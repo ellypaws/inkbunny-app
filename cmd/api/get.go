@@ -14,7 +14,7 @@ var getRoutes = map[string]func(c echo.Context) error{
 }
 
 func registerGetRoutes(e *echo.Echo) {
-	for path, handler := range postRoutes {
+	for path, handler := range getRoutes {
 		e.GET(path, handler)
 	}
 }

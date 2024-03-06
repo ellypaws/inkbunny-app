@@ -68,6 +68,43 @@ func TestInference(t *testing.T) {
 	}
 }
 
+func TestPrefill(t *testing.T) {
+	// Setup
+	prefillRequest := PrefillRequest{
+		Description: `
+Generated with Stable Diffusion, seeded with a photo and Photoshopped a bit.
+
+male, fennec, solo, (laying in a bed in the shape of a heart, heart-shaped bed, bed shaped like a heart), five fingers,
+four toes, dark toes, dark pawpads, blonde hair, short hair, blue eyes, masterpiece, 8k quality, (detailed fur:1.2),
+(cinematic lighting)+, backlighting, (shaded)+, photorealistic, hyperrealistic, (view from above),
+
+Negative Prompt: AS-YoungV2-neg, bad-hands-5, boring_e621_v4, bwu, deformityv6, dfc, ubbp, updn, deformed feet,
+deformed hands, fur markings, stripes, long torso, (out of proportion), (disproportional)
+
+Steps: 42, Sampler: DPM++ 2M Karras, CFG scale: 7, Seed: 2938221969, Size: 1220x690, Model hash: 593395568a,
+Model: indigoFurryMix_v90Hybrid, Denoising strength: 0.5,
+TI hashes: "bad-hands-5: aa7651be154c, boring_e621_v4: f9b806505bc2, bwu: 70e376c5cf1d, deformityv6: 8455ec9b3d31, dfc: 21c6ae158a7e, ubbp: 047acf26d29c, updn: b4ae8ca1b247",
+Version: v1.6.0`,
+	}
+	prefillRequestJSON, err := json.Marshal(prefillRequest)
+	assert.NoError(t, err)
+
+	e := echo.New()
+	req := httptest.NewRequest(http.MethodPost, "/prefill", bytes.NewReader(prefillRequestJSON))
+	req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+
+	// Assertions
+	if assert.NoError(t, prefill(c)) {
+		assert.Equal(t, http.StatusOK, rec.Code)
+		var systemMessage llm.Message
+		err := json.Unmarshal(rec.Body.Bytes(), &systemMessage)
+		assert.NoError(t, err)
+		assert.NotEmpty(t, systemMessage.Content)
+	}
+}
+
 func TestInferenceComplete(t *testing.T) {
 	user, err := api.Guest().Login()
 	if !assert.NoError(t, err) {

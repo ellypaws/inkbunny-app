@@ -14,6 +14,7 @@ var postRoutes = map[string]func(c echo.Context) error{
 	"/login":    login,
 	"/llm":      inference,
 	"/llm/json": stable,
+	"/prefill":  prefill,
 }
 
 func registerPostRoutes(e *echo.Echo) {
@@ -114,29 +115,10 @@ func stable(c echo.Context) error {
 		return c.JSON(http.StatusNotFound, ErrorResponse{Error: "no description found"})
 	}
 
-	results := utils.ExtractAll(details.Submissions[0].Description, utils.Patterns)
-
-	var request entities.TextToImageRequest
-
-	fieldsToSet := map[string]any{
-		"steps":     &request.Steps,
-		"sampler":   &request.SamplerName,
-		"cfg":       &request.CFGScale,
-		"seed":      &request.Seed,
-		"width":     &request.Width,
-		"height":    &request.Height,
-		"hash":      &request.OverrideSettings.SDCheckpointHash,
-		"model":     &request.OverrideSettings.SDModelCheckpoint,
-		"denoising": &request.DenoisingStrength,
-	}
-
-	err = utils.ResultsToFields(results, fieldsToSet)
+	request, err := descriptionHeuristics(details.Submissions[0].Description)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, ErrorResponse{Error: err.Error()})
 	}
-
-	request.Prompt = utils.ExtractPositivePrompt(details.Submissions[0].Description)
-	request.NegativePrompt = utils.ExtractNegativePrompt(details.Submissions[0].Description)
 
 	system, err := llm.PrefillSystemDump(request)
 	if err != nil {
@@ -168,4 +150,54 @@ func stable(c echo.Context) error {
 	}
 
 	return c.JSON(http.StatusOK, textToImage)
+}
+
+func descriptionHeuristics(description string) (entities.TextToImageRequest, error) {
+	results := utils.ExtractAll(description, utils.Patterns)
+
+	var request entities.TextToImageRequest
+
+	fieldsToSet := map[string]any{
+		"steps":     &request.Steps,
+		"sampler":   &request.SamplerName,
+		"cfg":       &request.CFGScale,
+		"seed":      &request.Seed,
+		"width":     &request.Width,
+		"height":    &request.Height,
+		"hash":      &request.OverrideSettings.SDCheckpointHash,
+		"model":     &request.OverrideSettings.SDModelCheckpoint,
+		"denoising": &request.DenoisingStrength,
+	}
+
+	err := utils.ResultsToFields(results, fieldsToSet)
+	if err != nil {
+		return request, err
+	}
+
+	request.Prompt = utils.ExtractPositivePrompt(description)
+	request.NegativePrompt = utils.ExtractNegativePrompt(description)
+	return request, nil
+}
+
+func prefill(c echo.Context) error {
+	var prefillRequest PrefillRequest
+	if err := c.Bind(&prefillRequest); err != nil {
+		return err
+	}
+
+	if prefillRequest.Description == "" {
+		return c.JSON(http.StatusBadRequest, ErrorResponse{Error: "description is required"})
+	}
+
+	request, err := descriptionHeuristics(prefillRequest.Description)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, ErrorResponse{Error: err.Error()})
+	}
+
+	system, err := llm.PrefillSystemDump(request)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, ErrorResponse{Error: err.Error()})
+	}
+
+	return c.JSON(http.StatusOK, system)
 }

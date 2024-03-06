@@ -21,6 +21,10 @@ type SubmissionRequest struct {
 	SubmissionID string          `json:"submission_id"`
 }
 
+type PrefillRequest struct {
+	Description string `json:"description"`
+}
+
 type ErrorResponse struct {
 	Error string `json:"error"`
 }

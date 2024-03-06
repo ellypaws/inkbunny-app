@@ -140,8 +140,8 @@ func stable(c echo.Context) error {
 		return c.JSON(http.StatusInternalServerError, ErrorResponse{Error: err.Error()})
 	}
 
-	message := utils.ExtractJson(response.Choices[0].Message.Content)
-	textToImage, err := entities.UnmarshalTextToImageRequest([]byte(message))
+	message := utils.ExtractJson([]byte(response.Choices[0].Message.Content))
+	textToImage, err := entities.UnmarshalTextToImageRequest(message)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, ErrorResponse{Error: err.Error()})
 	}

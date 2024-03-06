@@ -56,6 +56,14 @@ func GetInkbunnyDescription(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, crashy.ErrorResponse{Error: "missing submission ID"})
 	}
 
+	if request.SID == "guest" {
+		user, err := api.Guest().Login()
+		if err != nil {
+			return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
+		}
+		request.SID = user.Sid
+	}
+
 	details, err := api.Credentials{Sid: request.SID}.SubmissionDetails(
 		api.SubmissionDetailsRequest{
 			SubmissionIDs:   request.SubmissionIDs,

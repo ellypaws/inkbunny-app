@@ -1,6 +1,5 @@
-import React from 'react';
 import {useForm} from 'react-hook-form';
-import {z} from 'zod';
+import {z, ZodIssueCode} from 'zod';
 import {zodResolver} from '@hookform/resolvers/zod';
 import Cookies from 'js-cookie';
 import {
@@ -16,8 +15,19 @@ import {Input} from '@/components/ui/input'; // Adjust the import path according
 import {Form, FormControl, FormField, FormItem, FormLabel, FormMessage} from '@/components/ui/form';
 
 const formSchema = z.object({
-    username: z.string().min(2, {message: "Username must be at least 2 characters."}),
-    password: z.string().min(6, {message: "Password must be at least 6 characters."}),
+    username: z.string().optional(),
+    password: z.string(),
+}).superRefine((data, ctx) => {
+    // If a username is provided and is not 'guest', password must be at least 6 characters
+    if (data.username && data.username !== 'guest' && data.password.length < 6) {
+        ctx.addIssue({
+            code: ZodIssueCode.custom, // Specify the issue code
+            path: ["password"], // Specify the path to the field that has the issue
+            message: "Password must be at least 6 characters.", // Custom message
+        });
+    }
+
+    // Here you can add any additional conditions or validations as needed
 });
 
 const LoginForm = () => {
@@ -29,8 +39,8 @@ const LoginForm = () => {
         },
     });
 
-    const onSubmit = async (values) => {
-        const response = await fetch('http://localhost:1323/api/login', {
+    const onSubmit = async (values: any) => {
+        const response = await fetch('/api/login', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',

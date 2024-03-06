@@ -20,7 +20,3 @@ func main() {
 	// Start server
 	e.Logger.Fatal(e.Start(":1323"))
 }
-
-type handler struct {
-	login LoginRequest
-}

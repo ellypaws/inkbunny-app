@@ -1,41 +1,51 @@
-import * as React from "react";
-import {useState} from "react";
+import React from 'react';
+import {useForm} from 'react-hook-form';
+import {z} from 'zod';
+import {zodResolver} from '@hookform/resolvers/zod';
 import Cookies from 'js-cookie';
-
-import {Button} from "@/components/ui/button";
 import {
     Card,
     CardContent,
     CardDescription,
+    CardFooter,
     CardHeader,
     CardTitle,
-    CardFooter,
-} from "@/components/ui/card";
-import {Input} from "@/components/ui/input";
-import {Label} from "@/components/ui/label";
+} from '@/components/ui/card'; // Adjust the import path according to your project structure
+import {Button} from "@/components/ui/button";
+import {Input} from '@/components/ui/input'; // Adjust the import path according to your project structure
+import {Form, FormControl, FormField, FormItem, FormLabel, FormMessage} from '@/components/ui/form';
 
-export function LoginForm() {
-    const [username, setUsername] = useState('');
-    const [password, setPassword] = useState('');
+const formSchema = z.object({
+    username: z.string().min(2, {message: "Username must be at least 2 characters."}),
+    password: z.string().min(6, {message: "Password must be at least 6 characters."}),
+});
 
-    const handleLogin = async (e: React.FormEvent) => {
-        e.preventDefault();
-        const response = await fetch('http://localhost:5173/api/login', {
+const LoginForm = () => {
+    const form = useForm({
+        resolver: zodResolver(formSchema),
+        defaultValues: {
+            username: '',
+            password: '',
+        },
+    });
+
+    const onSubmit = async (values) => {
+        const response = await fetch('http://localhost:1323/api/login', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
             },
-            body: JSON.stringify({username, password}),
+            body: JSON.stringify(values),
         });
 
         if (response.ok) {
             const data = await response.json();
             Cookies.set('PHPSESSID', data.sessionId);
             alert('Login successful!');
-            // Proceed with navigating to the next page or showing login success message
+            // Navigate to the next page or update UI accordingly
         } else {
             alert('Login failed!');
-            // Handle login failure (e.g., show error message)
+            // Handle login failure
         }
     };
 
@@ -43,30 +53,46 @@ export function LoginForm() {
         <Card className="w-[350px]">
             <CardHeader>
                 <CardTitle>Login</CardTitle>
-                <CardDescription>Enter your credentials to access your account.</CardDescription>
+                <CardDescription>Access your account.</CardDescription>
             </CardHeader>
             <CardContent>
-                <form onSubmit={handleLogin}>
-                    <div className="grid w-full gap-4">
-                        <div className="flex flex-col space-y-1.5">
-                            <Label htmlFor="username">Username</Label>
-                            <Input id="username" placeholder="guest" value={username}
-                                   onChange={(e) => setUsername(e.target.value)}/>
-                        </div>
-                        <div className="flex flex-col space-y-1.5">
-                            <Label htmlFor="password">Password</Label>
-                            <Input id="password" type="password" placeholder="Password" value={password}
-                                   onChange={(e) => setPassword(e.target.value)}/>
-                        </div>
-                    </div>
-                </form>
+                <Form {...form}>
+                    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+                        <FormField
+                            control={form.control}
+                            name="username"
+                            render={({field}) => (
+                                <FormItem>
+                                    <FormLabel>Username</FormLabel>
+                                    <FormControl>
+                                        <Input placeholder="guest" {...field} />
+                                    </FormControl>
+                                    <FormMessage/>
+                                </FormItem>
+                            )}
+                        />
+                        <FormField
+                            control={form.control}
+                            name="password"
+                            render={({field}) => (
+                                <FormItem>
+                                    <FormLabel>Password</FormLabel>
+                                    <FormControl>
+                                        <Input type="password" placeholder="Password" {...field} />
+                                    </FormControl>
+                                    <FormMessage/>
+                                </FormItem>
+                            )}
+                        />
+                    </form>
+                </Form>
             </CardContent>
             <CardFooter className="flex justify-end">
-                <Button type="submit" onClick={handleLogin}>Login</Button>
+                <Button type="submit" onClick={form.handleSubmit(onSubmit)}>Login</Button>
             </CardFooter>
         </Card>
     );
-}
+};
 
 export function App() {
     return (

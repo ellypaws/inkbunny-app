@@ -34,9 +34,25 @@ func Hello(c echo.Context) error {
 //	  }
 func GetInkbunnyDescription(c echo.Context) error {
 	var request DescriptionRequest
-	err := c.Bind(&request)
-	if err != nil {
-		return err
+	_ = c.Bind(&request)
+
+	if sid := c.QueryParams().Get("sid"); sid != "" {
+		request.SID = sid
+	}
+
+	if request.SID == "" {
+		return c.JSON(http.StatusBadRequest, ErrorResponse{Error: "missing SID"})
+	}
+
+	if submissionIDs := c.QueryParam("submission_ids"); submissionIDs != "" {
+		if request.SubmissionIDs != "" {
+			request.SubmissionIDs += ","
+		}
+		request.SubmissionIDs += submissionIDs
+	}
+
+	if request.SubmissionIDs == "" {
+		return c.JSON(http.StatusBadRequest, ErrorResponse{Error: "missing submission ID"})
 	}
 
 	details, err := api.Credentials{Sid: request.SID}.SubmissionDetails(

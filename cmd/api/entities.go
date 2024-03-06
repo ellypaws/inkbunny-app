@@ -36,7 +36,3 @@ type DescriptionResponse struct {
 type PrefillRequest struct {
 	Description string `json:"description"`
 }
-
-type ErrorResponse struct {
-	Error string `json:"error"`
-}

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/ellypaws/inkbunny-app/cmd/crashy"
 	"github.com/ellypaws/inkbunny/api"
 	"github.com/labstack/echo/v4"
 	"net/http"
@@ -41,7 +42,7 @@ func GetInkbunnyDescription(c echo.Context) error {
 	}
 
 	if request.SID == "" {
-		return c.JSON(http.StatusBadRequest, ErrorResponse{Error: "missing SID"})
+		return c.JSON(http.StatusBadRequest, crashy.ErrorResponse{Error: "missing SID"})
 	}
 
 	if submissionIDs := c.QueryParam("submission_ids"); submissionIDs != "" {
@@ -52,7 +53,7 @@ func GetInkbunnyDescription(c echo.Context) error {
 	}
 
 	if request.SubmissionIDs == "" {
-		return c.JSON(http.StatusBadRequest, ErrorResponse{Error: "missing submission ID"})
+		return c.JSON(http.StatusBadRequest, crashy.ErrorResponse{Error: "missing submission ID"})
 	}
 
 	details, err := api.Credentials{Sid: request.SID}.SubmissionDetails(
@@ -61,10 +62,10 @@ func GetInkbunnyDescription(c echo.Context) error {
 			ShowDescription: api.Yes,
 		})
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, ErrorResponse{Error: err.Error()})
+		return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
 	}
 	if len(details.Submissions) == 0 {
-		return c.JSON(http.StatusNotFound, ErrorResponse{Error: "no submissions found"})
+		return c.JSON(http.StatusNotFound, crashy.ErrorResponse{Error: "no submissions found"})
 	}
 
 	var descriptions []DescriptionResponse
@@ -92,10 +93,10 @@ func GetInkbunnySubmission(c echo.Context) error {
 
 	details, err := api.Credentials{Sid: request.SID}.SubmissionDetails(request)
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, ErrorResponse{Error: err.Error()})
+		return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
 	}
 	if len(details.Submissions) == 0 {
-		return c.JSON(http.StatusNotFound, ErrorResponse{Error: "no submissions found"})
+		return c.JSON(http.StatusNotFound, crashy.ErrorResponse{Error: "no submissions found"})
 	}
 
 	return c.JSON(http.StatusOK, details)
@@ -113,10 +114,10 @@ func GetInkbunnySearch(c echo.Context) error {
 
 	searchResponse, err := api.Credentials{Sid: request.SID}.SearchSubmissions(request)
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, ErrorResponse{Error: err.Error()})
+		return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
 	}
 	if len(searchResponse.Submissions) == 0 {
-		return c.JSON(http.StatusNotFound, ErrorResponse{Error: "no submissions found"})
+		return c.JSON(http.StatusNotFound, crashy.ErrorResponse{Error: "no submissions found"})
 	}
 
 	return c.JSON(http.StatusOK, searchResponse)

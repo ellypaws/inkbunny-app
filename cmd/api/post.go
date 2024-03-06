@@ -1,11 +1,12 @@
 package main
 
 import (
-	"errors"
+	"github.com/ellypaws/inkbunny-app/cmd/crashy"
 	"github.com/ellypaws/inkbunny-sd/entities"
 	"github.com/ellypaws/inkbunny-sd/llm"
 	"github.com/ellypaws/inkbunny-sd/utils"
 	"github.com/ellypaws/inkbunny/api"
+	"github.com/go-errors/errors"
 	"github.com/labstack/echo/v4"
 	"net/http"
 )
@@ -34,7 +35,7 @@ func login(c echo.Context) error {
 	}
 	user, err := user.Login()
 	if err != nil {
-		return c.JSON(http.StatusUnauthorized, ErrorResponse{Error: err.Error()})
+		return c.JSON(http.StatusUnauthorized, crashy.Wrap(err))
 	}
 	return c.JSON(http.StatusOK, user)
 }
@@ -43,7 +44,7 @@ func hostOnline(c llm.Config) error {
 	endpointURL := c.Endpoint
 	resp, err := http.Get(endpointURL.String())
 	if err != nil {
-		return err
+		return errors.New(err)
 	}
 	if resp.StatusCode != http.StatusOK {
 		return errors.New("endpoint is not available")
@@ -59,18 +60,18 @@ func inference(c echo.Context) error {
 	config := llmRequest.Config
 
 	if config.Endpoint.String() == "" {
-		return c.JSON(http.StatusBadRequest, ErrorResponse{Error: "config is required"})
+		return c.JSON(http.StatusBadRequest, crashy.ErrorResponse{Error: "config is required"})
 	}
 
 	err := hostOnline(config)
 	if err != nil {
-		return c.JSON(http.StatusServiceUnavailable, ErrorResponse{Error: err.Error()})
+		return c.JSON(http.StatusServiceUnavailable, crashy.Wrap(err))
 	}
 
 	request := llmRequest.Request
 	response, err := config.Infer(&request)
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, ErrorResponse{Error: err.Error()})
+		return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
 	}
 
 	return c.JSON(http.StatusOK, response)
@@ -84,19 +85,19 @@ func stable(c echo.Context) error {
 	config := subRequest.Config
 
 	if config.Endpoint.String() == "" {
-		return c.JSON(http.StatusBadRequest, ErrorResponse{Error: "config is required"})
+		return c.JSON(http.StatusBadRequest, crashy.ErrorResponse{Error: "config is required"})
 	}
 
 	err := hostOnline(config)
 	if err != nil {
-		return c.JSON(http.StatusServiceUnavailable, ErrorResponse{Error: err.Error()})
+		return c.JSON(http.StatusServiceUnavailable, crashy.Wrap(err))
 	}
 
 	user := &subRequest.User
 	if user.Sid == "" {
 		user, err = user.Login()
 		if err != nil {
-			return c.JSON(http.StatusUnauthorized, ErrorResponse{Error: err.Error()})
+			return c.JSON(http.StatusUnauthorized, crashy.Wrap(err))
 		}
 	}
 
@@ -106,23 +107,23 @@ func stable(c echo.Context) error {
 			ShowDescription: api.Yes,
 		})
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, ErrorResponse{Error: err.Error()})
+		return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
 	}
 	if len(details.Submissions) == 0 {
-		return c.JSON(http.StatusNotFound, ErrorResponse{Error: "no submissions found"})
+		return c.JSON(http.StatusNotFound, crashy.ErrorResponse{Error: "no submissions found"})
 	}
 	if details.Submissions[0].Description == "" {
-		return c.JSON(http.StatusNotFound, ErrorResponse{Error: "no description found"})
+		return c.JSON(http.StatusNotFound, crashy.ErrorResponse{Error: "no description found"})
 	}
 
 	request, err := descriptionHeuristics(details.Submissions[0].Description)
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, ErrorResponse{Error: err.Error()})
+		return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
 	}
 
 	system, err := llm.PrefillSystemDump(request)
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, ErrorResponse{Error: err.Error()})
+		return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
 	}
 
 	inferenceRequest := llm.Request{
@@ -137,16 +138,16 @@ func stable(c echo.Context) error {
 	}
 	response, err := config.Infer(&inferenceRequest)
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, ErrorResponse{Error: err.Error()})
+		return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
 	}
 
 	message := utils.ExtractJson([]byte(response.Choices[0].Message.Content))
 	textToImage, err := entities.UnmarshalTextToImageRequest(message)
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, ErrorResponse{Error: err.Error()})
+		return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
 	}
 	if textToImage.Prompt == "" {
-		return c.JSON(http.StatusNotFound, ErrorResponse{Error: "prompt is empty"})
+		return c.JSON(http.StatusNotFound, crashy.ErrorResponse{Error: "prompt is empty"})
 	}
 
 	return c.JSON(http.StatusOK, textToImage)
@@ -186,17 +187,17 @@ func prefill(c echo.Context) error {
 	}
 
 	if prefillRequest.Description == "" {
-		return c.JSON(http.StatusBadRequest, ErrorResponse{Error: "description is required"})
+		return c.JSON(http.StatusBadRequest, crashy.ErrorResponse{Error: "description is required"})
 	}
 
 	request, err := descriptionHeuristics(prefillRequest.Description)
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, ErrorResponse{Error: err.Error()})
+		return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
 	}
 
 	system, err := llm.PrefillSystemDump(request)
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, ErrorResponse{Error: err.Error()})
+		return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
 	}
 
 	return c.JSON(http.StatusOK, system)

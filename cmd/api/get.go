@@ -1,12 +1,16 @@
 package main
 
 import (
+	"github.com/ellypaws/inkbunny/api"
 	"github.com/labstack/echo/v4"
 	"net/http"
 )
 
 var getRoutes = map[string]func(c echo.Context) error{
-	"/": Hello,
+	"/":                     Hello,
+	"/inkbunny/description": GetInkbunnyDescription,
+	"/inkbunny/submission":  GetInkbunnySubmission,
+	"/inkbunny/search":      GetInkbunnySearch,
 }
 
 func registerGetRoutes(e *echo.Echo) {
@@ -17,4 +21,87 @@ func registerGetRoutes(e *echo.Echo) {
 
 func Hello(c echo.Context) error {
 	return c.String(http.StatusOK, "Hello, World!")
+}
+
+// GetInkbunnyDescription returns the description of a submission using a DescriptionRequest
+// It requires a valid SID to be passed in the request.
+// It returns a slice of DescriptionResponse as JSON.
+// Example:
+//
+//	  DescriptionRequest{
+//				SID:           "session_id",
+//				SubmissionIDs: "14576",
+//	  }
+func GetInkbunnyDescription(c echo.Context) error {
+	var request DescriptionRequest
+	err := c.Bind(&request)
+	if err != nil {
+		return err
+	}
+
+	details, err := api.Credentials{Sid: request.SID}.SubmissionDetails(
+		api.SubmissionDetailsRequest{
+			SubmissionIDs:   request.SubmissionIDs,
+			ShowDescription: api.Yes,
+		})
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, ErrorResponse{Error: err.Error()})
+	}
+	if len(details.Submissions) == 0 {
+		return c.JSON(http.StatusNotFound, ErrorResponse{Error: "no submissions found"})
+	}
+
+	var descriptions []DescriptionResponse
+	for _, submission := range details.Submissions {
+		descriptions = append(descriptions, DescriptionResponse{
+			SubmissionID: request.SubmissionIDs,
+			Title:        submission.Title,
+			Username:     submission.Username,
+			Description:  submission.Description,
+		})
+	}
+
+	return c.JSON(http.StatusOK, descriptions)
+}
+
+// GetInkbunnySubmission returns the details of a submission using api.SubmissionDetailsRequest
+// It requires a valid SID to be passed in the request.
+// It returns api.SubmissionDetailsResponse as JSON.
+func GetInkbunnySubmission(c echo.Context) error {
+	var request api.SubmissionDetailsRequest
+	err := c.Bind(&request)
+	if err != nil {
+		return err
+	}
+
+	details, err := api.Credentials{Sid: request.SID}.SubmissionDetails(request)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, ErrorResponse{Error: err.Error()})
+	}
+	if len(details.Submissions) == 0 {
+		return c.JSON(http.StatusNotFound, ErrorResponse{Error: "no submissions found"})
+	}
+
+	return c.JSON(http.StatusOK, details)
+}
+
+// GetInkbunnySearch returns the search results of a submission using api.SubmissionSearchRequest
+// It requires a valid SID to be passed in the request.
+// It returns api.SubmissionSearchResponse as JSON.
+func GetInkbunnySearch(c echo.Context) error {
+	var request api.SubmissionSearchRequest
+	err := c.Bind(&request)
+	if err != nil {
+		return err
+	}
+
+	searchResponse, err := api.Credentials{Sid: request.SID}.SearchSubmissions(request)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, ErrorResponse{Error: err.Error()})
+	}
+	if len(searchResponse.Submissions) == 0 {
+		return c.JSON(http.StatusNotFound, ErrorResponse{Error: "no submissions found"})
+	}
+
+	return c.JSON(http.StatusOK, searchResponse)
 }

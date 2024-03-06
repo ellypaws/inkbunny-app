@@ -15,10 +15,22 @@ type InferenceRequest struct {
 	Request llm.Request `json:"request"`
 }
 
-type SubmissionRequest struct {
+type InferenceSubmissionRequest struct {
 	Config       llm.Config      `json:"config"`
 	User         api.Credentials `json:"user"`
 	SubmissionID string          `json:"submission_id"`
+}
+
+type DescriptionRequest struct {
+	SID           string `json:"sid"`
+	SubmissionIDs string `json:"submission_ids"`
+}
+
+type DescriptionResponse struct {
+	SubmissionID string `json:"submission_id"`
+	Title        string `json:"title"`
+	Username     string `json:"username"`
+	Description  string `json:"description"`
 }
 
 type PrefillRequest struct {

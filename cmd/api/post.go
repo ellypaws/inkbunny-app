@@ -77,7 +77,7 @@ func inference(c echo.Context) error {
 }
 
 func stable(c echo.Context) error {
-	var subRequest SubmissionRequest
+	var subRequest InferenceSubmissionRequest
 	if err := c.Bind(&subRequest); err != nil {
 		return err
 	}

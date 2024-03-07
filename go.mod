@@ -3,8 +3,8 @@ module github.com/ellypaws/inkbunny-app
 go 1.22.0
 
 require (
-	github.com/ellypaws/inkbunny-sd v0.0.0-20240306171057-6689df8f0356
-	github.com/ellypaws/inkbunny/api v0.0.0-20240306094519-f8fede62380c
+	github.com/ellypaws/inkbunny-sd v0.0.0-20240307150815-de7fa7252e32
+	github.com/ellypaws/inkbunny/api v0.0.0-20240307150334-672314837a1c
 	github.com/go-errors/errors v1.5.1
 	github.com/labstack/echo/v4 v4.11.4
 	github.com/stretchr/testify v1.9.0

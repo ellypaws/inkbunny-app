@@ -41,10 +41,10 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/registry/new-york/ui/tooltip"
-import { MailItems } from "@/app/examples/mail/data"
+import { MailItem } from "@/app/examples/mail/data"
 
 interface MailDisplayProps {
-  mail: MailItems | null
+  mail: MailItem | null
 }
 import ReactHtmlParser from "react-html-parser";
 // import DOMPurify from "dompurify";

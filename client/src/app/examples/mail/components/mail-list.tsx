@@ -8,7 +8,7 @@ import { MailItems } from "@/app/examples/mail/data"
 import { useMail } from "@/app/examples/mail/use-mail"
 
 interface MailListProps {
-  items: MailItems[]
+  items: MailItems
 }
 
 export function MailList({ items }: MailListProps) {

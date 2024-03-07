@@ -37,7 +37,7 @@ interface MailProps {
     email: string
     icon: React.ReactNode
   }[]
-  mails: MailItems[]
+  mails: MailItems
   defaultLayout: number[] | undefined
   defaultCollapsed?: boolean
   navCollapsedSize: number

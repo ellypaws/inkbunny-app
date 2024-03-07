@@ -41,7 +41,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/registry/new-york/ui/tooltip"
-import { MailItem } from "@/app/examples/mail/data"
+import {FileItem, MailItem} from "@/app/examples/mail/data"
 
 interface MailDisplayProps {
   mail: MailItem | null
@@ -56,14 +56,16 @@ import {CardContent} from "@/components/ui/card.tsx";
 import {ScrollArea} from "@/registry/new-york/ui/scroll-area";
 
 export function MailDisplay({ mail }: MailDisplayProps) {
-  const [loadingImages, setLoadingImages] = useState(true);
-  const [images, setImages] = useState<string[]>([]);
+  const [loadingImages, setLoadingImages] = useState<{ [key: number]: boolean }>({});
 
   useEffect(() => {
     if (mail && mail.files) {
-      const imageUrls = mail.files.map(file => file.preview ? `/api/image?url=${encodeURIComponent(file.preview)}` : '');
-      setImages(imageUrls);
-      setLoadingImages(false);
+      // Initialize all images as loading
+      const initialLoadingStates = mail.files.reduce((acc, _, index) => ({
+        ...acc,
+        [index]: true, // Set loading state to true for each image
+      }), {});
+      setLoadingImages(initialLoadingStates);
     }
   }, [mail]);
 
@@ -272,25 +274,34 @@ export function MailDisplay({ mail }: MailDisplayProps) {
           <Separator />
             <ScrollArea className="h-screen">
           <div className="flex-1 whitespace-pre-wrap p-4 text-sm">
-            {loadingImages ? (
-                <SkeletonCard />
-            ) : (
-                <Carousel className="w-full max-w-xs mx-auto">
-                  <CarouselContent>
-                    {mail.files.map((image, index) => (
-                        <CarouselItem key={index}>
-                          <Card>
-                            <CardContent className="flex aspect-square items-center justify-center p-6">
-                          <img src={`/api/image?url=${encodeURIComponent(image.file_url || '')}`} alt={image.file_name} />
-                            </CardContent>
-                          </Card>
-                        </CarouselItem>
-                    ))}
-                  </CarouselContent>
-                  <CarouselPrevious />
-                  <CarouselNext />
-                </Carousel>
-            )}
+            {mail && mail.files && mail.files.length > 0 ? (
+                <div className="flex-1">
+                  <Carousel className="w-full max-w-xs mx-auto">
+                    <CarouselContent>
+                      {mail.files.map((file: FileItem, index: number) => (
+                          <CarouselItem key={index}>
+                            <div className="relative">
+                              <Card className="pb-4">
+                                <CardContent className="flex items-center justify-center p-2 rounded-lg border bg-background shadow-lg">
+                              {loadingImages[index] && <SkeletonCard />}
+                              <img
+                                  className="w-full h-auto"
+                                  src={`/api/image?url=${encodeURIComponent(file.thumbnail_url || file.thumbnail_url_noncustom || '')}`}
+                                  alt={file.file_name}
+                                  style={{ display: loadingImages[index] ? 'none' : 'block' }}
+                                  onLoad={() => setLoadingImages(prev => ({ ...prev, [index]: false }))}
+                              />
+                                </CardContent>
+                              </Card>
+                            </div>
+                          </CarouselItem>
+                      ))}
+                    </CarouselContent>
+                    <CarouselNext />
+                    <CarouselPrevious />
+                  </Carousel>
+                </div>
+            ) : null}
               {mail.html ? ReactHtmlParser(sanitize(mail.html)) : mail.text}
           </div>
 

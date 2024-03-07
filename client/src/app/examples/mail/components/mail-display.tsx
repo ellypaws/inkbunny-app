@@ -107,11 +107,19 @@ export function MailDisplay({ mail }: MailDisplayProps) {
             node.setAttribute('src', newSrc);
         }
     }
+    if (data.tagName === 'a') {
+      const href = node.getAttribute('href');
+      if (href && !href.startsWith('http')) {
+        node.setAttribute('href', `https://inkbunny.net${href}`);
+      }
+      // set style to green with broken lines hover with tailwind
+        node.setAttribute('class', 'text-green-600 hover:text-green-500 hover:underline');
+    }
   });
 
   const sanitize = (html: string) => {
-    const htmlWithPrependedLinks = html.replace(/(href=["'])(?!https?:\/\/)([^"']+)/g, '$1https://inkbunny.net/$2');
-    return DOMPurify.sanitize(htmlWithPrependedLinks, {
+    // const htmlWithPrependedLinks = html.replace(/(href=["'])(?!https?:\/\/)([^"']+)/g, '$1https://inkbunny.net/$2');
+    return DOMPurify.sanitize(html, {
       WHOLE_DOCUMENT: false,
       KEEP_CONTENT: true,
       FORCE_BODY: true,

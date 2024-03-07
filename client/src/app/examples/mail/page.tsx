@@ -12,7 +12,7 @@ export default function MailPage() {
     useEffect(() => {
         // does things
         setLoading(true)
-        fetch('/api/inkbunny/search?sid=guest&output=mail&temp=no')
+        fetch('/api/inkbunny/search?sid=guest&output=mail&temp=yes')
             .then(r => r.json())
             .then(data => {
                 console.log('GetMailResponse', data)

@@ -48,8 +48,26 @@ interface MailDisplayProps {
 }
 import ReactHtmlParser from "react-html-parser";
 import DOMPurify from "dompurify";
+import {SkeletonCard} from "@/components/shadcn/skeleton.tsx";
+import {Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious} from "@/components/ui/carousel.tsx";
+import {useEffect, useState} from "react";
+import {Card} from "@radix-ui/themes";
+import {CardContent} from "@/components/ui/card.tsx";
+import {ScrollArea} from "@/registry/new-york/ui/scroll-area";
 
 export function MailDisplay({ mail }: MailDisplayProps) {
+  const [loadingImages, setLoadingImages] = useState(true);
+  const [images, setImages] = useState<string[]>([]);
+
+  useEffect(() => {
+    if (mail && mail.files) {
+      const imageUrls = mail.files.map(file => file.preview ? `/api/image?url=${encodeURIComponent(file.preview)}` : '');
+      setImages(imageUrls);
+      setLoadingImages(false);
+    }
+  }, [mail]);
+
+
   const today = new Date()
 
   const myCustomPolicy = {
@@ -61,6 +79,14 @@ export function MailDisplay({ mail }: MailDisplayProps) {
 
   DOMPurify.addHook('uponSanitizeElement', (node, data) => {
     if (node.tagName === 'STYLE' && data.tagName === 'style') {
+    }
+    if (data.tagName === 'img') {
+        const src = node.getAttribute('src');
+        if (src) {
+            // Rewrite the src attribute of <img> tags
+            const newSrc = `/api/image?url=${encodeURIComponent(src)}`;
+            node.setAttribute('src', newSrc);
+        }
     }
   });
 
@@ -244,9 +270,30 @@ export function MailDisplay({ mail }: MailDisplayProps) {
             )}
           </div>
           <Separator />
+            <ScrollArea className="h-screen">
           <div className="flex-1 whitespace-pre-wrap p-4 text-sm">
-            {mail.html ? ReactHtmlParser(sanitize(mail.html)) : mail.text}
+            {loadingImages ? (
+                <SkeletonCard />
+            ) : (
+                <Carousel className="w-full max-w-xs mx-auto">
+                  <CarouselContent>
+                    {mail.files.map((image, index) => (
+                        <CarouselItem key={index}>
+                          <Card>
+                            <CardContent className="flex aspect-square items-center justify-center p-6">
+                          <img src={`/api/image?url=${encodeURIComponent(image.file_url || '')}`} alt={image.file_name} />
+                            </CardContent>
+                          </Card>
+                        </CarouselItem>
+                    ))}
+                  </CarouselContent>
+                  <CarouselPrevious />
+                  <CarouselNext />
+                </Carousel>
+            )}
+              {mail.html ? ReactHtmlParser(sanitize(mail.html)) : mail.text}
           </div>
+
           <Separator className="mt-auto" />
           <div className="p-4">
             <form>
@@ -274,6 +321,7 @@ export function MailDisplay({ mail }: MailDisplayProps) {
               </div>
             </form>
           </div>
+            </ScrollArea>
         </div>
       ) : (
         <div className="p-8 text-center text-muted-foreground">

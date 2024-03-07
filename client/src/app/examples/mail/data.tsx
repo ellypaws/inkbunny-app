@@ -198,14 +198,14 @@ export const mails = [
 // 	CreateDateTime     string `json:"create_datetime"`
 // 	CreateDateTimeUser string `json:"create_datetime_usertime"`
 export interface FileItem {
-    id: string
-    name: string
-    preview?: string
-    nonCustomThumb?: string
-    url?: string
-    user: string
-    date: string
-    dateUser: string
+    file_id: string
+    file_name: string
+    thumbnail_url?: string
+    thumbnail_url_noncustom?: string
+    file_url?: string
+    user_id: string
+    create_datetime: string
+    create_datetime_usertime: string
 }
 
 export interface MailItem {

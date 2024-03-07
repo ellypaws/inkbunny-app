@@ -2,8 +2,6 @@
 
 import { siteConfig } from "@/config/site"
 import { cn } from "@/lib/utils"
-import { Announcement } from "@/components/announcement"
-import { ExamplesNav } from "@/components/examples-nav"
 import { Icons } from "@/components/icons"
 import {
   PageActions,
@@ -39,24 +37,8 @@ export default function IndexPage() {
         </PageActions>
       </PageHeader>
       {/*<ExamplesNav className="[&>a:first-child]:text-primary" />*/}
-      <section className="overflow-hidden rounded-lg border bg-background shadow-md md:hidden md:shadow-xl">
-        <img
-          src="/examples/mail-dark.png"
-          width={1280}
-          height={727}
-          alt="Mail"
-          className="hidden dark:block"
-        />
-        <img
-          src="/examples/mail-light.png"
-          width={1280}
-          height={727}
-          alt="Mail"
-          className="block dark:hidden"
-        />
-      </section>
       <section className="hidden md:block">
-        <div className="overflow-hidden rounded-lg border bg-background shadow-lg">
+        <div className="rounded-lg border bg-background shadow-lg">
           <MailPage />
         </div>
       </section>

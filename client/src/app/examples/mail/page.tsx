@@ -41,7 +41,7 @@ export default function MailPage() {
           className="block dark:hidden"
         />
       </div>
-      <div className="hidden flex-col md:flex">
+      <div className="">
         <Mail
           accounts={accounts}
           mails={mails}

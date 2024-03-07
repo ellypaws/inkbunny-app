@@ -44,6 +44,8 @@ func GetImageHandler(c echo.Context) error {
 
 	cacheItem, found := imageCache.Get(key)
 	if found {
+		// Set Cache-Control header for browser caching
+		c.Response().Header().Set("Cache-Control", "public, max-age=86400") // 24 hours
 		// Serve the blob from cache
 		return c.Blob(http.StatusOK, "image/jpeg", cacheItem.Blob) // Adjust MIME type as necessary
 	}

@@ -4,7 +4,6 @@ import formatDistanceToNow from "date-fns/formatDistanceToNow"
 import { cn } from "@/lib/utils"
 import { Badge } from "@/registry/new-york/ui/badge"
 import { ScrollArea } from "@/registry/new-york/ui/scroll-area"
-import { Separator } from "@/registry/new-york/ui/separator"
 import { MailItems } from "@/app/examples/mail/data"
 import { useMail } from "@/app/examples/mail/use-mail"
 
@@ -58,7 +57,7 @@ export function MailList({ items }: MailListProps) {
             <div className="line-clamp-2 text-xs text-muted-foreground">
               {item.text.substring(0, 300)}
             </div>
-            {item.labels.length ? (
+            {item.labels && item.labels.length ? (
               <div className="flex items-center gap-2">
                 {item.labels.map((label) => (
                   <Badge key={label} variant={getBadgeVariantFromLabel(label)}>

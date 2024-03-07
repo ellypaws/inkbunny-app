@@ -47,6 +47,8 @@ interface MailDisplayProps {
   mail: MailItems | null
 }
 
+
+
 export function MailDisplay({ mail }: MailDisplayProps) {
   const today = new Date()
 
@@ -205,7 +207,7 @@ export function MailDisplay({ mail }: MailDisplayProps) {
                 <div className="font-semibold">{mail.name}</div>
                 <div className="line-clamp-1 text-xs">{mail.subject}</div>
                 <div className="line-clamp-1 text-xs">
-                  <span className="font-medium">Reply-To:</span> {mail.email}
+                  <a href={mail.email}>{mail.email}</a>
                 </div>
               </div>
             </div>

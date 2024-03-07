@@ -380,7 +380,7 @@ function CopyCodeButton() {
         <Button
           onClick={() => {
             copyToClipboardWithMeta(getThemeCode(activeTheme, config.radius), {
-              name: "copy_theme_code",
+              title: "copy_theme_code",
               properties: {
                 theme: activeTheme.name,
                 radius: config.radius,
@@ -418,7 +418,7 @@ function CopyCodeButton() {
                   copyToClipboardWithMeta(
                     getThemeCode(activeTheme, config.radius),
                     {
-                      name: "copy_theme_code",
+                      title: "copy_theme_code",
                       properties: {
                         theme: activeTheme.name,
                         radius: config.radius,

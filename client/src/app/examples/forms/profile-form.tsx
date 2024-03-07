@@ -69,7 +69,7 @@ export function ProfileForm() {
   })
 
   const { fields, append } = useFieldArray({
-    name: "urls",
+    title: "urls",
     control: form.control,
   })
 

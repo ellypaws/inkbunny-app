@@ -1,12 +1,13 @@
 export const siteConfig = {
-  name: "shadcn/ui",
-  url: "https://ui.shadcn.com",
-  ogImage: "https://ui.shadcn.com/og.jpg",
+  name: "inkbunny-app",
+  url: "https://github.com/ellypaws/inkbunny-app",
+  ogImage: "https://jp.ib.metapix.net/files/full/112/112255_Lando_fuzzypaws6.jpg",
   description:
-    "Beautifully designed components that you can copy and paste into your apps. Accessible. Customizable. Open Source.",
+    "Dashboard for managing Inkbunny auditing and monitoring AI generated images",
   links: {
-    twitter: "https://twitter.com/shadcn",
-    github: "https://github.com/shadcn-ui/ui",
+    twitter: "https://twitter.com/ellypaws",
+    website: "https://keiau.space",
+    github: "https://github.com/ellypaws/inkbunny-app",
   },
 }
 

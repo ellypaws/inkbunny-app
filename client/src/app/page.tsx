@@ -18,11 +18,10 @@ export default function IndexPage() {
   return (
     <div className="container relative">
       <PageHeader>
-        <Announcement />
-        <PageHeaderHeading>Build your component library</PageHeaderHeading>
+        {/*<Announcement />*/}
+        <PageHeaderHeading>{siteConfig.name}</PageHeaderHeading>
         <PageHeaderDescription>
-          Beautifully designed components that you can copy and paste into your
-          apps. Accessible. Customizable. Open Source.
+          {siteConfig.description}
         </PageHeaderDescription>
         <PageActions>
           <a href="/docs" className={cn(buttonVariants())}>
@@ -39,7 +38,7 @@ export default function IndexPage() {
           </a>
         </PageActions>
       </PageHeader>
-      <ExamplesNav className="[&>a:first-child]:text-primary" />
+      {/*<ExamplesNav className="[&>a:first-child]:text-primary" />*/}
       <section className="overflow-hidden rounded-lg border bg-background shadow-md md:hidden md:shadow-xl">
         <img
           src="/examples/mail-dark.png"

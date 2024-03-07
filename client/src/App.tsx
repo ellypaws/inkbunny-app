@@ -3,7 +3,7 @@ import Page from '@/app/page';
 
 export function App() {
     return (
-        <div className="flex items-center justify-center h-screen">
+        <div className="lg:pb-24">
             {/*<LoginForm/>*/}
             <Page/>
         </div>

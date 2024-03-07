@@ -56,7 +56,7 @@ export function CopyButton({
           value,
           event
             ? {
-                name: event,
+                title: event,
                 properties: {
                   code: value,
                 },
@@ -153,7 +153,7 @@ export function CopyNpmCommandButton({
   const copyCommand = React.useCallback(
     (value: string, pm: "npm" | "pnpm" | "yarn" | "bun") => {
       copyToClipboardWithMeta(value, {
-        name: "copy_npm_command",
+        title: "copy_npm_command",
         properties: {
           command: value,
           pm,

@@ -47,10 +47,15 @@ interface MailDisplayProps {
   mail: MailItems | null
 }
 import ReactHtmlParser from "react-html-parser";
-import DOMPurify from "dompurify";
+// import DOMPurify from "dompurify";
 
 export function MailDisplay({ mail }: MailDisplayProps) {
   const today = new Date()
+
+  // const allowedTags = {
+  //   ALLOWED_TAGS: ['b', 'i', 'em', 'strong', 'a', 'p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'ul', 'ol', 'li', 'blockquote', 'code', 'hr', 'br', 'div', 'table', 'thead', 'caption', 'tbody', 'tr', 'th', 'td', 'pre', 'img', 'span'],
+  //   ALLOWED_ATTR: ['href', 'src', 'width', 'height', 'alt', 'title', 'class', 'style'],
+  // }
 
   return (
     <div className="flex h-full flex-col">
@@ -219,7 +224,7 @@ export function MailDisplay({ mail }: MailDisplayProps) {
           </div>
           <Separator />
           <div className="flex-1 whitespace-pre-wrap p-4 text-sm">
-            {mail.html ? ReactHtmlParser(DOMPurify.sanitize(mail.html)) : mail.text}
+            {mail.html ? ReactHtmlParser(mail.html) : mail.text}
           </div>
           <Separator className="mt-auto" />
           <div className="p-4">

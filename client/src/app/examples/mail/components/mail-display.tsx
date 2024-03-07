@@ -76,6 +76,8 @@ export function MailDisplay({ mail }: MailDisplayProps) {
     });
   };
 
+  const imageUrl = mail && mail.photo ? `/api/image?url=${encodeURIComponent(mail.photo)}` : '';
+
   return (
     <div className="flex h-full flex-col">
       <div className="flex items-center p-2">
@@ -219,7 +221,7 @@ export function MailDisplay({ mail }: MailDisplayProps) {
           <div className="flex items-start p-4">
             <div className="flex items-start gap-4 text-sm">
               <Avatar>
-                <AvatarImage alt={mail.name} />
+                <AvatarImage alt={mail.name} src={imageUrl} />
                 <AvatarFallback>
                   {mail.name
                     .split(" ")

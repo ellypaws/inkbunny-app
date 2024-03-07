@@ -7,7 +7,7 @@ export function App() {
         <div className="lg:pb-24">
             {/*<LoginForm/>*/}
             <Page/>
-            <BackgroundBeams className="fixed inset-0 z-0 pointer-events-none" />
+            {/*<BackgroundBeams className="fixed inset-0 z-0 pointer-events-none" />*/}
         </div>
     );
 }

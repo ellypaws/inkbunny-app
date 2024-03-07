@@ -16,6 +16,7 @@ var getRoutes = map[string]func(c echo.Context) error{
 	"/inkbunny/description": GetInkbunnyDescription,
 	"/inkbunny/submission":  GetInkbunnySubmission,
 	"/inkbunny/search":      GetInkbunnySearch,
+	"/image":                app.GetImageHandler,
 }
 
 func registerGetRoutes(e *echo.Echo) {
@@ -124,6 +125,10 @@ func GetInkbunnySearch(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, crashy.Wrap(err))
 	}
 
+	if temp := c.QueryParam("temp"); temp != "no" {
+		return c.JSONBlob(http.StatusOK, app.Temp())
+	}
+
 	if request.Text == "" {
 		if text := c.QueryParam("text"); text != "" {
 			request.Text = text
@@ -226,16 +231,32 @@ func mail(c echo.Context, user *api.Credentials, response api.SubmissionSearchRe
 			}
 		}
 
+		var files []app.File
+		for _, file := range submission.Files {
+			files = append(files, app.File{
+				FileID:             file.FileID,
+				FileName:           file.FileName,
+				FilePreview:        file.FileURLPreview,
+				NonCustomThumb:     file.ThumbURLLargeNonCustom,
+				FileURL:            file.FileURLFull,
+				UserID:             file.UserID,
+				CreateDateTime:     file.CreateDateTime,
+				CreateDateTimeUser: file.CreateDateTimeUser,
+			})
+		}
+
 		mails = append(mails, app.Mail{
-			SubmissionID: submission.SubmissionID,
-			Username:     submission.Username,
-			Link:         fmt.Sprintf("https://inkbunny.net/s/%s", submission.SubmissionID),
-			Title:        submission.Title,
-			Description:  submission.Description,
-			Html:         submission.DescriptionBBCodeParsed,
-			Date:         submission.CreateDateSystem,
-			Read:         false,
-			Labels:       keywords,
+			SubmissionID:   submission.SubmissionID,
+			Username:       submission.Username,
+			ProfilePicture: submission.UserIconURLs.Large,
+			Files:          files,
+			Link:           fmt.Sprintf("https://inkbunny.net/s/%s", submission.SubmissionID),
+			Title:          submission.Title,
+			Description:    submission.Description,
+			Html:           submission.DescriptionBBCodeParsed,
+			Date:           submission.CreateDateSystem,
+			Read:           false,
+			Labels:         keywords,
 		})
 	}
 	return c.JSON(http.StatusOK, mails)

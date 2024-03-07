@@ -188,10 +188,32 @@ export const mails = [
   },
 ]
 
+// From go
+// 	FileID             string `json:"file_id"`
+// 	FileName           string `json:"file_name"`
+// 	FilePreview        string `json:"thumbnail_url,omitempty"`
+// 	NonCustomThumb     string `json:"thumbnail_url_noncustom,omitempty"`
+// 	FileURL            string `json:"file_url,omitempty"`
+// 	UserID             string `json:"user_id"`
+// 	CreateDateTime     string `json:"create_datetime"`
+// 	CreateDateTimeUser string `json:"create_datetime_usertime"`
+export interface FileItem {
+    id: string
+    name: string
+    preview?: string
+    nonCustomThumb?: string
+    url?: string
+    user: string
+    date: string
+    dateUser: string
+}
+
 export interface MailItem {
   id: string
   name: string
   email: string
+  photo?: string
+  files?: FileItem[]
   subject: string
   text: string
   html?: string

@@ -20,15 +20,28 @@ func UnmarshalMails(data []byte) (Mails, error) {
 }
 
 type Mail struct {
-	SubmissionID string  `json:"id"`
-	Username     string  `json:"name"`
-	Link         string  `json:"email"`
-	Title        string  `json:"subject"`
-	Description  string  `json:"text"`
-	Html         string  `json:"html,omitempty"`
-	Date         string  `json:"date"`
-	Read         bool    `json:"read"`
-	Labels       []Label `json:"labels"`
+	SubmissionID   string  `json:"id"`
+	Username       string  `json:"name"`
+	ProfilePicture string  `json:"photo,omitempty"`
+	Files          []File  `json:"files"`
+	Link           string  `json:"email"`
+	Title          string  `json:"subject"`
+	Description    string  `json:"text"`
+	Html           string  `json:"html,omitempty"`
+	Date           string  `json:"date"`
+	Read           bool    `json:"read"`
+	Labels         []Label `json:"labels"`
+}
+
+type File struct {
+	FileID             string `json:"file_id"`
+	FileName           string `json:"file_name"`
+	FilePreview        string `json:"thumbnail_url,omitempty"`
+	NonCustomThumb     string `json:"thumbnail_url_noncustom,omitempty"`
+	FileURL            string `json:"file_url,omitempty"`
+	UserID             string `json:"user_id"`
+	CreateDateTime     string `json:"create_datetime"`
+	CreateDateTimeUser string `json:"create_datetime_usertime"`
 }
 
 type Label string

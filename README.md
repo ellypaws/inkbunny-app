@@ -18,18 +18,18 @@
   <a href="https://github.com/ellypaws/inkbunny">
     <img alt="api github" src="https://img.shields.io/badge/github-inkbunny/api-007d9c?logo=github&logoColor=white">
   </a>
-  <a href="https://goreportcard.com/report/github.com/ellypaws/inkbunny-sd">
-    <img src="https://goreportcard.com/badge/github.com/ellypaws/inkbunny-sd" alt="Go Report Card" />
+  <a href="https://goreportcard.com/report/github.com/ellypaws/inkbunny-app">
+    <img src="https://goreportcard.com/badge/github.com/ellypaws/inkbunny-app" alt="Go Report Card" />
   </a>
   <br>
-  <a href="https://github.com/ellypaws/inkbunny-sd/graphs/contributors">
-    <img alt="Inkbunny ML contributors" src="https://img.shields.io/github/contributors/ellypaws/inkbunny-sd">
+  <a href="https://github.com/ellypaws/inkbunny-app/graphs/contributors">
+    <img alt="Inkbunny ML contributors" src="https://img.shields.io/github/contributors/ellypaws/inkbunny-app">
   </a>
-  <a href="https://github.com/ellypaws/inkbunny-sd/commits/main">
-    <img alt="Commit Activity" src="https://img.shields.io/github/commit-activity/m/ellypaws/inkbunny-sd">
+  <a href="https://github.com/ellypaws/inkbunny-app/commits/main">
+    <img alt="Commit Activity" src="https://img.shields.io/github/commit-activity/m/ellypaws/inkbunny-app">
   </a>
-  <a href="https://github.com/ellypaws/inkbunny-sd">
-    <img alt="GitHub Repo stars" src="https://img.shields.io/github/stars/ellypaws/inkbunny-sd?style=social">
+  <a href="https://github.com/ellypaws/inkbunny-app">
+    <img alt="GitHub Repo stars" src="https://img.shields.io/github/stars/ellypaws/inkbunny-app?style=social">
   </a>
 </p>
 

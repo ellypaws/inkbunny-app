@@ -122,7 +122,7 @@ func TestInferenceComplete(t *testing.T) {
 		return
 	}
 
-	searchResponse := searchAIGenerated(err, user)
+	searchResponse := searchAIGenerated(user)
 	if assert.NoError(t, err) {
 		assert.NotEmpty(t, searchResponse.Submissions)
 		assert.NotEmpty(t, searchResponse.Submissions[0].SubmissionID)
@@ -204,8 +204,8 @@ func TestInferenceComplete(t *testing.T) {
 	}
 }
 
-func searchAIGenerated(err error, user *api.Credentials) api.SubmissionSearchResponse {
-	searchResponse, err := user.SearchSubmissions(api.SubmissionSearchRequest{
+func searchAIGenerated(user *api.Credentials) api.SubmissionSearchResponse {
+	searchResponse, _ := user.SearchSubmissions(api.SubmissionSearchRequest{
 		SubmissionIDsOnly:  true,
 		SubmissionsPerPage: 1,
 		Page:               1,

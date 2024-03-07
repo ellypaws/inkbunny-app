@@ -76,7 +76,7 @@ export function CommandMenu({ ...props }: DialogProps) {
           <CommandEmpty>No results found.</CommandEmpty>
           <CommandGroup heading="Links">
             {docsConfig.mainNav
-              .filter((navitem) => !navitem.external)
+              .filter((navItem) => !navItem.external)
               .map((navItem) => (
                 <CommandItem
                   key={navItem.href}
@@ -92,7 +92,7 @@ export function CommandMenu({ ...props }: DialogProps) {
           </CommandGroup>
           {docsConfig.sidebarNav.map((group) => (
             <CommandGroup key={group.title} heading={group.title}>
-              {group.items.map((navItem) => (
+              {group.items.map((navItem: { href: any; title: any }) => (
                 <CommandItem
                   key={navItem.href}
                   value={navItem.title}

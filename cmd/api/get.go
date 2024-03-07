@@ -136,6 +136,7 @@ func GetInkbunnySearch(c echo.Context) error {
 			request.Text = string(app.Generated)
 			request.SubmissionsPerPage = 10
 			request.Random = api.Yes
+			request.Type = api.SubmissionTypePicturePinup
 		}
 	}
 
@@ -230,6 +231,8 @@ func mail(c echo.Context, user *api.Credentials, response api.SubmissionSearchRe
 				keywords = append(keywords, app.Label(keyword.KeywordName))
 			}
 		}
+
+		keywords = append(keywords, app.Label(submission.TypeName))
 
 		var files []app.File
 		for _, file := range submission.Files {

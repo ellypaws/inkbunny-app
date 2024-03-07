@@ -49,13 +49,22 @@ interface MailDisplayProps {
 import ReactHtmlParser from "react-html-parser";
 import DOMPurify from "dompurify";
 import {SkeletonCard} from "@/components/shadcn/skeleton.tsx";
-import {Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious} from "@/components/ui/carousel.tsx";
+import {
+  Carousel,
+  CarouselApi,
+  CarouselContent,
+  CarouselItem,
+  CarouselNext,
+  CarouselPrevious
+} from "@/components/ui/carousel.tsx";
 import {useEffect, useState} from "react";
 import {Card} from "@radix-ui/themes";
 import {CardContent} from "@/components/ui/card.tsx";
 import {ScrollArea} from "@/registry/new-york/ui/scroll-area";
 
 export function MailDisplay({ mail }: MailDisplayProps) {
+  const [api, setApi] = useState<CarouselApi | null>(null);
+  const [current, setCurrent] = useState(0);
   const [loadingImages, setLoadingImages] = useState<{ [key: number]: boolean }>({});
 
   useEffect(() => {
@@ -68,6 +77,14 @@ export function MailDisplay({ mail }: MailDisplayProps) {
       setLoadingImages(initialLoadingStates);
     }
   }, [mail]);
+
+  useEffect(() => {
+    if (!api) return;
+    setCurrent(api.selectedScrollSnap());
+    api.on('select', () => {
+      setCurrent(api.selectedScrollSnap());
+    });
+  }, [api]);
 
 
   const today = new Date()
@@ -276,7 +293,7 @@ export function MailDisplay({ mail }: MailDisplayProps) {
           <div className="flex-1 whitespace-pre-wrap p-4 text-sm">
             {mail && mail.files && mail.files.length > 0 ? (
                 <div className="flex-1">
-                  <Carousel className="w-full max-w-xs mx-auto">
+                  <Carousel className="w-full max-w-xs mx-auto" setApi={setApi}>
                     <CarouselContent>
                       {mail.files.map((file: FileItem, index: number) => (
                           <CarouselItem key={index}>
@@ -297,8 +314,8 @@ export function MailDisplay({ mail }: MailDisplayProps) {
                           </CarouselItem>
                       ))}
                     </CarouselContent>
-                    <CarouselNext />
-                    <CarouselPrevious />
+                    <CarouselPrevious variant={current === 0 ? "ghost" : "secondary"} />
+                    <CarouselNext variant={current === (mail.files.length - 1) ? "ghost" : "secondary"} />
                   </Carousel>
                 </div>
             ) : null}

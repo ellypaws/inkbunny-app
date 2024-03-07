@@ -25,6 +25,7 @@ type Mail struct {
 	Link         string  `json:"email"`
 	Title        string  `json:"subject"`
 	Description  string  `json:"text"`
+	Html         string  `json:"html,omitempty"`
 	Date         string  `json:"date"`
 	Read         bool    `json:"read"`
 	Labels       []Label `json:"labels"`
@@ -33,7 +34,7 @@ type Mail struct {
 type Label string
 
 func (l Label) MarshalJSON() ([]byte, error) {
-	return json.Marshal(strings.ReplaceAll(string(l), "_", " "))
+	return json.Marshal(l.SetSpace())
 }
 
 func (l *Label) UnmarshalJSON(data []byte) error {
@@ -41,7 +42,7 @@ func (l *Label) UnmarshalJSON(data []byte) error {
 	if err := json.Unmarshal(data, &v); err != nil {
 		return err
 	}
-	*l = Label(strings.ReplaceAll(v, " ", "_"))
+	*l = Label(l.SetUnderscore())
 	return nil
 }
 
@@ -56,3 +57,15 @@ const (
 	YiffyMix  Label = "yiffymix"
 	YiffyMix3 Label = "yiffymix3"
 )
+
+func (l Label) SetUnderscore() string {
+	return strings.ReplaceAll(string(l), " ", "_")
+}
+
+func (l Label) SetSpace() string {
+	return strings.ReplaceAll(string(l), "_", " ")
+}
+
+func (l Label) String() string {
+	return l.SetSpace()
+}

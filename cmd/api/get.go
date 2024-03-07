@@ -129,6 +129,7 @@ func GetInkbunnySearch(c echo.Context) error {
 			request.Text = text
 		} else {
 			request.Text = string(app.Generated)
+			request.SubmissionsPerPage = 10
 			request.Random = api.Yes
 		}
 	}
@@ -220,7 +221,7 @@ func mail(c echo.Context, user *api.Credentials, response api.SubmissionSearchRe
 	for _, submission := range details.Submissions {
 		var keywords []app.Label
 		for _, keyword := range submission.Keywords {
-			if slices.Contains(validLabels, app.Label(keyword.KeywordName)) {
+			if slices.Contains(validLabels, app.Label(strings.ReplaceAll(keyword.KeywordName, " ", "_"))) {
 				keywords = append(keywords, app.Label(keyword.KeywordName))
 			}
 		}
@@ -231,6 +232,7 @@ func mail(c echo.Context, user *api.Credentials, response api.SubmissionSearchRe
 			Link:         fmt.Sprintf("https://inkbunny.net/s/%s", submission.SubmissionID),
 			Title:        submission.Title,
 			Description:  submission.Description,
+			Html:         submission.DescriptionBBCodeParsed,
 			Date:         submission.CreateDateSystem,
 			Read:         false,
 			Labels:       keywords,

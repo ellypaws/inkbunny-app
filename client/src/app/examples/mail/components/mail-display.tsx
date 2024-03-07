@@ -46,8 +46,8 @@ import { MailItems } from "@/app/examples/mail/data"
 interface MailDisplayProps {
   mail: MailItems | null
 }
-
-
+import ReactHtmlParser from "react-html-parser";
+import DOMPurify from "dompurify";
 
 export function MailDisplay({ mail }: MailDisplayProps) {
   const today = new Date()
@@ -219,7 +219,7 @@ export function MailDisplay({ mail }: MailDisplayProps) {
           </div>
           <Separator />
           <div className="flex-1 whitespace-pre-wrap p-4 text-sm">
-            {mail.text}
+            {mail.html ? ReactHtmlParser(DOMPurify.sanitize(mail.html)) : mail.text}
           </div>
           <Separator className="mt-auto" />
           <div className="p-4">

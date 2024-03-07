@@ -64,15 +64,17 @@ export function MailDisplay({ mail }: MailDisplayProps) {
     }
   });
 
-// Sanitize HTML using custom policy and additional configurations
-  const sanitize = (html: string) => DOMPurify.sanitize(html, {
-    WHOLE_DOCUMENT: false,
-    KEEP_CONTENT: true,
-    FORCE_BODY: true,
-    USE_PROFILES: {html: true},
-    ALLOW_DATA_ATTR: true,
-    ...myCustomPolicy,
-  });
+  const sanitize = (html: string) => {
+    const htmlWithPrependedLinks = html.replace(/(href=["'])(?!https?:\/\/)([^"']+)/g, '$1https://inkbunny.net/$2');
+    return DOMPurify.sanitize(htmlWithPrependedLinks, {
+      WHOLE_DOCUMENT: false,
+      KEEP_CONTENT: true,
+      FORCE_BODY: true,
+      USE_PROFILES: { html: true },
+      ALLOW_DATA_ATTR: true,
+      ...myCustomPolicy,
+    });
+  };
 
   return (
     <div className="flex h-full flex-col">

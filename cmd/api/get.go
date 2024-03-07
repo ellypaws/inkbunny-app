@@ -1,10 +1,14 @@
 package main
 
 import (
+	"fmt"
+	"github.com/ellypaws/inkbunny-app/cmd/app"
 	"github.com/ellypaws/inkbunny-app/cmd/crashy"
 	"github.com/ellypaws/inkbunny/api"
 	"github.com/labstack/echo/v4"
 	"net/http"
+	"slices"
+	"strings"
 )
 
 var getRoutes = map[string]func(c echo.Context) error{
@@ -96,7 +100,7 @@ func GetInkbunnySubmission(c echo.Context) error {
 	var request api.SubmissionDetailsRequest
 	err := c.Bind(&request)
 	if err != nil {
-		return err
+		return c.JSON(http.StatusBadRequest, crashy.Wrap(err))
 	}
 
 	details, err := api.Credentials{Sid: request.SID}.SubmissionDetails(request)
@@ -117,10 +121,36 @@ func GetInkbunnySearch(c echo.Context) error {
 	var request api.SubmissionSearchRequest
 	err := c.Bind(&request)
 	if err != nil {
-		return err
+		return c.JSON(http.StatusBadRequest, crashy.Wrap(err))
 	}
 
-	searchResponse, err := api.Credentials{Sid: request.SID}.SearchSubmissions(request)
+	if request.Text == "" {
+		if text := c.QueryParam("text"); text != "" {
+			request.Text = text
+		} else {
+			request.Text = string(app.Generated)
+			request.Random = api.Yes
+		}
+	}
+
+	user := &api.Credentials{Sid: request.SID}
+
+	if user.Sid == "" {
+		if sid := c.QueryParams().Get("sid"); sid != "" {
+			user.Sid = sid
+		}
+	}
+
+	if user.Sid == "guest" {
+		user, err = api.Guest().Login()
+		if err != nil {
+			return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
+		}
+		defer logoutGuest(c, user)
+	}
+
+	request.SID = user.Sid
+	searchResponse, err := user.SearchSubmissions(request)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
 	}
@@ -128,5 +158,83 @@ func GetInkbunnySearch(c echo.Context) error {
 		return c.JSON(http.StatusNotFound, crashy.ErrorResponse{Error: "no submissions found"})
 	}
 
+	if output := c.QueryParam("output"); output != "" {
+		switch output {
+		case "json":
+			return c.JSON(http.StatusOK, searchResponse)
+		case "xml":
+			return c.XML(http.StatusOK, searchResponse)
+		case "mail":
+			return mail(c, user, searchResponse)
+		default:
+			return c.JSON(http.StatusBadRequest, crashy.ErrorResponse{Error: "invalid output format"})
+		}
+	}
+
 	return c.JSON(http.StatusOK, searchResponse)
+}
+
+func logoutGuest(c echo.Context, user *api.Credentials) {
+	if user == nil {
+		return
+	}
+	if user.Username == "guest" {
+		err := user.Logout()
+		if err != nil {
+			c.Logger().Errorf("error logging out guest: %v", err)
+		} else {
+			c.Logger().Info("logged out guest")
+		}
+	}
+}
+
+func mail(c echo.Context, user *api.Credentials, response api.SubmissionSearchResponse) error {
+	if user == nil {
+		return c.JSON(http.StatusBadRequest, crashy.ErrorResponse{Error: "missing user"})
+	}
+
+	submissionIDs := make([]string, len(response.Submissions))
+	for i, s := range response.Submissions {
+		submissionIDs[i] = s.SubmissionID
+	}
+
+	details, err := user.SubmissionDetails(api.SubmissionDetailsRequest{
+		SID:                         user.Sid,
+		SubmissionIDs:               strings.Join(submissionIDs, ","),
+		ShowDescription:             api.Yes,
+		ShowDescriptionBbcodeParsed: api.Yes,
+	})
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
+	}
+
+	var validLabels = []app.Label{
+		app.Generated,
+		app.Assisted,
+		app.StableDiffusion,
+		app.YiffyMix,
+		app.YiffyMix3,
+	}
+
+	var mails app.Mails
+	for _, submission := range details.Submissions {
+		var keywords []app.Label
+		for _, keyword := range submission.Keywords {
+			if slices.Contains(validLabels, app.Label(keyword.KeywordName)) {
+				keywords = append(keywords, app.Label(keyword.KeywordName))
+			}
+		}
+
+		mails = append(mails, app.Mail{
+			SubmissionID: submission.SubmissionID,
+			Username:     submission.Username,
+			Link:         fmt.Sprintf("https://inkbunny.net/s/%s", submission.SubmissionID),
+			Title:        submission.Title,
+			Description:  submission.Description,
+			Date:         submission.CreateDateSystem,
+			Read:         false,
+			Labels:       keywords,
+		})
+	}
+	return c.JSON(http.StatusOK, mails)
 }

@@ -391,7 +391,8 @@ export function MailDisplay({ mail }: MailDisplayProps) {
                 <div className="font-semibold">{mail.name}</div>
                 <div className="line-clamp-1 text-xs">{mail.subject}</div>
                 <div className="line-clamp-1 text-xs">
-                  <a href={mail.email}>{mail.email}</a>
+                  <a href={mail.email} target="_blank" rel="noreferrer">
+                    {mail.email}</a>
                 </div>
               </div>
             </div>

@@ -433,7 +433,7 @@ export function MailDisplay({ mail }: MailDisplayProps) {
                   </Carousel>
                 </div>
             ) : null}
-              {mail.html ? ReactHtmlParser(sanitize(mail.html)) : mail.text}
+              {mail.html ? ReactHtmlParser(mail.html) : mail.text}
           </div>
 
           <Separator className="mt-auto" />

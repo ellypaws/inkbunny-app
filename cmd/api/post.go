@@ -195,6 +195,10 @@ func prefill(c echo.Context) error {
 		return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
 	}
 
+	if output := c.QueryParams().Get("output"); output == "json" {
+		return c.JSON(http.StatusOK, request)
+	}
+
 	system, err := llm.PrefillSystemDump(request)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))

@@ -66,6 +66,40 @@ export function MailDisplay({ mail }: MailDisplayProps) {
   const [api, setApi] = useState<CarouselApi | null>(null);
   const [current, setCurrent] = useState(0);
   const [loadingImages, setLoadingImages] = useState<{ [key: number]: boolean }>({});
+  const [textareaContent, setTextareaContent] = useState('');
+  const [loadingPrefill, setLoadingPrefill] = useState(false);
+
+  useEffect(() => {
+    async function prefillTextarea() {
+      if (mail && mail.text) {
+        setLoadingPrefill(true);
+        try {
+          const response = await fetch(`/api/prefill?output=json`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ description: mail.text }),
+          });
+
+          if (!response.ok) {
+            throw new Error('Network response was not ok');
+          }
+
+          const data = await response.json();
+
+          setTextareaContent(JSON.stringify(data, null, 2));
+        } catch (error) {
+          console.error('Error prefilling the textarea:', error);
+          setTextareaContent(mail.text); // Fallback to original mail text on error
+        } finally {
+          setLoadingPrefill(false);
+        }
+      }
+    }
+
+    prefillTextarea().then(r => r);
+  }, [mail]);
 
   useEffect(() => {
     if (mail && mail.files) {
@@ -337,6 +371,9 @@ export function MailDisplay({ mail }: MailDisplayProps) {
                 <Textarea
                   className="p-4"
                   placeholder={`Reply ${mail.name}...`}
+                  value={loadingPrefill ? 'Loading...' : textareaContent}
+                  onChange={(e) => setTextareaContent(e.target.value)}
+                  disabled={loadingPrefill}
                 />
                 <div className="flex items-center">
                   <Label

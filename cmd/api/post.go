@@ -8,6 +8,7 @@ import (
 	"github.com/ellypaws/inkbunny/api"
 	"github.com/go-errors/errors"
 	"github.com/labstack/echo/v4"
+	"github.com/labstack/gommon/log"
 	"net/http"
 )
 
@@ -59,6 +60,10 @@ func inference(c echo.Context) error {
 	}
 	config := llmRequest.Config
 
+	if localhost := c.QueryParam("localhost"); localhost == "true" {
+		config = llm.Localhost()
+	}
+
 	if config.Endpoint.String() == "" {
 		return c.JSON(http.StatusBadRequest, crashy.ErrorResponse{Error: "config is required"})
 	}
@@ -74,6 +79,19 @@ func inference(c echo.Context) error {
 		return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
 	}
 
+	if output := c.QueryParams().Get("output"); output == "json" {
+		message := utils.ExtractJson([]byte(response.Choices[0].Message.Content))
+		textToImage, err := entities.UnmarshalTextToImageRequest(message)
+		if err != nil {
+			return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
+		}
+		if textToImage.Prompt == "" {
+			return c.JSON(http.StatusNotFound, crashy.ErrorResponse{Error: "prompt is empty"})
+		}
+
+		return c.JSON(http.StatusOK, textToImage)
+	}
+
 	return c.JSON(http.StatusOK, response)
 }
 
@@ -83,6 +101,10 @@ func stable(c echo.Context) error {
 		return err
 	}
 	config := subRequest.Config
+
+	if localhost := c.QueryParam("localhost"); localhost == "true" {
+		config = llm.Localhost()
+	}
 
 	if config.Endpoint.String() == "" {
 		return c.JSON(http.StatusBadRequest, crashy.ErrorResponse{Error: "config is required"})
@@ -204,5 +226,23 @@ func prefill(c echo.Context) error {
 		return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
 	}
 
-	return c.JSON(http.StatusOK, system)
+	if output := c.QueryParams().Get("output"); output != "complete" {
+		return c.JSON(http.StatusOK, system)
+	}
+
+	var messages []llm.Message
+	if system.Content != "" {
+		messages = append(messages, system)
+	} else {
+		return c.JSON(http.StatusNotFound, crashy.ErrorResponse{Error: "system message is empty"})
+	}
+
+	messages = append(messages, llm.UserMessage(request.Prompt))
+	return c.JSON(http.StatusOK, llm.Request{
+		Messages:      messages,
+		Temperature:   1.0,
+		MaxTokens:     1024,
+		Stream:        false,
+		StreamChannel: nil,
+	})
 }

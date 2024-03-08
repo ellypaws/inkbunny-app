@@ -61,6 +61,26 @@ import {useEffect, useState} from "react";
 import {Card} from "@radix-ui/themes";
 import {CardContent} from "@/components/ui/card.tsx";
 import {ScrollArea} from "@/registry/new-york/ui/scroll-area";
+import {ShowProcessedOutputDialog} from "@/components/shadcn/dialog.tsx";
+import {MultiStepLoaderDemo} from "@/components/aceternity/loader.tsx";
+
+interface Message {
+  role: 'user' | 'system'; // Adjust the Role type according to your project's definitions
+  content: string;
+}
+
+interface LLMRequest {
+  messages: Message[];
+  temperature: number;
+  max_tokens: number;
+  stream: boolean;
+  // StreamChannel is omitted since it's not serializable and not relevant for the client-side request
+}
+
+interface InferenceRequest {
+  config: {}; // Leave blank as instructed
+  request: LLMRequest; // This will be filled with the response from /api/prefill
+}
 
 export function MailDisplay({ mail }: MailDisplayProps) {
   const [api, setApi] = useState<CarouselApi | null>(null);
@@ -68,6 +88,67 @@ export function MailDisplay({ mail }: MailDisplayProps) {
   const [loadingImages, setLoadingImages] = useState<{ [key: number]: boolean }>({});
   const [textareaContent, setTextareaContent] = useState('');
   const [loadingPrefill, setLoadingPrefill] = useState(false);
+  const [inferenceResponse, setInferenceResponse] = useState<any>(null);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [processedOutput, setProcessedOutput] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [llmStep, setLLMStep] = useState(0);
+
+  const handleSendClick = async (event: React.MouseEvent<HTMLButtonElement>) => {
+    event.preventDefault(); // Prevent the default form submission behavior
+    setLoading(true);
+    setLLMStep(0);
+
+    if (!mail || !mail.text) return;
+
+    // First, POST to /api/prefill
+    try {
+      const prefillResponse = await fetch('/api/prefill?output=complete', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ description: mail.text }),
+      });
+      setLLMStep(1);
+
+      if (!prefillResponse.ok) {
+        const errorData = await prefillResponse.json(); // Assuming the API returns error details in JSON
+        throw new Error(errorData.message || 'Failed to prefill'); // Use the message from the API or a generic one
+      }
+      setLLMStep(2);
+
+      const prefillData = await prefillResponse.json();
+
+      console.log("prefillData", prefillData)
+
+      setLLMStep(3);
+      // Then, use prefillData to POST to /api/llm
+      const llmResponse = await fetch('/api/llm?localhost=true', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ request: prefillData }),
+      });
+
+      if (!llmResponse.ok) {
+        const errorData = await llmResponse.json(); // Assuming the API returns error details in JSON
+        throw new Error(errorData.message || 'Failed to process with LLM'); // Use the message from the API or a generic one
+      }
+
+      setLLMStep(4);
+      const llmData = await llmResponse.json();
+      setProcessedOutput(JSON.stringify(llmData, null, 2));
+      setIsDialogOpen(true);
+      setLoading(false);
+
+    } catch (error) {
+      console.error("Error during processing:", error.message); // Log the error message
+      // Optionally, update the UI to reflect the error state
+    }
+  };
+
 
   useEffect(() => {
     async function prefillTextarea() {
@@ -384,12 +465,16 @@ export function MailDisplay({ mail }: MailDisplayProps) {
                     thread
                   </Label>
                   <Button
-                    onClick={(e) => e.preventDefault()}
+                    onClick={handleSendClick}
                     size="sm"
                     className="ml-auto"
                   >
                     Send
                   </Button>
+
+                  {isDialogOpen && (
+                      <ShowProcessedOutputDialog processedOutput={processedOutput} />
+                  )}
                 </div>
               </div>
             </form>
@@ -401,6 +486,8 @@ export function MailDisplay({ mail }: MailDisplayProps) {
           No message selected
         </div>
       )}
+
+      <MultiStepLoaderDemo loading={loading} setLoading={setLoading} llmStep={llmStep} />
     </div>
   )
 }

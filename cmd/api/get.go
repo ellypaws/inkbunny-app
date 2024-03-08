@@ -143,7 +143,7 @@ func GetInkbunnySearch(c echo.Context) error {
 	user := &api.Credentials{Sid: request.SID}
 
 	if user.Sid == "" {
-		if sid := c.QueryParams().Get("sid"); sid != "" {
+		if sid := c.QueryParam("sid"); sid != "" {
 			user.Sid = sid
 		}
 	}

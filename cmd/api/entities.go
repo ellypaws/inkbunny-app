@@ -18,7 +18,8 @@ type InferenceRequest struct {
 type InferenceSubmissionRequest struct {
 	Config       llm.Config      `json:"config"`
 	User         api.Credentials `json:"user"`
-	SubmissionID string          `json:"submission_id"`
+	SubmissionID string          `json:"submission_id,omitempty"`
+	Request      *llm.Request    `json:"request,omitempty"`
 }
 
 type DescriptionRequest struct {

@@ -8,7 +8,6 @@ import (
 	"github.com/ellypaws/inkbunny/api"
 	"github.com/go-errors/errors"
 	"github.com/labstack/echo/v4"
-	"github.com/labstack/gommon/log"
 	"net/http"
 )
 
@@ -88,7 +87,9 @@ func inference(c echo.Context) error {
 		if textToImage.Prompt == "" {
 			return c.JSON(http.StatusNotFound, crashy.ErrorResponse{Error: "prompt is empty"})
 		}
-
+		if desc, ok := textToImage.Comments["description"]; ok && desc == "<|description|>" {
+			textToImage.Comments["description"] = request.Messages[1].Content
+		}
 		return c.JSON(http.StatusOK, textToImage)
 	}
 

@@ -10,9 +10,11 @@ export default function MailPage() {
     const [loading, setLoading] = useState(false)
 
     useEffect(() => {
-        // does things
         setLoading(true)
-        fetch('/api/inkbunny/search?sid=guest&output=mail&temp=yes')
+        const urlParams = new URLSearchParams(window.location.search);
+        const temp = urlParams.get('temp') || 'no'
+
+        fetch(`/api/inkbunny/search?sid=guest&output=mail&temp=${temp}`)
             .then(r => r.json())
             .then(data => {
                 console.log('GetMailResponse', data)
@@ -27,14 +29,14 @@ export default function MailPage() {
     <>
       <div className="md:hidden">
         <img
-          src="/examples/mail-dark.png"
+          // src="/examples/mail-dark.png"
           width={1280}
           height={727}
           alt="Mail"
           className="hidden dark:block"
         />
         <img
-          src="/examples/mail-light.png"
+          // src="/examples/mail-light.png"
           width={1280}
           height={727}
           alt="Mail"

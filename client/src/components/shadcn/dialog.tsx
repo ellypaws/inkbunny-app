@@ -15,11 +15,11 @@ import {
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea"
 
-export function ShowProcessedOutputDialog({ processedOutput }: { processedOutput: string }) {
+export function ShowProcessedOutputDialog({ hasJson }: { hasJson: string | undefined }) {
     const [copySuccess, setCopySuccess] = useState('');
 
     const copyToClipboard = () => {
-        navigator.clipboard.writeText(processedOutput).then(() => {
+        navigator.clipboard.writeText(hasJson ? hasJson : '').then(() => {
             setCopySuccess('Copied!');
             setTimeout(() => setCopySuccess(''), 2000); // Reset copy success message after 2 seconds
         }, (err) => {
@@ -46,7 +46,7 @@ export function ShowProcessedOutputDialog({ processedOutput }: { processedOutput
                         </Label>
                         <Textarea
                             id="processedOutput"
-                            defaultValue={processedOutput}
+                            defaultValue={hasJson ? hasJson : ''}
                             readOnly
                             className={"h-80 overscroll-auto max-h[250px]"}
                             placeholder="Type your message here."

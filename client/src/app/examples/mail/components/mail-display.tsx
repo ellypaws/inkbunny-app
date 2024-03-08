@@ -64,33 +64,14 @@ import {ScrollArea} from "@/registry/new-york/ui/scroll-area";
 import {ShowProcessedOutputDialog} from "@/components/shadcn/dialog.tsx";
 import {MultiStepLoaderDemo} from "@/components/aceternity/loader.tsx";
 
-interface Message {
-  role: 'user' | 'system'; // Adjust the Role type according to your project's definitions
-  content: string;
-}
-
-interface LLMRequest {
-  messages: Message[];
-  temperature: number;
-  max_tokens: number;
-  stream: boolean;
-  // StreamChannel is omitted since it's not serializable and not relevant for the client-side request
-}
-
-interface InferenceRequest {
-  config: {}; // Leave blank as instructed
-  request: LLMRequest; // This will be filled with the response from /api/prefill
-}
-
 export function MailDisplay({ mail }: MailDisplayProps) {
   const [api, setApi] = useState<CarouselApi | null>(null);
   const [current, setCurrent] = useState(0);
   const [loadingImages, setLoadingImages] = useState<{ [key: number]: boolean }>({});
   const [textareaContent, setTextareaContent] = useState('');
   const [loadingPrefill, setLoadingPrefill] = useState(false);
-  const [inferenceResponse, setInferenceResponse] = useState<any>(null);
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [processedOutput, setProcessedOutput] = useState("");
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [mailJsons, setMailJsons] = useState<{ [key: string]: string }>({});
   const [loading, setLoading] = useState(false);
   const [llmStep, setLLMStep] = useState(0);
 
@@ -100,6 +81,7 @@ export function MailDisplay({ mail }: MailDisplayProps) {
     setLLMStep(0);
 
     if (!mail || !mail.text) return;
+    setDialogOpen(!mailJsons[mail.id]);
 
     // First, POST to /api/prefill
     try {
@@ -124,7 +106,7 @@ export function MailDisplay({ mail }: MailDisplayProps) {
 
       setLLMStep(3);
       // Then, use prefillData to POST to /api/llm
-      const llmResponse = await fetch('/api/llm?localhost=true', {
+      const llmResponse = await fetch('/api/llm?localhost=true&output=json', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -133,19 +115,27 @@ export function MailDisplay({ mail }: MailDisplayProps) {
       });
 
       if (!llmResponse.ok) {
-        const errorData = await llmResponse.json(); // Assuming the API returns error details in JSON
-        throw new Error(errorData.message || 'Failed to process with LLM'); // Use the message from the API or a generic one
+        const errorData = await llmResponse.json();
+        throw new Error(errorData.message || 'Failed to process with LLM');
       }
 
       setLLMStep(4);
       const llmData = await llmResponse.json();
-      setProcessedOutput(JSON.stringify(llmData, null, 2));
-      setIsDialogOpen(true);
+      setMailJsons(prev => ({ ...prev, [mail.id]: JSON.stringify(llmData, null, 2) }));
+
+      console.log("llmData", llmData)
+
+      setDialogOpen(false);
+      setDialogOpen(true);
+
+      await new Promise(resolve => setTimeout(resolve, 1500));
       setLoading(false);
 
     } catch (error) {
-      console.error("Error during processing:", error.message); // Log the error message
-      // Optionally, update the UI to reflect the error state
+      console.error("Error during processing:", error);
+      setLLMStep(-1);
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      setLoading(false);
     }
   };
 
@@ -472,8 +462,9 @@ export function MailDisplay({ mail }: MailDisplayProps) {
                     Send
                   </Button>
 
-                  {isDialogOpen && (
-                      <ShowProcessedOutputDialog processedOutput={processedOutput} />
+                  {/*check if mailJsons[mail.id] is defined*/}
+                  { dialogOpen && (
+                      <ShowProcessedOutputDialog hasJson={mailJsons[mail.id]} />
                   )}
                 </div>
               </div>

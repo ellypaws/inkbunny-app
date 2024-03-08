@@ -33,7 +33,7 @@ interface SettingsLayoutProps {
 export default function SettingsLayout({ children }: SettingsLayoutProps) {
   return (
     <>
-      <div className="md:hidden">
+      <div className="">
         <img
           src="/examples/forms-light.png"
           width={1280}

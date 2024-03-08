@@ -24,7 +24,7 @@ import { UserNav } from "@/app/examples/dashboard/components/user-nav"
 export default function DashboardPage() {
   return (
     <>
-      <div className="md:hidden">
+      <div className="">
         <img
           src="/examples/dashboard-light.png"
           width={1280}

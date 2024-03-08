@@ -22,7 +22,7 @@ export default function ExamplesLayout({ children }: ExamplesLayoutProps) {
           <PageHeaderHeading className="hidden md:block">
             Check out some examples
           </PageHeaderHeading>
-          <PageHeaderHeading className="md:hidden">Examples</PageHeaderHeading>
+          <PageHeaderHeading className="">Examples</PageHeaderHeading>
           <PageHeaderDescription>
             Dashboard, cards, authentication. Some examples built using the
             components. Use this as a guide to build your own.

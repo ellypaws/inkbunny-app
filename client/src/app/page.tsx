@@ -37,7 +37,7 @@ export default function IndexPage() {
         </PageActions>
       </PageHeader>
       {/*<ExamplesNav className="[&>a:first-child]:text-primary" />*/}
-      <section className="hidden md:block">
+      <section className="md:block">
         <div className="rounded-lg border bg-background shadow-lg">
           <MailPage />
         </div>

@@ -66,7 +66,7 @@ export function Mail({
                        accounts,
                        mails,
                        defaultLayout = [265, 440, 655],
-                       defaultCollapsed = false,
+                       defaultCollapsed = true,
                        navCollapsedSize,
                        loading
                      }: MailProps) {

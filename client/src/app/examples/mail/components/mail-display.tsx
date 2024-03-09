@@ -60,9 +60,11 @@ import {
 import {useEffect, useState} from "react";
 import {Card} from "@radix-ui/themes";
 import {CardContent} from "@/components/ui/card.tsx";
-import {ScrollArea} from "@/registry/new-york/ui/scroll-area";
+import {ScrollArea} from "@/components/ui/scroll-area";
 import {ShowProcessedOutputDialog} from "@/components/shadcn/dialog.tsx";
 import {MultiStepLoaderDemo} from "@/components/aceternity/loader.tsx";
+import {Highlighter} from "@lobehub/ui";
+import {Chat} from "@/components/lobehub/ChatItem.tsx";
 
 export function MailDisplay({ mail }: MailDisplayProps) {
   const [api, setApi] = useState<CarouselApi | null>(null);
@@ -121,14 +123,14 @@ export function MailDisplay({ mail }: MailDisplayProps) {
 
       setLLMStep(4);
       const llmData = await llmResponse.json();
+      setDialogOpen(true);
+
       setMailJsons(prev => ({ ...prev, [mail.id]: JSON.stringify(llmData, null, 2) }));
 
       console.log("llmData", llmData)
 
-      setDialogOpen(false);
-      setDialogOpen(true);
-
       await new Promise(resolve => setTimeout(resolve, 1500));
+      setDialogOpen(false);
       setLoading(false);
 
     } catch (error) {
@@ -403,7 +405,7 @@ export function MailDisplay({ mail }: MailDisplayProps) {
             )}
           </div>
           <Separator />
-            <ScrollArea className="h-screen">
+            <ScrollArea className="h-[calc(100vh-25vh)]">
           <div className="flex-1 whitespace-pre-wrap p-4 text-sm">
             {mail && mail.files && mail.files.length > 0 ? (
                 <div className="flex-1">
@@ -440,32 +442,45 @@ export function MailDisplay({ mail }: MailDisplayProps) {
           <div className="p-4">
             <form>
               <div className="grid gap-4">
-                <Textarea
-                  className="p-4"
-                  placeholder={`Reply ${mail.name}...`}
-                  value={loadingPrefill ? 'Loading...' : textareaContent}
-                  onChange={(e) => setTextareaContent(e.target.value)}
-                  disabled={loadingPrefill}
+                {/*<Textarea*/}
+                {/*  className="p-4"*/}
+                {/*  placeholder={`Reply ${mail.name}...`}*/}
+                {/*  value={loadingPrefill ? 'Loading...' : textareaContent}*/}
+                {/*  onChange={(e) => setTextareaContent(e.target.value)}*/}
+                {/*  disabled={loadingPrefill}*/}
+                {/*/>*/}
+                <Highlighter fullFeatured
+                             children={textareaContent}
+                             copyable
+                             language={'json'}
+                             type={'block'}
+                             className={""}
                 />
+                { mailJsons[mail.id] && (
+                    <Chat
+                        value={textareaContent}
+                    />
+                )}
                 <div className="flex items-center">
                   <Label
                     htmlFor="mute"
                     className="flex items-center gap-2 text-xs font-normal"
                   >
-                    <Switch id="mute" aria-label="Mute thread" /> Mute this
-                    thread
+                    <Switch id="mute" aria-label="Mute thread" defaultChecked /> Use localhost
                   </Label>
                   <Button
                     onClick={handleSendClick}
                     size="sm"
                     className="ml-auto"
                   >
-                    Send
+                    Inference
                   </Button>
 
-                  {/*check if mailJsons[mail.id] is defined*/}
-                  { dialogOpen && (
-                      <ShowProcessedOutputDialog hasJson={mailJsons[mail.id]} />
+                  {/*check if mailJsons[mail.id] is defined OR dialogOpen is true */}
+                  { mailJsons[mail.id] && (
+                      <div className={"pl-2"}>
+                      <ShowProcessedOutputDialog defaultOpen={dialogOpen} hasJson={mailJsons[mail.id]} />
+                      </div>
                   )}
                 </div>
               </div>

@@ -3,8 +3,8 @@ import { accounts } from "@/app/examples/mail/data"
 import {useEffect, useState} from "react";
 
 export default function MailPage() {
-  const layout = { value: "[]" }
-  const collapsed = { value: "[]" }
+  const layout = { value: "[4, 440, 655]" }
+  const collapsed = { value: "[true]" }
 
     const [mails, setMails] = useState([])
     const [loading, setLoading] = useState(false)

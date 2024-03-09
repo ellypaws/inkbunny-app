@@ -15,7 +15,7 @@ import {
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea"
 
-export function ShowProcessedOutputDialog({ hasJson }: { hasJson: string | undefined }) {
+export function ShowProcessedOutputDialog({ defaultOpen, hasJson }: { defaultOpen?: boolean, hasJson: string | undefined }) {
     const [copySuccess, setCopySuccess] = useState('');
 
     const copyToClipboard = () => {
@@ -28,9 +28,9 @@ export function ShowProcessedOutputDialog({ hasJson }: { hasJson: string | undef
     };
 
     return (
-        <Dialog defaultOpen={true}>
+        <Dialog defaultOpen={defaultOpen}>
             <DialogTrigger asChild data-state={"open"}>
-                <Button variant="outline">Show output</Button>
+                <Button size="sm" variant="outline">Show output</Button>
             </DialogTrigger>
             <DialogContent className="sm:max-w-md">
                 <DialogHeader>
@@ -49,7 +49,7 @@ export function ShowProcessedOutputDialog({ hasJson }: { hasJson: string | undef
                             defaultValue={hasJson ? hasJson : ''}
                             readOnly
                             className={"h-80 overscroll-auto max-h[250px]"}
-                            placeholder="Type your message here."
+                            placeholder="Finished TextToImage JSON will be filled here."
                         />
                     </div>
                     <Button onClick={copyToClipboard} size="sm" className="px-3">

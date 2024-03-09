@@ -11,6 +11,7 @@ import {
 import { avatar } from './data';
 
 interface FunctionProps {
+    value?: string;
     useLevaStore?: boolean;
 }
 
@@ -29,7 +30,7 @@ const demoError = {
     ],
 };
 
-const MyComponent: React.FC<FunctionProps> = ({ useLevaStore = true }) => {
+export const Chat: React.FC<FunctionProps> = ({ useLevaStore = false, value = demoError }) => {
     let control: ChatItemProps['error'] | any;
     let store;
 
@@ -55,18 +56,16 @@ const MyComponent: React.FC<FunctionProps> = ({ useLevaStore = true }) => {
     }
 
     return (
-        <StoryBook levaStore={useLevaStore ? store : undefined}>
             <ChatItem
                 avatar={avatar}
                 error={control}
                 errorMessage={
                     <Highlighter copyButtonSize={'small'} language={'json'} type={'pure'}>
-                        {JSON.stringify(demoError, null, 2)}
+                        {JSON.stringify(value ? value : demoError, null, 2)}
                     </Highlighter>
                 }
             />
-        </StoryBook>
     );
 };
 
-export default MyComponent;
+export default Chat;

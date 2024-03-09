@@ -62,10 +62,166 @@ function Loader() {
   </div>
 }
 
+function LeftNav(props: {
+    defaultLayout: number[] | undefined,
+    collapsedSize: number,
+    onCollapse: (collapsed) => void,
+    collapsed: boolean | undefined,
+    accounts: { label: string; email: string; icon: React.ReactNode }[]
+}) {
+    return <>
+        <ResizablePanel
+            defaultSize={props.defaultLayout[0]}
+            collapsedSize={props.collapsedSize}
+            collapsible={true}
+            minSize={15}
+            maxSize={20}
+            onCollapse={props.onCollapse}
+            className={cn(props.collapsed && "min-w-[50px] transition-all duration-300 ease-in-out")}
+        >
+            <div className={cn("flex h-[52px] items-center justify-center", props.collapsed ? "h-[52px]" : "px-2")}>
+                <AccountSwitcher isCollapsed={props.collapsed} accounts={props.accounts}/>
+            </div>
+            <Separator/>
+            <Nav
+                isCollapsed={props.collapsed}
+                links={[
+                    {
+                        title: "Inbox",
+                        label: "128",
+                        icon: Inbox,
+                        variant: "default",
+                    },
+                    {
+                        title: "Drafts",
+                        label: "9",
+                        icon: File,
+                        variant: "ghost",
+                    },
+                    {
+                        title: "Sent",
+                        label: "",
+                        icon: Send,
+                        variant: "ghost",
+                    },
+                    {
+                        title: "Junk",
+                        label: "23",
+                        icon: Archive,
+                        variant: "ghost",
+                    },
+                    {
+                        title: "Trash",
+                        label: "",
+                        icon: Trash2,
+                        variant: "ghost",
+                    },
+                    {
+                        title: "Archive",
+                        label: "",
+                        icon: Archive,
+                        variant: "ghost",
+                    },
+                ]}
+            />
+            <Separator/>
+            <Nav
+                isCollapsed={props.collapsed}
+                links={[
+                    {
+                        title: "Social",
+                        label: "972",
+                        icon: Users2,
+                        variant: "ghost",
+                    },
+                    {
+                        title: "Updates",
+                        label: "342",
+                        icon: AlertCircle,
+                        variant: "ghost",
+                    },
+                    {
+                        title: "Forums",
+                        label: "128",
+                        icon: MessagesSquare,
+                        variant: "ghost",
+                    },
+                    {
+                        title: "Shopping",
+                        label: "8",
+                        icon: ShoppingCart,
+                        variant: "ghost",
+                    },
+                    {
+                        title: "Promotions",
+                        label: "21",
+                        icon: Archive,
+                        variant: "ghost",
+                    },
+                ]}
+            />
+        </ResizablePanel>
+        <ResizableHandle withHandle/>
+    </>;
+}
+
+function MiddleList(props: {
+    defaultLayout: number[] | undefined,
+    loading: boolean,
+    items: MailItems,
+    items1: MailItem[]
+}) {
+    return <>
+        <ResizablePanel defaultSize={props.defaultLayout[1]} minSize={30}>
+            <Tabs defaultValue="all">
+                <div className="flex items-center px-4 py-2">
+                    <h1 className="text-xl font-bold">Inbox</h1>
+                    <TabsList className="ml-auto">
+                        <TabsTrigger value="all" className="text-zinc-600 dark:text-zinc-200">All
+                            mail</TabsTrigger>
+                        <TabsTrigger value="unread"
+                                     className="text-zinc-600 dark:text-zinc-200">Unread</TabsTrigger>
+                    </TabsList>
+                </div>
+                <Separator/>
+                <div className="bg-background/95 p-4 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+                    <form>
+                        <div className="relative">
+                            <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground"/>
+                            <Input placeholder="Search" className="pl-8"/>
+                        </div>
+                    </form>
+                </div>
+                {
+                    props.loading ? <Loader/> :
+                        <>
+                            <TabsContent value="all" className="m-0">
+                                <MailList items={props.items}/>
+                            </TabsContent>
+                            <TabsContent value="unread" className="m-0">
+                                <MailList items={props.items1}/>
+                            </TabsContent>
+                        </>
+                }
+            </Tabs>
+
+        </ResizablePanel>
+        <ResizableHandle withHandle/>
+    </>;
+}
+
+function RightMail(props: { defaultLayout: number[] | undefined, mailItem: MailItem | undefined }) {
+    return <ResizablePanel defaultSize={props.defaultLayout[2]}>
+        <MailDisplay
+            mail={props.mailItem || null}
+        />
+    </ResizablePanel>;
+}
+
 export function Mail({
                        accounts,
                        mails,
-                       defaultLayout = [265, 440, 655],
+                       defaultLayout = [0, 440, 655],
                        defaultCollapsed = true,
                        navCollapsedSize,
                        loading
@@ -75,151 +231,25 @@ export function Mail({
 
   return (
       <TooltipProvider delayDuration={0}>
-        <ResizablePanelGroup
-            direction="horizontal"
-            onLayout={(sizes: number[]) => {
-              document.cookie = `react-resizable-panels:layout=${JSON.stringify(
-                  sizes
-              )}`
-            }}
-            className="h-screen items-stretch"
-        >
-          <ResizablePanel
-              defaultSize={defaultLayout[0]}
-              collapsedSize={navCollapsedSize}
-              collapsible={true}
-              minSize={15}
-              maxSize={20}
-              onCollapse={(collapsed) => {
-                setIsCollapsed(collapsed)
-                document.cookie = `react-resizable-panels:collapsed=${JSON.stringify(
-                    collapsed
-                )}`
+          <ResizablePanelGroup
+              direction="horizontal"
+              onLayout={(sizes: number[]) => {
+                  document.cookie = `react-resizable-panels:layout=${JSON.stringify(
+                      sizes
+                  )}`
               }}
-              className={cn(isCollapsed && "min-w-[50px] transition-all duration-300 ease-in-out")}
+              className="items-stretch"
           >
-            <div className={cn("flex h-[52px] items-center justify-center", isCollapsed ? 'h-[52px]' : 'px-2')}>
-              <AccountSwitcher isCollapsed={isCollapsed} accounts={accounts}/>
-            </div>
-            <Separator/>
-            <Nav
-            isCollapsed={isCollapsed}
-            links={[
-              {
-                title: "Inbox",
-                label: "128",
-                icon: Inbox,
-                variant: "default",
-              },
-              {
-                title: "Drafts",
-                label: "9",
-                icon: File,
-                variant: "ghost",
-              },
-              {
-                title: "Sent",
-                label: "",
-                icon: Send,
-                variant: "ghost",
-              },
-              {
-                title: "Junk",
-                label: "23",
-                icon: Archive,
-                variant: "ghost",
-              },
-              {
-                title: "Trash",
-                label: "",
-                icon: Trash2,
-                variant: "ghost",
-              },
-              {
-                title: "Archive",
-                label: "",
-                icon: Archive,
-                variant: "ghost",
-              },
-            ]}
-          />
-          <Separator />
-          <Nav
-            isCollapsed={isCollapsed}
-            links={[
-              {
-                title: "Social",
-                label: "972",
-                icon: Users2,
-                variant: "ghost",
-              },
-              {
-                title: "Updates",
-                label: "342",
-                icon: AlertCircle,
-                variant: "ghost",
-              },
-              {
-                title: "Forums",
-                label: "128",
-                icon: MessagesSquare,
-                variant: "ghost",
-              },
-              {
-                title: "Shopping",
-                label: "8",
-                icon: ShoppingCart,
-                variant: "ghost",
-              },
-              {
-                title: "Promotions",
-                label: "21",
-                icon: Archive,
-                variant: "ghost",
-              },
-            ]}
-          />
-        </ResizablePanel>
-        <ResizableHandle withHandle />
-        <ResizablePanel defaultSize={defaultLayout[1]} minSize={30}>
-          <Tabs defaultValue="all">
-            <div className="flex items-center px-4 py-2">
-              <h1 className="text-xl font-bold">Inbox</h1>
-              <TabsList className="ml-auto">
-                <TabsTrigger value="all" className="text-zinc-600 dark:text-zinc-200">All mail</TabsTrigger>
-                <TabsTrigger value="unread" className="text-zinc-600 dark:text-zinc-200">Unread</TabsTrigger>
-              </TabsList>
-            </div>
-            <Separator />
-            <div className="bg-background/95 p-4 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-              <form>
-                <div className="relative">
-                  <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-                  <Input placeholder="Search" className="pl-8" />
-                </div>
-              </form>
-            </div>
-          {
-            loading ? <Loader/> :
-                <>
-                  <TabsContent value="all" className="m-0">
-                    <MailList items={mails} />
-                  </TabsContent>
-                  <TabsContent value="unread" className="m-0">
-                    <MailList items={mails.filter((item) => !item.read)} />
-                  </TabsContent>
-                </>
-          }
-        </Tabs>
-
-        </ResizablePanel>
-        <ResizableHandle withHandle />
-        <ResizablePanel defaultSize={defaultLayout[2]}>
-          <MailDisplay
-            mail={mails.find((item) => item.id === mail.selected) || null}
-          />
-        </ResizablePanel>
-      </ResizablePanelGroup>
-    </TooltipProvider>
+              <LeftNav defaultLayout={defaultLayout} collapsedSize={navCollapsedSize} onCollapse={(collapsed) => {
+                  setIsCollapsed(collapsed)
+                  document.cookie = `react-resizable-panels:collapsed=${JSON.stringify(
+                      collapsed
+                  )}`
+              }} collapsed={isCollapsed} accounts={accounts}/>
+              <MiddleList defaultLayout={defaultLayout} loading={loading} items={mails}
+                          items1={mails.filter((item) => !item.read)}/>
+              <RightMail defaultLayout={defaultLayout} mailItem={mails.find((item) => item.id === mail.selected)}/>
+          </ResizablePanelGroup>
+      </TooltipProvider>
   )
 }

@@ -4,7 +4,7 @@ import Page from '@/app/page';
 
 export function App() {
     return (
-        <div className="md:pb-12 h-3/5 min-h-[300px]">
+        <div className="p-4 fixed">
             {/*<LoginForm/>*/}
             <Page/>
             {/*<BackgroundBeams className="fixed inset-0 z-0 pointer-events-none" />*/}

@@ -15,7 +15,7 @@ export function MailList({ items }: MailListProps) {
   const [mail, setMail] = useMail()
 
   return (
-    <ScrollArea className="h-screen">
+    <ScrollArea className="h-[calc(100vh-25vh)]">
       <div className="flex flex-col gap-2 p-4 pt-0">
         {items
             .sort((a, b) => new Date(b.date)

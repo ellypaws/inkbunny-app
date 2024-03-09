@@ -76,3 +76,19 @@
     @apply bg-background text-foreground;
   }
 }
+
+#textarea textarea::-webkit-scrollbar {
+  width: 4px;
+}
+
+#textarea textarea::-webkit-scrollbar-button {
+  display: none;
+}
+
+#textarea textarea::-webkit-scrollbar-track {
+  background-color: transparent;
+}
+
+#textarea textarea::-webkit-scrollbar-thumb {
+  background: #d2d2d2;
+}

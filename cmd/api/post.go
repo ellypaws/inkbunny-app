@@ -238,7 +238,11 @@ func prefill(c echo.Context) error {
 		return c.JSON(http.StatusNotFound, crashy.ErrorResponse{Error: "system message is empty"})
 	}
 
-	messages = append(messages, llm.UserMessage(request.Prompt))
+	if prefillRequest.Description != "" {
+		prefillRequest.Description = "Return the JSON without the // comments"
+	}
+	messages = append(messages, llm.UserMessage(prefillRequest.Description))
+
 	return c.JSON(http.StatusOK, llm.Request{
 		Messages:      messages,
 		Temperature:   1.0,

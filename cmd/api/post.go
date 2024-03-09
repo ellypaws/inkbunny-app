@@ -139,7 +139,7 @@ func stable(c echo.Context) error {
 		return c.JSON(http.StatusNotFound, crashy.ErrorResponse{Error: "no description found"})
 	}
 
-	request, err := descriptionHeuristics(details.Submissions[0].Description)
+	request, err := utils.DescriptionHeuristics(details.Submissions[0].Description)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
 	}
@@ -176,33 +176,6 @@ func stable(c echo.Context) error {
 	return c.JSON(http.StatusOK, textToImage)
 }
 
-func descriptionHeuristics(description string) (entities.TextToImageRequest, error) {
-	results := utils.ExtractAll(description, utils.Patterns)
-
-	var request entities.TextToImageRequest
-
-	fieldsToSet := map[string]any{
-		"steps":     &request.Steps,
-		"sampler":   &request.SamplerName,
-		"cfg":       &request.CFGScale,
-		"seed":      &request.Seed,
-		"width":     &request.Width,
-		"height":    &request.Height,
-		"hash":      &request.OverrideSettings.SDCheckpointHash,
-		"model":     &request.OverrideSettings.SDModelCheckpoint,
-		"denoising": &request.DenoisingStrength,
-	}
-
-	err := utils.ResultsToFields(results, fieldsToSet)
-	if err != nil {
-		return request, err
-	}
-
-	request.Prompt = utils.ExtractPositivePrompt(description)
-	request.NegativePrompt = utils.ExtractNegativePrompt(description)
-	return request, nil
-}
-
 func prefill(c echo.Context) error {
 	var prefillRequest PrefillRequest
 	if err := c.Bind(&prefillRequest); err != nil {
@@ -213,7 +186,7 @@ func prefill(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, crashy.ErrorResponse{Error: "description is required"})
 	}
 
-	request, err := descriptionHeuristics(prefillRequest.Description)
+	request, err := utils.DescriptionHeuristics(prefillRequest.Description)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
 	}

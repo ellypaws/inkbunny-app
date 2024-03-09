@@ -1,9 +1,9 @@
 github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
-github.com/ellypaws/inkbunny-sd v0.0.0-20240307150815-de7fa7252e32 h1:vSfajbd6fhGhrC/21sxaPbx1f0N6Bm4CdgJOrB801e0=
-github.com/ellypaws/inkbunny-sd v0.0.0-20240307150815-de7fa7252e32/go.mod h1:utV8uZlF3da5+6uXpqjObFJoz+3RuMKiQbpTKAcHoUY=
-github.com/ellypaws/inkbunny/api v0.0.0-20240307201809-d4af6fac8ea5 h1:gBb0nXlD0SqH2Ut0Xq3dr8Kv2su6+riKp9gy60jK1Jc=
-github.com/ellypaws/inkbunny/api v0.0.0-20240307201809-d4af6fac8ea5/go.mod h1:wdWqyRSEoSVdu5FnUGv44PvqdLfKQfgaXvDQpZFJs3A=
+github.com/ellypaws/inkbunny-sd v0.0.0-20240309225242-61a26a520f05 h1:onp+zmxti6zRFiwozvZYQmOOXoZbHEbo+4c2oZ3pBxg=
+github.com/ellypaws/inkbunny-sd v0.0.0-20240309225242-61a26a520f05/go.mod h1:BNbIVQKyu129AcL73sHhx/8LC6DabhMjlLyWGp9NFyQ=
+github.com/ellypaws/inkbunny/api v0.0.0-20240309112240-58aabadd18c2 h1:gMPw6j8jKws31oNjranEBXqltX9Vy2x4PwZBaf22bbI=
+github.com/ellypaws/inkbunny/api v0.0.0-20240309112240-58aabadd18c2/go.mod h1:wdWqyRSEoSVdu5FnUGv44PvqdLfKQfgaXvDQpZFJs3A=
 github.com/go-errors/errors v1.5.1 h1:ZwEMSLRCapFLflTpT7NKaAc7ukJ8ZPEjzlxt8rPN8bk=
 github.com/go-errors/errors v1.5.1/go.mod h1:sIVyrIiJhuEF+Pj9Ebtd6P/rEYROXFi3BopGUQ5a5Og=
 github.com/golang-jwt/jwt v3.2.2+incompatible h1:IfV12K8xAKAnZqdXVzCZ+TOjboZ2keLg81eXfW3O+oY=

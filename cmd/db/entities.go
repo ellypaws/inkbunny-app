@@ -3,25 +3,8 @@ package db
 import (
 	"github.com/ellypaws/inkbunny-sd/entities"
 	"github.com/ellypaws/inkbunny/api"
+	"time"
 )
-
-type Role string
-
-const (
-	RoleAdmin        Role = "administrator"
-	RoleAuditor      Role = "auditor"
-	RoleCommunityMod Role = "community_mod"
-	RoleSuperMod     Role = "super_mod"
-	RoleModerator    Role = "moderator" // Deprecated: use SuperMod
-	RoleUser         Role = "user"
-)
-
-type Auditor struct {
-	UserID     string `json:"user_id"`
-	Username   string `json:"username"`
-	Role       Role   `json:"role"`
-	AuditCount int    `json:"audit_count"`
-}
 
 // Flag is the type of violation that had incurred in a Submission
 // In the event that the image is mostly or fully AI-generated:
@@ -61,13 +44,31 @@ const (
 )
 
 type Audit struct {
-	Auditor     *Auditor   `json:"auditor"`
-	Username    string     `json:"username"` // The username of the user who submitted the image
-	UserID      string     `json:"user_id"`  // The user ID of the user who submitted the image
-	Flags       []Flag     `json:"flags"`
-	Submission  Submission `json:"submission"`
-	ActionTaken string     `json:"action_taken"`
+	Auditor            *Auditor `json:"auditor"`
+	SubmissionUsername string   `json:"submission_username"` // The username of the user who submitted the image
+	SubmissionUserID   string   `json:"submission_user_id"`  // The user ID of the user who submitted the image
+	Flags              []Flag   `json:"flags"`
+	SubmissionID       string   `json:"submission"`
+	ActionTaken        string   `json:"action_taken"`
 }
+
+type Auditor struct {
+	UserID     string `json:"user_id"`
+	Username   string `json:"username"`
+	Role       Role   `json:"role"`
+	AuditCount int    `json:"audit_count"`
+}
+
+type Role string
+
+const (
+	RoleAdmin        Role = "administrator"
+	RoleAuditor      Role = "auditor"
+	RoleCommunityMod Role = "community_mod"
+	RoleSuperMod     Role = "super_mod"
+	RoleModerator    Role = "moderator" // Deprecated: use SuperMod
+	RoleUser         Role = "user"
+)
 
 const (
 	StableDiffusion = "stable_diffusion"
@@ -82,9 +83,12 @@ type GenerationInfo struct {
 
 type Submission struct {
 	ID          string               `json:"id"`
+	UserID      string               `json:"user_id"`
 	URL         string               `json:"url"`
+	Audit       *Audit               `json:"audit,omitempty"`
 	Title       string               `json:"title"`
 	Description string               `json:"description"`
+	Updated     time.Time            `json:"updated_at"`
 	Generated   bool                 `json:"generated"`
 	Assisted    bool                 `json:"assisted"`
 	Img2Img     bool                 `json:"img2img"`

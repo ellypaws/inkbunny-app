@@ -36,10 +36,10 @@ const (
 	    		id INTEGER PRIMARY KEY AUTOINCREMENT,
 -- 	    		get auditor from auditors table, store only the auditor id
 	    		auditor INTEGER,
+	    		submission_id TEXT NOT NULL,
 	    		submission_username TEXT NOT NULL,
 	    		submission_user_id TEXT NOT NULL,
 	    		flags TEXT NOT NULL,
-	    		submission_id TEXT NOT NULL,
 	    		action_taken TEXT NOT NULL,
 	    		FOREIGN KEY(auditor) REFERENCES auditors(id)
 	)

@@ -45,10 +45,10 @@ const (
 
 type Audit struct {
 	Auditor            *Auditor `json:"auditor"`
+	SubmissionID       string   `json:"submission"`
 	SubmissionUsername string   `json:"submission_username"` // The username of the user who submitted the image
 	SubmissionUserID   string   `json:"submission_user_id"`  // The user ID of the user who submitted the image
 	Flags              []Flag   `json:"flags"`
-	SubmissionID       string   `json:"submission"`
 	ActionTaken        string   `json:"action_taken"`
 }
 

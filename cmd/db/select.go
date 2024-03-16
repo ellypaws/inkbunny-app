@@ -19,6 +19,16 @@ const (
 	       audit_count
 	FROM auditors WHERE id = ?;
 	`
+
+	selectAuditsByAuditor = `
+	SELECT
+		submission_id,
+		submission_username,
+		submission_user_id,
+		flags,
+		action_taken
+	FROM audits WHERE auditor = ?;
+`
 )
 
 func (db Sqlite) GetAuditBySubmissionID(submissionID string) (Audit, error) {
@@ -40,6 +50,37 @@ func (db Sqlite) GetAuditBySubmissionID(submissionID string) (Audit, error) {
 	}
 
 	return audit, nil
+}
+
+func (db Sqlite) GetAuditsByAuditor(auditorID string) ([]Audit, error) {
+	var audits []Audit
+
+	rows, err := db.QueryContext(db.context, selectAuditsByAuditor, auditorID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var audit Audit
+		var auditor string
+		err = rows.Scan(
+			&audit.SubmissionID, &audit.SubmissionUsername, &audit.SubmissionUserID,
+			&audit.Flags, &audit.ActionTaken,
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		audit.Auditor, err = db.GetAuditorByID(auditor)
+		if err != nil {
+			return nil, err
+		}
+
+		audits = append(audits, audit)
+	}
+
+	return audits, nil
 }
 
 func (db Sqlite) GetAuditorByID(auditorID string) (*Auditor, error) {

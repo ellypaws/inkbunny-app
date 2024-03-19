@@ -2,14 +2,61 @@ package db
 
 import (
 	"context"
+	"database/sql"
+	"errors"
 	"testing"
 )
 
-var db, _ = New(context.Background())
+var db, _ = tempDB(context.Background())
+
+func tempDB(ctx context.Context) (*Sqlite, error) {
+	db, err := sql.Open("sqlite", ":memory:")
+	if err != nil {
+		return nil, err
+	}
+
+	_, err = db.Exec(setForeignKeyCheck)
+	if err != nil {
+		return nil, errors.New("failed to enable foreign key checks")
+	}
+
+	err = migrate(ctx, db)
+	if err != nil {
+		return nil, err
+	}
+
+	return &Sqlite{db, ctx}, nil
+}
+
+func resetDB(t *testing.T) {
+	var err error
+	db, err = tempDB(context.Background())
+	if err != nil {
+		t.Fatalf("tempDB() failed: %v", err)
+	}
+}
+
+func TestPhysical(t *testing.T) {
+	db, err := New(context.Background())
+	if db == nil {
+		t.Fatal("New() failed: db is nil")
+	}
+
+	err = db.PingContext(db.context)
+	if err != nil {
+		t.Errorf("PingContext() failed: %v", err)
+	}
+
+	err = db.Close()
+	if err != nil {
+		t.Errorf("Close() failed: %v", err)
+	}
+
+	t.Log("TestPhysical() passed")
+}
 
 func TestNew(t *testing.T) {
-	ctx := context.Background()
-	db, err := New(ctx)
+	db, err := tempDB(context.Background())
 	if err != nil {
 		t.Fatalf("New() failed: %v", err)
 	}
@@ -18,7 +65,7 @@ func TestNew(t *testing.T) {
 		t.Fatal("New() failed: db is nil")
 	}
 
-	err = db.PingContext(ctx)
+	err = db.PingContext(db.context)
 	if err != nil {
 		t.Errorf("PingContext() failed: %v", err)
 	}
@@ -32,6 +79,8 @@ func TestNew(t *testing.T) {
 }
 
 func TestSqlite_InsertAuditor(t *testing.T) {
+	resetDB(t)
+
 	auditor := Auditor{
 		UserID:   "196417",
 		Username: "Elly",
@@ -47,6 +96,8 @@ func TestSqlite_InsertAuditor(t *testing.T) {
 }
 
 func TestSqlite_IncreaseAuditCount(t *testing.T) {
+	resetDB(t)
+
 	auditor := &Auditor{
 		UserID:   "196417",
 		Username: "Elly",
@@ -76,6 +127,8 @@ func TestSqlite_IncreaseAuditCount(t *testing.T) {
 }
 
 func TestSqlite_SyncAuditCount(t *testing.T) {
+	resetDB(t)
+
 	auditor := &Auditor{
 		UserID:   "196417",
 		Username: "Elly",
@@ -115,10 +168,40 @@ func TestSqlite_SyncAuditCount(t *testing.T) {
 		t.Fatalf("SyncAuditCount() failed: expected 0, got %v", auditor.AuditCount)
 	}
 
+	audit := Audit{
+		Auditor:            auditor,
+		SubmissionID:       "123",
+		SubmissionUsername: "User",
+		SubmissionUserID:   "456",
+		Flags:              []Flag{FlagUndisclosed},
+		ActionTaken:        "none",
+	}
+
+	_, err = db.InsertAudit(audit)
+	if err != nil {
+		t.Fatalf("InsertAudit() failed: %v", err)
+	}
+
+	err = db.SyncAuditCount(auditor.UserID)
+	if err != nil {
+		t.Fatalf("SyncAuditCount() failed: %v", err)
+	}
+
+	auditor, err = db.GetAuditorByID(auditor.UserID)
+	if err != nil {
+		t.Fatalf("GetAuditorByID() failed: %v", err)
+	}
+
+	if auditor.AuditCount != 1 {
+		t.Fatalf("SyncAuditCount() failed: expected 1, got %v", auditor.AuditCount)
+	}
+
 	t.Log("TestSqlite_SyncAuditCount() passed")
 }
 
 func TestSqlite_GetAuditsByAuditor(t *testing.T) {
+	resetDB(t)
+
 	audits, err := db.GetAuditsByAuditor("196417")
 	if err != nil {
 		t.Fatalf("GetAuditsByAuditor() failed: %v", err)

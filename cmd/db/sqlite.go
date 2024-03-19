@@ -31,20 +31,6 @@ const (
 	)
 	`
 
-	createAudits = `
-	CREATE TABLE IF NOT EXISTS audits (
-	    		audit_id INTEGER PRIMARY KEY AUTOINCREMENT,
--- 	    		get auditor from auditors table, store only the auditor id
-	    		auditor_id INTEGER,
-	    		submission_id TEXT NOT NULL UNIQUE,
-	    		submission_username TEXT NOT NULL,
-	    		submission_user_id TEXT NOT NULL,
-	    		flags TEXT NOT NULL,
-	    		action_taken TEXT NOT NULL,
-	    		FOREIGN KEY(auditor_id) REFERENCES auditors(auditor_id)
-	)
-	`
-
 	createFiles = `
 	CREATE TABLE IF NOT EXISTS files (
 	    file_id INTEGER PRIMARY KEY,
@@ -74,8 +60,22 @@ const (
 		keywords TEXT,
 -- 		get files from files table, store only the file ids
 		file_id INTEGER,
-	    FOREIGN KEY(audit_id) REFERENCES audits(audit_id),
 	    FOREIGN KEY(file_id) REFERENCES files(file_id)
+	)
+	`
+
+	createAudits = `
+	CREATE TABLE IF NOT EXISTS audits (
+	    		audit_id INTEGER PRIMARY KEY AUTOINCREMENT,
+-- 	    		get auditor from auditors table, store only the auditor id
+	    		auditor_id INTEGER,
+	    		submission_id TEXT NOT NULL UNIQUE,
+	    		submission_username TEXT NOT NULL,
+	    		submission_user_id TEXT NOT NULL,
+	    		flags TEXT NOT NULL,
+	    		action_taken TEXT NOT NULL,
+	    		FOREIGN KEY(auditor_id) REFERENCES auditors(auditor_id),
+	            FOREIGN KEY(submission_id) REFERENCES submissions(submission_id)
 	)
 	`
 )
@@ -92,9 +92,9 @@ type migration struct {
 
 var migrations = []migration{
 	{migrationName: "create auditors table", migrationQuery: createAuditors},
-	{migrationName: "create audits table", migrationQuery: createAudits},
 	{migrationName: "create files table", migrationQuery: createFiles},
 	{migrationName: "create submissions table", migrationQuery: createSubmissions},
+	{migrationName: "create audits table", migrationQuery: createAudits},
 }
 
 func New(ctx context.Context) (*Sqlite, error) {

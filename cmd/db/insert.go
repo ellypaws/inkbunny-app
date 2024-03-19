@@ -44,7 +44,7 @@ const (
 	INSERT INTO submissions (submission_id, user_id, url, audit_id,
 	                         title, description, updated_at,
 	                         ai_generated, ai_assisted, img2img,
-	                         ratings, keywords, files)
+	                         ratings, keywords, file_id)
 	VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 	ON CONFLICT(submission_id)
 	    DO UPDATE SET
@@ -59,7 +59,7 @@ const (
 	                  img2img=excluded.img2img,
 	                  ratings=excluded.ratings,
 	                  keywords=excluded.keywords,
-	                  files=excluded.files;
+	                  file_id=excluded.file_id;
 	`
 
 	// IF submission exists, update the audit_id field

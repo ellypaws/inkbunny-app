@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"strings"
 )
 
 // Insert statements
@@ -93,10 +94,14 @@ func (db Sqlite) SyncAuditCount(auditorID string) error {
 }
 
 func (db Sqlite) InsertAudit(audit Audit) (id int64, err error) {
+	var flags []string
+	for _, flag := range audit.Flags {
+		flags = append(flags, string(flag))
+	}
 	res, err := db.ExecContext(db.context, upsertAudit,
 		audit.Auditor.UserID,
 		audit.SubmissionID, audit.SubmissionUsername, audit.SubmissionUserID,
-		fmt.Sprintf("%v", audit.Flags), audit.ActionTaken,
+		strings.Join(flags, ","), audit.ActionTaken,
 	)
 	if err != nil {
 		return 0, err

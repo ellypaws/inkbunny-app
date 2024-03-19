@@ -85,7 +85,7 @@ func (db Sqlite) GetAuditsByAuditor(auditorID string) ([]Audit, error) {
 			return nil, fmt.Errorf("got an error while scanning rows: %w", err)
 		}
 
-		for _, flag := range strings.Split(flags[1:len(flags)-1], " ") {
+		for _, flag := range strings.Split(flags, ",") {
 			audit.Flags = append(audit.Flags, Flag(flag))
 		}
 

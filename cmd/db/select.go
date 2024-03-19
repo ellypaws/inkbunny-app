@@ -11,7 +11,7 @@ import (
 const (
 	selectAuditsBySubmission = `
 	SELECT 
-	    auditor,
+	    auditor_id,
 	    submission_username,
 	    submission_user_id,
 	    flags, submission_id,
@@ -20,11 +20,11 @@ const (
 	`
 
 	selectAuditorByID = `
-	SELECT id,
+	SELECT auditor_id,
 	       username,
 	       role,
 	       audit_count
-	FROM auditors WHERE id = ?;
+	FROM auditors WHERE auditor_id = ?;
 	`
 
 	selectAuditsByAuditor = `
@@ -34,7 +34,7 @@ const (
 		submission_user_id,
 		flags,
 		action_taken
-	FROM audits WHERE auditor = ?;
+	FROM audits WHERE auditor_id = ?;
 `
 )
 

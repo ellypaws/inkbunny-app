@@ -24,7 +24,7 @@ const (
 const (
 	createAuditors = `
 	CREATE TABLE IF NOT EXISTS auditors (
-		id INTEGER PRIMARY KEY,
+		auditor_id INTEGER PRIMARY KEY,
 		username TEXT NOT NULL,
 		role TEXT NOT NULL,
 		audit_count INTEGER NOT NULL
@@ -33,21 +33,21 @@ const (
 
 	createAudits = `
 	CREATE TABLE IF NOT EXISTS audits (
-	    		id INTEGER PRIMARY KEY AUTOINCREMENT,
+	    		audit_id INTEGER PRIMARY KEY AUTOINCREMENT,
 -- 	    		get auditor from auditors table, store only the auditor id
-	    		auditor INTEGER,
+	    		auditor_id INTEGER,
 	    		submission_id TEXT NOT NULL UNIQUE,
 	    		submission_username TEXT NOT NULL,
 	    		submission_user_id TEXT NOT NULL,
 	    		flags TEXT NOT NULL,
 	    		action_taken TEXT NOT NULL,
-	    		FOREIGN KEY(auditor) REFERENCES auditors(id)
+	    		FOREIGN KEY(auditor_id) REFERENCES auditors(auditor_id)
 	)
 	`
 
 	createFiles = `
 	CREATE TABLE IF NOT EXISTS files (
-	    id INTEGER PRIMARY KEY,
+	    file_id INTEGER PRIMARY KEY,
 -- 	    store file as a json string
 	    file TEXT NOT NULL,
 -- 	    store info as a json string
@@ -58,11 +58,11 @@ const (
 
 	createSubmissions = `
 	CREATE TABLE IF NOT EXISTS submissions (
-		id TEXT PRIMARY KEY,
+		submission_id TEXT PRIMARY KEY,
 		user_id TEXT NOT NULL,
 		url TEXT NOT NULL,
 -- 		get audit from audits table, store only the audit id
-		audit INTEGER UNIQUE,
+		audit_id INTEGER UNIQUE,
 		title TEXT NOT NULL,
 		description TEXT NOT NULL,
 		updated_at TEXT NOT NULL,
@@ -73,9 +73,9 @@ const (
 -- 		store keywords as a json string
 		keywords TEXT,
 -- 		get files from files table, store only the file ids
-		files INTEGER,
-	    FOREIGN KEY(audit) REFERENCES audits(id),
-	    FOREIGN KEY(files) REFERENCES files(id)
+		file_id INTEGER,
+	    FOREIGN KEY(audit_id) REFERENCES audits(audit_id),
+	    FOREIGN KEY(file_id) REFERENCES files(file_id)
 	)
 	`
 )

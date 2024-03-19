@@ -276,3 +276,53 @@ func TestSqlite_InsertSubmission(t *testing.T) {
 
 	t.Log("TestSqlite_InsertSubmission() passed")
 }
+
+func TestSqlite_InsertAudit(t *testing.T) {
+	TestSqlite_GetAuditorByID(t)
+
+	auditor, err := db.GetAuditorByID("196417")
+	if err != nil {
+		t.Fatalf("GetAuditorByID() failed: %v", err)
+	}
+
+	err = db.InsertSubmission(Submission{ID: "123"})
+	if err != nil {
+		t.Fatalf("InsertSubmission() failed: %v", err)
+	}
+
+	audit := Audit{
+		Auditor:            auditor,
+		SubmissionID:       "123",
+		SubmissionUsername: "User",
+		SubmissionUserID:   "456",
+		Flags:              []Flag{FlagUndisclosed},
+		ActionTaken:        "none",
+	}
+
+	_, err = db.InsertAudit(audit)
+	if err != nil {
+		t.Fatalf("InsertAudit() failed: %v", err)
+	}
+
+	t.Log("TestSqlite_InsertAudit() passed")
+}
+
+func TestSqlite_GetAuditorByID(t *testing.T) {
+	resetDB(t)
+
+	auditor := &Auditor{
+		UserID:   "196417",
+		Username: "Elly",
+		Role:     RoleAuditor,
+	}
+
+	err := db.InsertAuditor(*auditor)
+	if err != nil {
+		t.Fatalf("InsertAuditor() failed: %v", err)
+	}
+
+	auditor, err = db.GetAuditorByID(auditor.UserID)
+	if err != nil {
+		t.Fatalf("GetAuditorByID() failed: %v", err)
+	}
+}

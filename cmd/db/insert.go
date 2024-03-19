@@ -93,7 +93,17 @@ func (db Sqlite) SyncAuditCount(auditorID string) error {
 	return err
 }
 
+// InsertAudit inserts an audit into the database. If the auditor is not in the database, it will be inserted.
+// Auditor needs to be non-empty and exist in the database before inserting an audit.
+// Similarly, the Submission needs to be in the database as well and be filled in the audit.
 func (db Sqlite) InsertAudit(audit Audit) (id int64, err error) {
+	if audit.Auditor != nil {
+		err := db.InsertAuditor(*audit.Auditor)
+		if err != nil {
+			return 0, fmt.Errorf("error: inserting auditor: %v", err)
+		}
+	}
+
 	var flags []string
 	for _, flag := range audit.Flags {
 		flags = append(flags, string(flag))
@@ -113,7 +123,7 @@ func (db Sqlite) InsertAudit(audit Audit) (id int64, err error) {
 	}
 
 	// set audit in submission if it exists in database
-	_, err = db.ExecContext(db.context, updateSubmissionAudit, id, audit.SubmissionID)
+	res, err = db.ExecContext(db.context, updateSubmissionAudit, id, audit.SubmissionID)
 	if err != nil {
 		return
 	}

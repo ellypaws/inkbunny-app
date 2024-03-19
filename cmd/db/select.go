@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 	"github.com/go-errors/errors"
+	"strings"
 )
 
 // Selection statements
@@ -75,12 +76,17 @@ func (db Sqlite) GetAuditsByAuditor(auditorID string) ([]Audit, error) {
 		var audit = Audit{
 			Auditor: auditor,
 		}
+		var flags string
 		err = rows.Scan(
 			&audit.SubmissionID, &audit.SubmissionUsername, &audit.SubmissionUserID,
-			&audit.Flags, &audit.ActionTaken,
+			&flags, &audit.ActionTaken,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("got an error while scanning rows: %w", err)
+		}
+
+		for _, flag := range strings.Split(flags[1:len(flags)-1], " ") {
+			audit.Flags = append(audit.Flags, Flag(flag))
 		}
 
 		audits = append(audits, audit)

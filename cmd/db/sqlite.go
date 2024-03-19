@@ -36,7 +36,7 @@ const (
 	    		id INTEGER PRIMARY KEY AUTOINCREMENT,
 -- 	    		get auditor from auditors table, store only the auditor id
 	    		auditor INTEGER,
-	    		submission_id TEXT NOT NULL,
+	    		submission_id TEXT NOT NULL UNIQUE,
 	    		submission_username TEXT NOT NULL,
 	    		submission_user_id TEXT NOT NULL,
 	    		flags TEXT NOT NULL,
@@ -62,7 +62,7 @@ const (
 		user_id TEXT NOT NULL,
 		url TEXT NOT NULL,
 -- 		get audit from audits table, store only the audit id
-		audit INTEGER,
+		audit INTEGER UNIQUE,
 		title TEXT NOT NULL,
 		description TEXT NOT NULL,
 		updated_at TEXT NOT NULL,

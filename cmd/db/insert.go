@@ -1,6 +1,9 @@
 package db
 
-import "log"
+import (
+	"fmt"
+	"log"
+)
 
 // Insert statements
 const (
@@ -92,7 +95,7 @@ func (db Sqlite) InsertAudit(audit Audit) (id int64, err error) {
 	res, err := db.ExecContext(db.context, insertAudit,
 		audit.Auditor.UserID,
 		audit.SubmissionID, audit.SubmissionUsername, audit.SubmissionUserID,
-		audit.Flags, audit.ActionTaken,
+		fmt.Sprintf("%v", audit.Flags), audit.ActionTaken,
 	)
 	if err != nil {
 		return 0, err

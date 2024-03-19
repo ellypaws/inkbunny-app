@@ -35,10 +35,11 @@ const (
 	CREATE TABLE IF NOT EXISTS files (
 	    file_id INTEGER PRIMARY KEY,
 -- 	    store file as a json string
-	    file TEXT NOT NULL,
+	    file BLOB NOT NULL,
 -- 	    store info as a json string
-	    info TEXT
+	    info BLOB
 --		blob is not stored in the db (for now)
+-- 	    blob BLOB
 	)
 	`
 
@@ -55,9 +56,9 @@ const (
 		ai_generated BOOLEAN NOT NULL,
 		ai_assisted BOOLEAN NOT NULL,
 		img2img BOOLEAN NOT NULL,
-		ratings TEXT NOT NULL,
+		ratings BLOB NOT NULL,
 -- 		store keywords as a json string
-		keywords TEXT,
+		keywords BLOB,
 -- 		get files from files table, store only the file ids
 		file_id INTEGER
 -- 	    FOREIGN KEY(file_id) REFERENCES files(file_id)

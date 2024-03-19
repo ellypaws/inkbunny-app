@@ -169,18 +169,38 @@ func TestSqlite_SyncAuditCount(t *testing.T) {
 		t.Fatalf("SyncAuditCount() failed: expected 0, got %v", auditor.AuditCount)
 	}
 
-	audit := Audit{
-		Auditor:            auditor,
-		SubmissionID:       "123",
-		SubmissionUsername: "User",
-		SubmissionUserID:   "456",
-		Flags:              []Flag{FlagUndisclosed},
-		ActionTaken:        "none",
+	submission := Submission{
+		ID:          "123",
+		UserID:      "456",
+		URL:         "url",
+		Title:       "title",
+		Description: "description",
+		Audit: &Audit{
+			Auditor:            auditor,
+			SubmissionID:       "123",
+			SubmissionUsername: "User",
+			SubmissionUserID:   "456",
+			Flags:              []Flag{FlagUndisclosed},
+			ActionTaken:        "none",
+		},
+		Files: []File{
+			{
+				File: api.File{
+					FileID:   "123",
+					FileName: "file",
+				},
+				Info: &GenerationInfo{
+					Generator: "generator",
+					Model:     "model",
+				},
+				Blob: nil,
+			},
+		},
 	}
 
-	_, err = db.InsertAudit(audit)
+	err = db.InsertSubmission(submission)
 	if err != nil {
-		t.Fatalf("InsertAudit() failed: %v", err)
+		t.Fatalf("InsertSubmission() failed: %v", err)
 	}
 
 	err = db.SyncAuditCount(auditor.UserID)
@@ -236,4 +256,23 @@ func TestSqlite_InsertFile(t *testing.T) {
 	}
 
 	t.Log("TestSqlite_InsertFile() passed")
+}
+
+func TestSqlite_InsertSubmission(t *testing.T) {
+	resetDB(t)
+
+	submission := Submission{
+		ID:          "123",
+		UserID:      "456",
+		URL:         "url",
+		Title:       "title",
+		Description: "description",
+	}
+
+	err := db.InsertSubmission(submission)
+	if err != nil {
+		t.Fatalf("InsertSubmission() failed: %v", err)
+	}
+
+	t.Log("TestSqlite_InsertSubmission() passed")
 }

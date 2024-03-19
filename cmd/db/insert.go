@@ -150,21 +150,45 @@ func (db Sqlite) InsertFile(file File) error {
 }
 
 func (db Sqlite) InsertSubmission(submission Submission) error {
-	var auditId *int64
+	ratings, err := json.Marshal(submission.Ratings)
+	if err != nil {
+		return fmt.Errorf("error: marshalling ratings: %v", err)
+	}
+
+	keywords, err := json.Marshal(submission.Keywords)
+	if err != nil {
+		return fmt.Errorf("error: marshalling keywords: %v", err)
+	}
+
+	var fileIDs []string
+	if len(submission.Files) > 0 {
+		for _, file := range submission.Files {
+			err = db.InsertFile(file)
+			if err != nil {
+				return fmt.Errorf("error: inserting file: %v", err)
+			}
+			fileIDs = append(fileIDs, file.File.FileID)
+		}
+	}
+
+	_, err = db.ExecContext(db.context, upsertSubmission,
+		submission.ID, submission.UserID, submission.URL, nil,
+		submission.Title, submission.Description, submission.Updated,
+		submission.Generated, submission.Assisted, submission.Img2Img,
+		ratings, keywords, strings.Join(fileIDs, ","),
+	)
+	if err != nil {
+		return fmt.Errorf("error: inserting submission: %v", err)
+	}
+
 	if submission.Audit != nil {
 		id, err := db.InsertAudit(*submission.Audit)
 		if err != nil {
-			return err
+			return fmt.Errorf("error: inserting audit: %v", err)
 		}
-		auditId = &id
+
+		_, err = db.ExecContext(db.context, updateSubmissionAudit, id, submission.ID)
 	}
 
-	_, err := db.ExecContext(db.context, upsertSubmission,
-		submission.ID, submission.UserID, submission.URL, auditId,
-		submission.Title, submission.Description, submission.Updated,
-		submission.Generated, submission.Assisted, submission.Img2Img,
-		submission.Ratings, submission.Keywords, submission.Files,
-	)
-
-	return err
+	return nil
 }

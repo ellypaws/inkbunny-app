@@ -59,8 +59,8 @@ const (
 -- 		store keywords as a json string
 		keywords TEXT,
 -- 		get files from files table, store only the file ids
-		file_id INTEGER,
-	    FOREIGN KEY(file_id) REFERENCES files(file_id)
+		file_id INTEGER
+-- 	    FOREIGN KEY(file_id) REFERENCES files(file_id)
 	)
 	`
 

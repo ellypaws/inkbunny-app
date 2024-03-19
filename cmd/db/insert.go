@@ -1,6 +1,7 @@
 package db
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 )
@@ -126,8 +127,18 @@ func (db Sqlite) InsertAudit(audit Audit) (id int64, err error) {
 }
 
 func (db Sqlite) InsertFile(file File) error {
-	_, err := db.ExecContext(db.context, upsertFile,
-		file.File.FileID, file.File, file.Info,
+	marshal, err := json.Marshal(file.File)
+	if err != nil {
+		return fmt.Errorf("error: marshalling file: %v", err)
+	}
+
+	info, err := json.Marshal(file.Info)
+	if err != nil {
+		return fmt.Errorf("error: marshalling info: %v", err)
+	}
+
+	_, err = db.ExecContext(db.context, upsertFile,
+		file.File.FileID, marshal, info,
 	)
 
 	return err

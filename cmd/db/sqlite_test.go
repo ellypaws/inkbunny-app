@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"github.com/ellypaws/inkbunny/api"
 	"testing"
 )
 
@@ -212,4 +213,27 @@ func TestSqlite_GetAuditsByAuditor(t *testing.T) {
 	}
 
 	t.Log("TestSqlite_GetAuditsByAuditor() passed")
+}
+
+func TestSqlite_InsertFile(t *testing.T) {
+	resetDB(t)
+
+	file := File{
+		File: api.File{
+			FileID:   "123",
+			FileName: "file",
+		},
+		Info: &GenerationInfo{
+			Generator: "generator",
+			Model:     "model",
+		},
+		Blob: nil,
+	}
+
+	err := db.InsertFile(file)
+	if err != nil {
+		t.Fatalf("InsertFile() failed: %v", err)
+	}
+
+	t.Log("TestSqlite_InsertFile() passed")
 }

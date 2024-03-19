@@ -1,5 +1,11 @@
 package db
 
+import (
+	"database/sql"
+	"fmt"
+	"github.com/go-errors/errors"
+)
+
 // Selection statements
 const (
 	selectAuditsBySubmission = `
@@ -53,7 +59,10 @@ func (db Sqlite) GetAuditBySubmissionID(submissionID string) (Audit, error) {
 }
 
 func (db Sqlite) GetAuditsByAuditor(auditorID string) ([]Audit, error) {
-	var audits []Audit
+	auditor, err := db.GetAuditorByID(auditorID)
+	if err != nil && !errors.As(err, &sql.ErrNoRows) {
+		return nil, fmt.Errorf("got an error while getting auditor by id (not sql.ErrNoRows): %w", err)
+	}
 
 	rows, err := db.QueryContext(db.context, selectAuditsByAuditor, auditorID)
 	if err != nil {
@@ -61,20 +70,17 @@ func (db Sqlite) GetAuditsByAuditor(auditorID string) ([]Audit, error) {
 	}
 	defer rows.Close()
 
+	var audits []Audit
 	for rows.Next() {
-		var audit Audit
-		var auditor string
+		var audit = Audit{
+			Auditor: auditor,
+		}
 		err = rows.Scan(
 			&audit.SubmissionID, &audit.SubmissionUsername, &audit.SubmissionUserID,
 			&audit.Flags, &audit.ActionTaken,
 		)
 		if err != nil {
-			return nil, err
-		}
-
-		audit.Auditor, err = db.GetAuditorByID(auditor)
-		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("got an error while scanning rows: %w", err)
 		}
 
 		audits = append(audits, audit)

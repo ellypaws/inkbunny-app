@@ -1,10 +1,12 @@
 package db
 
 import (
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"log"
 	"strings"
+	"time"
 )
 
 // Insert statements
@@ -181,11 +183,19 @@ func (db Sqlite) InsertSubmission(submission Submission) error {
 		}
 	}
 
+	var fileIDsNullable sql.NullString
+	if len(fileIDs) > 0 {
+		fileIDsNullable = sql.NullString{
+			String: strings.Join(fileIDs, ","),
+			Valid:  true,
+		}
+	}
+
 	_, err = db.ExecContext(db.context, upsertSubmission,
 		submission.ID, submission.UserID, submission.URL, nil,
-		submission.Title, submission.Description, submission.Updated,
+		submission.Title, submission.Description, submission.Updated.UTC().Format(time.RFC3339),
 		submission.Generated, submission.Assisted, submission.Img2Img,
-		ratings, keywords, strings.Join(fileIDs, ","),
+		ratings, keywords, fileIDsNullable,
 	)
 	if err != nil {
 		return fmt.Errorf("error: inserting submission: %v", err)

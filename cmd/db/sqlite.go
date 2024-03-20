@@ -60,7 +60,7 @@ const (
 -- 		store keywords as a json string
 		keywords BLOB,
 -- 		get files from files table, store only the file ids
-		file_id INTEGER
+		file_id TEXT
 -- 	    FOREIGN KEY(file_id) REFERENCES files(file_id)
 	)
 	`

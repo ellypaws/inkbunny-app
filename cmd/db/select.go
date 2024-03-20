@@ -82,6 +82,8 @@ const (
 	selectUsernameFromSID = `SELECT username FROM sids WHERE sid_hash = ?;`
 
 	isAnAuditor = `SELECT EXISTS(SELECT 1 FROM auditors WHERE auditor_id = ?);`
+
+	selectRole = `SELECT role FROM auditors WHERE auditor_id = ?;`
 )
 
 func (db Sqlite) GetAuditBySubmissionID(submissionID int64) (Audit, error) {
@@ -294,4 +296,18 @@ func (db Sqlite) IsInAuditor(auditorID int64) (bool, error) {
 	var exists bool
 	err := db.QueryRowContext(db.context, isAnAuditor, auditorID).Scan(&exists)
 	return exists, err
+}
+
+func (db Sqlite) IsAuditorRole(auditorID int64) bool {
+	role, err := db.GetRole(auditorID)
+	if err != nil {
+		return false
+	}
+	return role <= RoleAuditor
+}
+
+func (db Sqlite) GetRole(auditorID int64) (Role, error) {
+	var role string
+	err := db.QueryRowContext(db.context, selectRole, auditorID).Scan(&role)
+	return RoleLevel(role), err
 }

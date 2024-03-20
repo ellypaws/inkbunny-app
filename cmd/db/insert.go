@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"github.com/ellypaws/inkbunny/api"
 	"log"
-	"strconv"
 	"strings"
 	"time"
 )
@@ -347,14 +346,9 @@ func (db Sqlite) RemoveSIDHash(sid SIDHash) error {
 }
 
 func HashCredentials(user api.Credentials) SIDHash {
-	var id int64
-	if user.UserID != "" {
-		id, _ = strconv.ParseInt(user.UserID, 10, 64)
-	}
-
 	checksum := hash(user.Sid)
 	return SIDHash{
-		UserID:   id,
+		UserID:   int64(user.UserID.Int()),
 		Username: user.Username,
 		Hashes:   checksum,
 	}
@@ -367,12 +361,7 @@ func hash(s any) hashmap {
 }
 
 func (db Sqlite) ValidSID(user api.Credentials) bool {
-	var id int64
-	if user.UserID != "" {
-		id, _ = strconv.ParseInt(user.UserID, 10, 64)
-	}
-
-	stored, err := db.GetSIDsFromUserID(id)
+	stored, err := db.GetSIDsFromUserID(int64(user.UserID.Int()))
 	if err != nil {
 		return false
 	}

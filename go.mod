@@ -3,8 +3,8 @@ module github.com/ellypaws/inkbunny-app
 go 1.22.0
 
 require (
-	github.com/ellypaws/inkbunny-sd v0.0.0-20240310003216-a7f8cddd9d16
-	github.com/ellypaws/inkbunny/api v0.0.0-20240309112240-58aabadd18c2
+	github.com/ellypaws/inkbunny-sd v0.0.0-20240320233620-87678081a601
+	github.com/ellypaws/inkbunny/api v0.0.0-20240320233248-1659f4be4758
 	github.com/go-errors/errors v1.5.1
 	github.com/labstack/echo/v4 v4.11.4
 	github.com/labstack/gommon v0.4.2
@@ -32,7 +32,7 @@ require (
 	golang.org/x/time v0.5.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	modernc.org/gc/v3 v3.0.0-20240304020402-f0dba7c97c2b // indirect
-	modernc.org/libc v1.45.3 // indirect
+	modernc.org/libc v1.46.0 // indirect
 	modernc.org/mathutil v1.6.0 // indirect
 	modernc.org/memory v1.7.2 // indirect
 	modernc.org/strutil v1.2.0 // indirect

@@ -67,6 +67,10 @@ const (
 	                  file_id=excluded.file_id;
 	`
 
+	updateSubmissionDescription = `
+	UPDATE submissions SET description = ? WHERE submission_id = ?;
+	`
+
 	// IF submission exists, update the audit_id field
 	updateSubmissionAudit = `
 	UPDATE submissions SET audit_id = ? WHERE submission_id = ?;

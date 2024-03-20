@@ -3,6 +3,7 @@ package db
 import (
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"strings"
@@ -80,12 +81,12 @@ func (db Sqlite) InsertAuditor(auditor Auditor) error {
 	return err
 }
 
-func (db Sqlite) IncreaseAuditCount(auditorID string) error {
+func (db Sqlite) IncreaseAuditCount(auditorID int64) error {
 	_, err := db.ExecContext(db.context, increaseAuditCount, auditorID)
 	return err
 }
 
-func (db Sqlite) SyncAuditCount(auditorID string) error {
+func (db Sqlite) SyncAuditCount(auditorID int64) error {
 	audits, err := db.GetAuditsByAuditor(auditorID)
 	if err != nil {
 		return err
@@ -137,10 +138,34 @@ func (db Sqlite) InsertAudit(audit Audit) (id int64, err error) {
 	}
 
 	if rowCount == 0 {
-		log.Printf("warning: submission %s doesn't exist in the database", audit.SubmissionID)
+		log.Printf("warning: submission %d doesn't exist in the database", audit.SubmissionID)
 	}
 
 	return id, nil
+}
+
+// FixAuditsInSubmissions updates all submissions with the correct audit_id.
+func (db Sqlite) FixAuditsInSubmissions() error {
+	rows, err := db.QueryContext(db.context, selectAudits)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var auditID, submissionID int64
+		err = rows.Scan(&auditID, &submissionID)
+		if err != nil {
+			return err
+		}
+
+		_, err = db.ExecContext(db.context, updateSubmissionAudit, auditID, submissionID)
+		if err != nil {
+			return fmt.Errorf("error: updating submission audit: %v", err)
+		}
+	}
+
+	return nil
 }
 
 func (db Sqlite) InsertFile(file File) error {
@@ -191,8 +216,26 @@ func (db Sqlite) InsertSubmission(submission Submission) error {
 		}
 	}
 
+	var auditIDNullable sql.NullInt64
+	if submission.Audit != nil {
+		auditIDNullable = sql.NullInt64{
+			Int64: submission.Audit.ID,
+			Valid: true,
+		}
+	} else {
+		audit, err := db.GetAuditBySubmissionID(submission.ID)
+		if err != nil && !errors.Is(err, sql.ErrNoRows) {
+			return fmt.Errorf("error: getting audit by submission id: %v", err)
+		} else {
+			auditIDNullable = sql.NullInt64{
+				Int64: audit.ID,
+				Valid: true,
+			}
+		}
+	}
+
 	_, err = db.ExecContext(db.context, upsertSubmission,
-		submission.ID, submission.UserID, submission.URL, nil,
+		submission.ID, submission.UserID, submission.URL, auditIDNullable,
 		submission.Title, submission.Description, submission.Updated.UTC().Format(time.RFC3339),
 		submission.Generated, submission.Assisted, submission.Img2Img,
 		ratings, keywords, fileIDsNullable,
@@ -208,6 +251,9 @@ func (db Sqlite) InsertSubmission(submission Submission) error {
 		}
 
 		_, err = db.ExecContext(db.context, updateSubmissionAudit, id, submission.ID)
+		if err != nil {
+			return fmt.Errorf("error: setting audit in submission: %v", err)
+		}
 	}
 
 	return nil

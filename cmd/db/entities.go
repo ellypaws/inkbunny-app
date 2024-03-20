@@ -44,16 +44,17 @@ const (
 )
 
 type Audit struct {
+	ID                 int64    `json:"id"`
 	Auditor            *Auditor `json:"auditor"`
-	SubmissionID       string   `json:"submission"`
+	SubmissionID       int64    `json:"submission"`
 	SubmissionUsername string   `json:"submission_username"` // The username of the user who submitted the image
-	SubmissionUserID   string   `json:"submission_user_id"`  // The user ID of the user who submitted the image
+	SubmissionUserID   int64    `json:"submission_user_id"`  // The user ID of the user who submitted the image
 	Flags              []Flag   `json:"flags"`
 	ActionTaken        string   `json:"action_taken"`
 }
 
 type Auditor struct {
-	UserID     string `json:"user_id"`
+	UserID     int64  `json:"user_id"`
 	Username   string `json:"username"`
 	Role       Role   `json:"role"`
 	AuditCount int    `json:"audit_count"`
@@ -82,8 +83,8 @@ type GenerationInfo struct {
 }
 
 type Submission struct {
-	ID          string               `json:"id"`
-	UserID      string               `json:"user_id"`
+	ID          int64                `json:"id"`
+	UserID      int64                `json:"user_id"`
 	URL         string               `json:"url"`
 	Audit       *Audit               `json:"audit,omitempty"`
 	Title       string               `json:"title"`
@@ -104,7 +105,7 @@ type File struct {
 }
 
 type Keyword struct {
-	KeywordID   string `json:"keyword_id"`
+	KeywordID   int64  `json:"keyword_id"`
 	KeywordName string `json:"keyword_name"`
 	Suggested   bool   `json:"contributed"`
 }

@@ -91,7 +91,7 @@ func TestSqlite_InsertAuditor(t *testing.T) {
 	resetDB(t)
 
 	auditor := Auditor{
-		UserID:   "196417",
+		UserID:   196417,
 		Username: "Elly",
 		Role:     RoleAuditor,
 	}
@@ -108,7 +108,7 @@ func TestSqlite_IncreaseAuditCount(t *testing.T) {
 	resetDB(t)
 
 	auditor := &Auditor{
-		UserID:   "196417",
+		UserID:   196417,
 		Username: "Elly",
 		Role:     RoleAuditor,
 	}
@@ -139,7 +139,7 @@ func TestSqlite_SyncAuditCount(t *testing.T) {
 	resetDB(t)
 
 	auditor := &Auditor{
-		UserID:   "196417",
+		UserID:   196417,
 		Username: "Elly",
 		Role:     RoleAuditor,
 	}
@@ -184,16 +184,16 @@ func TestSqlite_SyncAuditCount(t *testing.T) {
 	}
 
 	submission := Submission{
-		ID:          "123",
-		UserID:      "456",
+		ID:          123,
+		UserID:      456,
 		URL:         "url",
 		Title:       "title",
 		Description: "description",
 		Audit: &Audit{
 			Auditor:            auditor,
-			SubmissionID:       "123",
+			SubmissionID:       123,
 			SubmissionUsername: "User",
-			SubmissionUserID:   "456",
+			SubmissionUserID:   456,
 			Flags:              []Flag{FlagUndisclosed},
 			ActionTaken:        "none",
 		},
@@ -237,7 +237,7 @@ func TestSqlite_SyncAuditCount(t *testing.T) {
 func TestSqlite_GetAuditsByAuditor(t *testing.T) {
 	resetDB(t)
 
-	audits, err := db.GetAuditsByAuditor("196417")
+	audits, err := db.GetAuditsByAuditor(196417)
 	if err != nil {
 		t.Fatalf("GetAuditsByAuditor() failed: %v", err)
 	}
@@ -282,8 +282,8 @@ func TestSqlite_InsertSubmission(t *testing.T) {
 	resetDB(t)
 
 	submission := Submission{
-		ID:          "123",
-		UserID:      "456",
+		ID:          123,
+		UserID:      456,
 		URL:         "url",
 		Title:       "title",
 		Description: "description",
@@ -300,21 +300,21 @@ func TestSqlite_InsertSubmission(t *testing.T) {
 func TestSqlite_InsertAudit(t *testing.T) {
 	TestSqlite_GetAuditorByID(t)
 
-	auditor, err := db.GetAuditorByID("196417")
+	auditor, err := db.GetAuditorByID(196417)
 	if err != nil {
 		t.Fatalf("GetAuditorByID() failed: %v", err)
 	}
 
-	err = db.InsertSubmission(Submission{ID: "123"})
+	err = db.InsertSubmission(Submission{ID: 123})
 	if err != nil {
 		t.Fatalf("InsertSubmission() failed: %v", err)
 	}
 
 	audit := Audit{
 		Auditor:            auditor,
-		SubmissionID:       "123",
+		SubmissionID:       123,
 		SubmissionUsername: "User",
-		SubmissionUserID:   "456",
+		SubmissionUserID:   456,
 		Flags:              []Flag{FlagUndisclosed},
 		ActionTaken:        "none",
 	}
@@ -331,7 +331,7 @@ func TestSqlite_GetAuditorByID(t *testing.T) {
 	resetDB(t)
 
 	auditor := &Auditor{
-		UserID:   "196417",
+		UserID:   196417,
 		Username: "Elly",
 		Role:     RoleAuditor,
 	}
@@ -351,8 +351,8 @@ func TestSqlite_GetSubmissionByID(t *testing.T) {
 	resetDB(t)
 
 	submission := Submission{
-		ID:          "123",
-		UserID:      "456",
+		ID:          123,
+		UserID:      456,
 		URL:         "url",
 		Title:       "title",
 		Description: "description",
@@ -372,6 +372,68 @@ func TestSqlite_GetSubmissionByID(t *testing.T) {
 	t.Logf("TestSqlite_GetSubmissionByID() passed: %v", submission)
 }
 
+func TestSqlite_GetAuditBySubmissionID(t *testing.T) {
+	resetDB(t)
+
+	auditor := &Auditor{
+		UserID:   196417,
+		Username: "Elly",
+		Role:     RoleAuditor,
+	}
+
+	err := db.InsertAuditor(*auditor)
+	if err != nil {
+		t.Fatalf("InsertAuditor() failed: %v", err)
+	}
+
+	submission := Submission{
+		ID:          123,
+		UserID:      456,
+		URL:         "url",
+		Title:       "title",
+		Description: "description",
+		Updated:     time.Now(),
+	}
+
+	err = db.InsertSubmission(submission)
+	if err != nil {
+		t.Fatalf("InsertSubmission() failed: %v", err)
+	}
+
+	audit := Audit{
+		Auditor:            auditor,
+		SubmissionID:       submission.ID,
+		SubmissionUsername: "User",
+		SubmissionUserID:   456,
+		Flags:              []Flag{FlagUndisclosed},
+		ActionTaken:        "none",
+	}
+
+	id, err := db.InsertAudit(audit)
+
+	audit, err = db.GetAuditBySubmissionID(submission.ID)
+	if err != nil {
+		t.Fatalf("GetAuditBySubmissionID() failed: %v", err)
+	}
+
+	if audit.SubmissionID != submission.ID {
+		t.Fatalf("GetAuditBySubmissionID() failed: expected %v, got %v", submission.ID, audit.SubmissionID)
+	}
+
+	submission, err = db.GetSubmissionByID(submission.ID)
+	if err != nil {
+		t.Fatalf("GetSubmissionByID() failed: %v", err)
+	}
+
+	if submission.Audit == nil {
+		t.Fatalf("GetAuditBySubmissionID() failed: expected non-nil, got nil")
+	}
+
+	if submission.Audit.ID != id {
+		t.Fatalf("GetAuditBySubmissionID() failed: expected %v, got %v", audit.ID, submission.Audit.ID)
+	}
+}
+
 const descriptionSQLInjection = `description'); DROP TABLE submissions; --`
 const userIDSQLInjection = `123 OR 1=1`
 
@@ -379,8 +441,8 @@ func TestSqlite_InsertSubmission_SQLInjection(t *testing.T) {
 	resetDB(t)
 
 	submission := Submission{
-		ID:          "123",
-		UserID:      "456",
+		ID:          123,
+		UserID:      456,
 		URL:         "url",
 		Title:       "title",
 		Description: descriptionSQLInjection,
@@ -400,12 +462,126 @@ func TestSqlite_InsertSubmission_SQLInjection(t *testing.T) {
 		t.Fatalf("InsertSubmission() failed: expected %v, got %v", descriptionSQLInjection, submissions.Description)
 	}
 
-	submissions, err = db.GetSubmissionByID(userIDSQLInjection)
-	if !errors.Is(err, sql.ErrNoRows) {
-		t.Fatalf("GetSubmissions() failed: expected sql.ErrNoRows, got %v", err)
-	}
+	//	No longer possible as we're using int64 for submission_id instead of string
+	//	submissions, err = db.GetSubmissionByID(userIDSQLInjection)
+	//	if !errors.Is(err, sql.ErrNoRows) {
+	//		t.Fatalf("GetSubmissions() failed: expected sql.ErrNoRows, got %v", err)
+	//	}
 
 	t.Logf("TestSqlite_InsertSubmission_SQLInjection() passed: %#v", submissions)
+}
+
+func TestSqlite_FixAuditsInSubmissions(t *testing.T) {
+	resetDB(t)
+
+	auditor := &Auditor{
+		UserID:   196417,
+		Username: "Elly",
+		Role:     RoleAuditor,
+	}
+
+	err := db.InsertAuditor(*auditor)
+	if err != nil {
+		t.Fatalf("InsertAuditor() failed: %v", err)
+	}
+
+	submission := Submission{
+		ID:          123,
+		UserID:      456,
+		URL:         "url",
+		Title:       "title",
+		Description: "description",
+		Updated:     time.Now(),
+	}
+
+	err = db.InsertSubmission(submission)
+	if err != nil {
+		t.Fatalf("InsertSubmission() failed: %v", err)
+	}
+
+	audit := Audit{
+		Auditor:            auditor,
+		SubmissionID:       submission.ID,
+		SubmissionUsername: "User",
+		SubmissionUserID:   456,
+		Flags:              []Flag{FlagUndisclosed},
+		ActionTaken:        "none",
+	}
+
+	_, err = db.InsertAudit(audit)
+	if err != nil {
+		t.Fatalf("InsertAudit() failed: %v", err)
+	}
+
+	err = db.FixAuditsInSubmissions()
+	if err != nil {
+		t.Fatalf("FixAuditsInSubmissions() failed: %v", err)
+	}
+
+	submission, err = db.GetSubmissionByID(submission.ID)
+	if err != nil {
+		t.Fatalf("GetSubmissionByID() failed: %v", err)
+	}
+
+	if submission.Audit == nil {
+		t.Fatalf("FixAuditsInSubmissions() failed: expected non-nil, got nil")
+	}
+
+	t.Log("TestSqlite_FixAuditsInSubmissions() passed")
+}
+
+func TestSqlite_GetAuditByID(t *testing.T) {
+	resetDB(t)
+
+	auditor := &Auditor{
+		UserID:   196417,
+		Username: "Elly",
+		Role:     RoleAuditor,
+	}
+
+	err := db.InsertAuditor(*auditor)
+	if err != nil {
+		t.Fatalf("InsertAuditor() failed: %v", err)
+	}
+
+	submission := Submission{
+		ID:          123,
+		UserID:      456,
+		URL:         "url",
+		Title:       "title",
+		Description: "description",
+		Updated:     time.Now(),
+	}
+
+	err = db.InsertSubmission(submission)
+	if err != nil {
+		t.Fatalf("InsertSubmission() failed: %v", err)
+	}
+
+	audit := Audit{
+		Auditor:            auditor,
+		SubmissionID:       submission.ID,
+		SubmissionUsername: "User",
+		SubmissionUserID:   456,
+		Flags:              []Flag{FlagUndisclosed},
+		ActionTaken:        "none",
+	}
+
+	id, err := db.InsertAudit(audit)
+	if err != nil {
+		t.Fatalf("InsertAudit() failed: %v", err)
+	}
+
+	audit, err = db.GetAuditByID(id)
+	if err != nil {
+		t.Fatalf("GetAuditByID() failed: %v", err)
+	}
+
+	if audit.ID != id {
+		t.Fatalf("GetAuditByID() failed: expected %v, got %v", id, audit.ID)
+	}
+
+	t.Log("TestSqlite_GetAuditByID() passed")
 }
 
 func newPhysical(filename string, t *testing.T) *Sqlite {
@@ -439,12 +615,14 @@ func TestAllReal(t *testing.T) {
 	t.Run("TestNew", TestNew)
 	t.Run("TestSqlite_InsertAuditor", TestSqlite_InsertAuditor)
 	t.Run("TestSqlite_IncreaseAuditCount", TestSqlite_IncreaseAuditCount)
-	t.Run("TestSqlite_SyncAuditCount", TestSqlite_SyncAuditCount)
-	t.Run("TestSqlite_GetAuditsByAuditor", TestSqlite_GetAuditsByAuditor)
 	t.Run("TestSqlite_InsertFile", TestSqlite_InsertFile)
 	t.Run("TestSqlite_InsertSubmission", TestSqlite_InsertSubmission)
 	t.Run("TestSqlite_InsertAudit", TestSqlite_InsertAudit)
+	t.Run("TestSqlite_SyncAuditCount", TestSqlite_SyncAuditCount)
+	t.Run("TestSqlite_FixAuditsInSubmissions", TestSqlite_FixAuditsInSubmissions)
+	t.Run("TestSqlite_GetAuditsByAuditor", TestSqlite_GetAuditsByAuditor)
 	t.Run("TestSqlite_GetAuditorByID", TestSqlite_GetAuditorByID)
+	t.Run("TestSqlite_GetAuditBySubmissionID", TestSqlite_GetAuditBySubmissionID)
 	t.Run("TestSqlite_GetSubmissionByID", TestSqlite_GetSubmissionByID)
 	t.Run("TestSqlite_InsertSubmission_SQLInjection", TestSqlite_InsertSubmission_SQLInjection)
 	useVirtualDB = true

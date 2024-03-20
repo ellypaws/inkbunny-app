@@ -367,8 +367,8 @@ func (db Sqlite) ValidSID(user api.Credentials) bool {
 	}
 
 	checksum := hash(user.Sid)
-	for hash := range stored.Hashes {
-		if _, ok := checksum[hash]; ok {
+	for hash := range checksum {
+		if _, ok := stored.Hashes[hash]; ok {
 			return true
 		}
 	}

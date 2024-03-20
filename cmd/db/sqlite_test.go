@@ -10,8 +10,15 @@ import (
 )
 
 var db, _ = tempDB(context.Background())
+var useVirtualDB = true
+
+const tempPhysicalDB = "temp.sqlite"
 
 func tempDB(ctx context.Context) (*Sqlite, error) {
+	if !useVirtualDB {
+		db := newPhysical(tempPhysicalDB, nil)
+		return db, nil
+	}
 	db, err := sql.Open("sqlite", ":memory:")
 	if err != nil {
 		return nil, err
@@ -166,8 +173,14 @@ func TestSqlite_SyncAuditCount(t *testing.T) {
 		t.Fatalf("GetAuditorByID() failed: %v", err)
 	}
 
-	if auditor.AuditCount != 0 {
-		t.Fatalf("SyncAuditCount() failed: expected 0, got %v", auditor.AuditCount)
+	if useVirtualDB {
+		if auditor.AuditCount != 0 {
+			t.Errorf("SyncAuditCount() failed: expected 0, got %v", auditor.AuditCount)
+		}
+	} else {
+		if auditor.AuditCount != 1 {
+			t.Errorf("SyncAuditCount() failed: expected 1, got %v", auditor.AuditCount)
+		}
 	}
 
 	submission := Submission{
@@ -229,8 +242,14 @@ func TestSqlite_GetAuditsByAuditor(t *testing.T) {
 		t.Fatalf("GetAuditsByAuditor() failed: %v", err)
 	}
 
-	if len(audits) != 0 {
-		t.Fatalf("GetAuditsByAuditor() failed: expected 0, got %v", len(audits))
+	if useVirtualDB {
+		if len(audits) != 0 {
+			t.Fatalf("GetAuditsByAuditor() failed: expected 0, got %v", len(audits))
+		}
+	} else {
+		if len(audits) != 1 {
+			t.Fatalf("GetAuditsByAuditor() failed: expected 1, got %v", len(audits))
+		}
 	}
 
 	t.Log("TestSqlite_GetAuditsByAuditor() passed")
@@ -387,4 +406,46 @@ func TestSqlite_InsertSubmission_SQLInjection(t *testing.T) {
 	}
 
 	t.Logf("TestSqlite_InsertSubmission_SQLInjection() passed: %#v", submissions)
+}
+
+func newPhysical(filename string, t *testing.T) *Sqlite {
+	err := touchDBFile(filename)
+	if err != nil {
+		t.Fatalf("touchDBFile() failed: %v", err)
+	}
+
+	db, err := sql.Open("sqlite", filename)
+	if err != nil {
+		t.Fatalf("sql.Open() failed: %v", err)
+	}
+
+	_, err = db.Exec(setForeignKeyCheck)
+	if err != nil {
+		t.Fatalf("failed to enable foreign key checks: %v", err)
+	}
+
+	ctx := context.Background()
+	err = migrate(ctx, db)
+	if err != nil {
+		t.Fatalf("migrate() failed: %v", err)
+	}
+
+	return &Sqlite{db, ctx}
+}
+
+func TestAllReal(t *testing.T) {
+	useVirtualDB = false
+	//t.Run("TestPhysical", TestPhysical)
+	t.Run("TestNew", TestNew)
+	t.Run("TestSqlite_InsertAuditor", TestSqlite_InsertAuditor)
+	t.Run("TestSqlite_IncreaseAuditCount", TestSqlite_IncreaseAuditCount)
+	t.Run("TestSqlite_SyncAuditCount", TestSqlite_SyncAuditCount)
+	t.Run("TestSqlite_GetAuditsByAuditor", TestSqlite_GetAuditsByAuditor)
+	t.Run("TestSqlite_InsertFile", TestSqlite_InsertFile)
+	t.Run("TestSqlite_InsertSubmission", TestSqlite_InsertSubmission)
+	t.Run("TestSqlite_InsertAudit", TestSqlite_InsertAudit)
+	t.Run("TestSqlite_GetAuditorByID", TestSqlite_GetAuditorByID)
+	t.Run("TestSqlite_GetSubmissionByID", TestSqlite_GetSubmissionByID)
+	t.Run("TestSqlite_InsertSubmission_SQLInjection", TestSqlite_InsertSubmission_SQLInjection)
+	useVirtualDB = true
 }

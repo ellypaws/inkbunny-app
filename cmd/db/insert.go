@@ -152,6 +152,7 @@ func (db Sqlite) FixAuditsInSubmissions() error {
 	}
 	defer rows.Close()
 
+	var audits []Audit
 	for rows.Next() {
 		var auditID, submissionID int64
 		err = rows.Scan(&auditID, &submissionID)
@@ -159,7 +160,11 @@ func (db Sqlite) FixAuditsInSubmissions() error {
 			return err
 		}
 
-		_, err = db.ExecContext(db.context, updateSubmissionAudit, auditID, submissionID)
+		audits = append(audits, Audit{ID: auditID, SubmissionID: submissionID})
+	}
+
+	for _, audit := range audits {
+		_, err = db.ExecContext(db.context, updateSubmissionAudit, audit.ID, audit.SubmissionID)
 		if err != nil {
 			return fmt.Errorf("error: updating submission audit: %v", err)
 		}
@@ -257,4 +262,9 @@ func (db Sqlite) InsertSubmission(submission Submission) error {
 	}
 
 	return nil
+}
+
+func (db Sqlite) UpdateDescription(submission Submission) error {
+	_, err := db.ExecContext(db.context, updateSubmissionDescription, submission.Description, submission.ID)
+	return err
 }

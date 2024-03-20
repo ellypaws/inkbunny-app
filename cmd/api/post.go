@@ -2,6 +2,7 @@ package main
 
 import (
 	"github.com/ellypaws/inkbunny-app/cmd/crashy"
+	"github.com/ellypaws/inkbunny-app/cmd/db"
 	"github.com/ellypaws/inkbunny-sd/entities"
 	"github.com/ellypaws/inkbunny-sd/llm"
 	"github.com/ellypaws/inkbunny-sd/utils"
@@ -9,10 +10,13 @@ import (
 	"github.com/go-errors/errors"
 	"github.com/labstack/echo/v4"
 	"net/http"
+	"strconv"
 )
 
 var postRoutes = map[string]func(c echo.Context) error{
 	"/login":    login,
+	"/logout":   logout,
+	"/validate": validate,
 	"/llm":      inference,
 	"/llm/json": stable,
 	"/prefill":  prefill,
@@ -29,6 +33,12 @@ func login(c echo.Context) error {
 	if err := c.Bind(&loginRequest); err != nil {
 		return err
 	}
+	if loginRequest.Username == "" {
+		loginRequest.Username = c.QueryParam("username")
+	}
+	if loginRequest.Password == "" {
+		loginRequest.Password = c.QueryParam("password")
+	}
 	user := &api.Credentials{
 		Username: loginRequest.Username,
 		Password: loginRequest.Password,
@@ -37,7 +47,53 @@ func login(c echo.Context) error {
 	if err != nil {
 		return c.JSON(http.StatusUnauthorized, crashy.Wrap(err))
 	}
+
+	err = database.InsertSIDHash(db.HashCredentials(*user))
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
+	}
+
 	return c.JSON(http.StatusOK, user)
+}
+
+func logout(c echo.Context) error {
+	var user *api.Credentials
+	if err := c.Bind(&user); err != nil {
+		return c.JSON(http.StatusBadRequest, crashy.Wrap(err))
+	}
+
+	if user.Sid == "" {
+		return c.JSON(http.StatusBadRequest, crashy.ErrorResponse{Error: "SID is required"})
+	}
+
+	err := user.Logout()
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
+	}
+
+	err = database.RemoveSIDHash(db.HashCredentials(*user))
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
+	}
+
+	return c.String(http.StatusOK, "logged out")
+}
+
+func validate(c echo.Context) error {
+	var user api.Credentials
+	if err := c.Bind(user); err != nil {
+		return err
+	}
+
+	if user.Sid == "" {
+		return c.JSON(http.StatusBadRequest, crashy.ErrorResponse{Error: "SID is required"})
+	}
+
+	if !database.ValidSID(user) {
+		return c.JSON(http.StatusUnauthorized, crashy.ErrorResponse{Error: "invalid SID"})
+	}
+
+	return c.String(http.StatusOK, strconv.Itoa(http.StatusOK))
 }
 
 func hostOnline(c llm.Config) error {

@@ -17,6 +17,7 @@ var getRoutes = map[string]func(c echo.Context) error{
 	"/inkbunny/submission":  GetInkbunnySubmission,
 	"/inkbunny/search":      GetInkbunnySearch,
 	"/image":                app.GetImageHandler,
+	"/tickets/audits":       GetAuditHandler,
 }
 
 func registerGetRoutes(e *echo.Echo) {
@@ -263,4 +264,43 @@ func mail(c echo.Context, user *api.Credentials, response api.SubmissionSearchRe
 		})
 	}
 	return c.JSON(http.StatusOK, mails)
+}
+
+func GetAuditHandler(c echo.Context) error {
+	var user *api.Credentials
+	err := c.Bind(&user)
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, crashy.Wrap(err))
+	}
+
+	if user.Sid == "" {
+		if sid := c.QueryParam("sid"); sid != "" {
+			user.Sid = sid
+		}
+	}
+
+	if !database.ValidSID(*user) {
+		return c.JSON(http.StatusUnauthorized, crashy.ErrorResponse{Error: "invalid SID"})
+	}
+	if user.Username == "" {
+		user.Username, err = database.GetUsernameFromSID(user.Sid)
+		if err != nil {
+			return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
+		}
+	}
+
+	if !validAuditor(user) {
+		return c.JSON(http.StatusUnauthorized, crashy.ErrorResponse{Error: "invalid auditor"})
+	}
+
+	audits, err := database.GetAuditsByAuditor(int64(user.UserID.Int()))
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
+	}
+
+	return c.JSON(http.StatusOK, audits)
+}
+
+func validAuditor(user *api.Credentials) bool {
+	return database.IsAuditorRole(int64(user.UserID.Int()))
 }

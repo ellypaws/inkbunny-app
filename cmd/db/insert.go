@@ -101,13 +101,22 @@ func (db Sqlite) SyncAuditCount(auditorID int64) error {
 }
 
 // InsertAudit inserts an audit into the database. If the auditor is not in the database, it will be inserted.
-// Auditor needs to be non-empty and exist in the database before inserting an audit.
+// Auditor needs to be non-empty or exist in the database before inserting an audit.
 // Similarly, the Submission needs to be in the database as well and be filled in the audit.
-func (db Sqlite) InsertAudit(audit Audit) (id int64, err error) {
+// If successful, the submission will be updated with the new audit_id.
+func (db Sqlite) InsertAudit(audit Audit) (int64, error) {
+	if audit.Auditor == nil {
+		return 0, errors.New("error: auditor is nil")
+	}
+
 	if audit.Auditor != nil {
-		err := db.InsertAuditor(*audit.Auditor)
-		if err != nil {
-			return 0, fmt.Errorf("error: inserting auditor: %v", err)
+		_, err := db.GetAuditorByID(audit.Auditor.UserID)
+		if err != nil && errors.Is(err, sql.ErrNoRows) {
+			// Only insert if new, otherwise keep old record
+			err := db.InsertAuditor(*audit.Auditor)
+			if err != nil {
+				return 0, fmt.Errorf("error: inserting auditor: %v", err)
+			}
 		}
 	}
 
@@ -124,28 +133,28 @@ func (db Sqlite) InsertAudit(audit Audit) (id int64, err error) {
 		return 0, err
 	}
 
-	id, err = res.LastInsertId()
+	audit, err = db.GetAuditBySubmissionID(audit.SubmissionID)
 	if err != nil {
-		return 0, err
+		return 0, fmt.Errorf("error: getting audit by submission id: %v", err)
 	}
 
 	// set audit in submission if it exists in database
-	res, err = db.ExecContext(db.context, updateSubmissionAudit, id, audit.SubmissionID)
+	res, err = db.ExecContext(db.context, updateSubmissionAudit, audit.ID, audit.SubmissionID)
 	if err != nil {
-		return
+		return 0, fmt.Errorf("error: updating submission audit: %v", err)
 	}
 
 	rowCount, err := res.RowsAffected()
 	if err != nil {
 		log.Printf("error: getting rows affected: %v", err)
-		return
+		return 0, err
 	}
 
 	if rowCount == 0 {
 		log.Printf("warning: submission %d doesn't exist in the database", audit.SubmissionID)
 	}
 
-	return id, nil
+	return audit.ID, nil
 }
 
 // FixAuditsInSubmissions updates all submissions with the correct audit_id.

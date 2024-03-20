@@ -352,3 +352,33 @@ func TestSqlite_GetSubmissionByID(t *testing.T) {
 
 	t.Logf("TestSqlite_GetSubmissionByID() passed: %v", submission)
 }
+
+const descriptionSQLInjection = `description'); DROP TABLE submissions; --`
+
+func TestSqlite_InsertSubmission_SQLInjection(t *testing.T) {
+	resetDB(t)
+
+	submission := Submission{
+		ID:          "123",
+		UserID:      "456",
+		URL:         "url",
+		Title:       "title",
+		Description: descriptionSQLInjection,
+	}
+
+	err := db.InsertSubmission(submission)
+	if err != nil {
+		t.Fatalf("InsertSubmission() failed: %v", err)
+	}
+
+	submissions, err := db.GetSubmissionByID(submission.ID)
+	if err != nil {
+		t.Fatalf("GetSubmissions() failed: %v", err)
+	}
+
+	if submissions.Description != descriptionSQLInjection {
+		t.Fatalf("InsertSubmission() failed: expected %v, got %v", descriptionSQLInjection, submissions.Description)
+	}
+
+	t.Logf("TestSqlite_InsertSubmission_SQLInjection() passed: %#v", submissions)
+}

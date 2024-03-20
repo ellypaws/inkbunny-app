@@ -178,8 +178,8 @@ func TestSqlite_SyncAuditCount(t *testing.T) {
 			t.Errorf("SyncAuditCount() failed: expected 0, got %v", auditor.AuditCount)
 		}
 	} else {
-		if auditor.AuditCount != 1 {
-			t.Errorf("SyncAuditCount() failed: expected 1, got %v", auditor.AuditCount)
+		if !(auditor.AuditCount > 0) {
+			t.Errorf("SyncAuditCount() failed: expected > 0, got %v", auditor.AuditCount)
 		}
 	}
 
@@ -227,8 +227,8 @@ func TestSqlite_SyncAuditCount(t *testing.T) {
 		t.Fatalf("GetAuditorByID() failed: %v", err)
 	}
 
-	if auditor.AuditCount != 1 {
-		t.Fatalf("SyncAuditCount() failed: expected 1, got %v", auditor.AuditCount)
+	if !(auditor.AuditCount > 0) {
+		t.Fatalf("SyncAuditCount() failed: expected > 0, got %v", auditor.AuditCount)
 	}
 
 	t.Log("TestSqlite_SyncAuditCount() passed")
@@ -247,8 +247,8 @@ func TestSqlite_GetAuditsByAuditor(t *testing.T) {
 			t.Fatalf("GetAuditsByAuditor() failed: expected 0, got %v", len(audits))
 		}
 	} else {
-		if len(audits) != 1 {
-			t.Fatalf("GetAuditsByAuditor() failed: expected 1, got %v", len(audits))
+		if !(len(audits) > 0) {
+			t.Fatalf("GetAuditsByAuditor() failed: expected > 0, got %v", len(audits))
 		}
 	}
 

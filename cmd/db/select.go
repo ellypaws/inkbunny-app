@@ -2,9 +2,12 @@ package db
 
 import (
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"github.com/go-errors/errors"
+	"strconv"
 	"strings"
+	"time"
 )
 
 // Selection statements
@@ -35,7 +38,25 @@ const (
 		flags,
 		action_taken
 	FROM audits WHERE auditor_id = ?;
-`
+	`
+
+	selectSubmissionByID = `
+	SELECT
+		submission_id,
+		user_id,
+		url,
+		audit_id,
+		title,
+		description,
+		updated_at,
+		ai_generated,
+		ai_assisted,
+		img2img,
+		ratings,
+		keywords,
+		file_id
+	FROM submissions WHERE submission_id = ?;
+	`
 )
 
 func (db Sqlite) GetAuditBySubmissionID(submissionID string) (Audit, error) {
@@ -61,7 +82,7 @@ func (db Sqlite) GetAuditBySubmissionID(submissionID string) (Audit, error) {
 
 func (db Sqlite) GetAuditsByAuditor(auditorID string) ([]Audit, error) {
 	auditor, err := db.GetAuditorByID(auditorID)
-	if err != nil && !errors.As(err, &sql.ErrNoRows) {
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		return nil, fmt.Errorf("got an error while getting auditor by id (not sql.ErrNoRows): %w", err)
 	}
 
@@ -106,4 +127,62 @@ func (db Sqlite) GetAuditorByID(auditorID string) (*Auditor, error) {
 	}
 
 	return &auditor, nil
+}
+
+func (db Sqlite) GetSubmissionByID(submissionID string) (Submission, error) {
+	var submission Submission
+	var timeString string
+	var auditID *sql.NullInt64
+	var fileID *sql.NullString
+	var ratings []byte
+	var keywords []byte
+
+	err := db.QueryRowContext(db.context, selectSubmissionByID, submissionID).Scan(
+		&submission.ID, &submission.UserID, &submission.URL, &auditID,
+		&submission.Title, &submission.Description, &timeString,
+		&submission.Generated, &submission.Assisted, &submission.Img2Img, &ratings,
+		&keywords, &fileID,
+	)
+	if err != nil {
+		return submission, err
+	}
+
+	submission.Updated, err = time.Parse(time.RFC3339, timeString)
+	if err != nil {
+		return submission, err
+	}
+	if submission.Updated.IsZero() {
+		submission.Updated = time.Now().UTC()
+	}
+
+	err = json.Unmarshal(ratings, &submission.Ratings)
+	if err != nil {
+		return submission, fmt.Errorf("error: unmarshalling ratings: %w", err)
+	}
+	err = json.Unmarshal(keywords, &submission.Keywords)
+	if err != nil {
+		return submission, fmt.Errorf("error: unmarshalling keywords: %w", err)
+	}
+
+	if auditID != nil && auditID.Valid {
+		audit, err := db.GetAuditBySubmissionID(strconv.Itoa(int((*auditID).Int64)))
+		if err != nil {
+			if !errors.Is(err, sql.ErrNoRows) {
+				return submission, err
+			}
+		} else {
+			submission.Audit = &audit
+		}
+	}
+
+	// TODO: get files by fileID as comma separated string
+	//if fileID != nil && fileID.Valid {
+	//	files, err := db.GetFilesByID(fileID.String)
+	//	if err != nil {
+	//		if !errors.Is(err, sql.ErrNoRows) { return submission, err }
+	//	}
+	//	submission.Files = files
+	//}
+
+	return submission, nil
 }

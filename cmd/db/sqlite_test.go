@@ -6,6 +6,7 @@ import (
 	"errors"
 	"github.com/ellypaws/inkbunny/api"
 	"testing"
+	"time"
 )
 
 var db, _ = tempDB(context.Background())
@@ -325,4 +326,29 @@ func TestSqlite_GetAuditorByID(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GetAuditorByID() failed: %v", err)
 	}
+}
+
+func TestSqlite_GetSubmissionByID(t *testing.T) {
+	resetDB(t)
+
+	submission := Submission{
+		ID:          "123",
+		UserID:      "456",
+		URL:         "url",
+		Title:       "title",
+		Description: "description",
+		Updated:     time.Now(),
+	}
+
+	err := db.InsertSubmission(submission)
+	if err != nil {
+		t.Fatalf("InsertSubmission() failed: %v", err)
+	}
+
+	submission, err = db.GetSubmissionByID(submission.ID)
+	if err != nil {
+		t.Fatalf("GetSubmissionByID() failed: %v", err)
+	}
+
+	t.Logf("TestSqlite_GetSubmissionByID() passed: %v", submission)
 }

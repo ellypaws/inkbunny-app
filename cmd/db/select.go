@@ -78,6 +78,10 @@ const (
 	selectAudits = `SELECT audit_id, submission_id FROM audits`
 
 	selectSIDsFromUserID = `SELECT user_id, username, sid_hash FROM sids WHERE user_id = ?;`
+
+	selectUsernameFromSID = `SELECT username FROM sids WHERE sid_hash = ?;`
+
+	isAnAuditor = `SELECT EXISTS(SELECT 1 FROM auditors WHERE auditor_id = ?);`
 )
 
 func (db Sqlite) GetAuditBySubmissionID(submissionID int64) (Audit, error) {
@@ -172,13 +176,16 @@ func (db Sqlite) GetAuditsByAuditor(auditorID int64) ([]Audit, error) {
 
 func (db Sqlite) GetAuditorByID(auditorID int64) (*Auditor, error) {
 	var auditor Auditor
+	var role string
 
 	err := db.QueryRowContext(db.context, selectAuditorByID, auditorID).Scan(
-		&auditor.UserID, &auditor.Username, &auditor.Role, &auditor.AuditCount,
+		&auditor.UserID, &auditor.Username, &role, &auditor.AuditCount,
 	)
 	if err != nil {
 		return nil, err
 	}
+
+	auditor.Role = RoleLevel(role)
 
 	return &auditor, nil
 }
@@ -275,4 +282,16 @@ func (db Sqlite) GetSIDsFromUserID(userID int64) (SIDHash, error) {
 	err = json.Unmarshal(hashes, &sid.Hashes)
 
 	return sid, nil
+}
+
+func (db Sqlite) GetUsernameFromSID(sid string) (string, error) {
+	var username string
+	err := db.QueryRowContext(db.context, selectUsernameFromSID, sid).Scan(&username)
+	return username, err
+}
+
+func (db Sqlite) IsInAuditor(auditorID int64) (bool, error) {
+	var exists bool
+	err := db.QueryRowContext(db.context, isAnAuditor, auditorID).Scan(&exists)
+	return exists, err
 }

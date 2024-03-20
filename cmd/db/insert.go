@@ -90,7 +90,7 @@ const (
 
 func (db Sqlite) InsertAuditor(auditor Auditor) error {
 	_, err := db.ExecContext(db.context, upsertAuditor,
-		auditor.UserID, auditor.Username, auditor.Role, auditor.AuditCount,
+		auditor.UserID, auditor.Username, auditor.Role.String(), auditor.AuditCount,
 	)
 
 	return err

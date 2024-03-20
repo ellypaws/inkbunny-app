@@ -60,16 +60,57 @@ type Auditor struct {
 	AuditCount int    `json:"audit_count"`
 }
 
-type Role string
+type Role int
 
+// Role is the type of role that an Auditor can have
+// Admin is the highest role, and has the ability to perform all actions
+// The list of Inkbunny staff can be found at https://inkbunny.net/adminsmods_process.php
 const (
-	RoleAdmin        Role = "administrator"
-	RoleAuditor      Role = "auditor"
-	RoleCommunityMod Role = "community_mod"
-	RoleSuperMod     Role = "super_mod"
-	RoleModerator    Role = "moderator" // Deprecated: use SuperMod
-	RoleUser         Role = "user"
+	RoleAdmin Role = iota
+	RoleCommunityMod
+	RoleSuperMod
+	RoleModerator // Deprecated: use SuperMod
+	RoleAuditor
+	RoleUser
 )
+
+func (r Role) String() string {
+	switch r {
+	case RoleAdmin:
+		return "admin"
+	case RoleCommunityMod:
+		return "community_mod"
+	case RoleSuperMod:
+		return "super_mod"
+	case RoleModerator:
+		return "moderator"
+	case RoleAuditor:
+		return "auditor"
+	case RoleUser:
+		return "user"
+	default:
+		return "unknown"
+	}
+}
+
+func RoleLevel(s string) Role {
+	switch s {
+	case "admin":
+		return RoleAdmin
+	case "community_mod":
+		return RoleCommunityMod
+	case "super_mod":
+		return RoleSuperMod
+	case "moderator":
+		return RoleModerator
+	case "auditor":
+		return RoleAuditor
+	case "user":
+		return RoleUser
+	default:
+		return RoleUser
+	}
+}
 
 const (
 	StableDiffusion = "stable_diffusion"

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/go-errors/errors"
+	"log"
 	"strings"
 	"time"
 )
@@ -183,8 +184,8 @@ func (db Sqlite) GetAuditorByID(auditorID int64) (*Auditor, error) {
 func (db Sqlite) GetSubmissionByID(submissionID int64) (Submission, error) {
 	var submission Submission
 	var timeString string
-	var auditID *sql.NullInt64
-	var fileID *sql.NullString
+	var auditID sql.NullInt64
+	var fileID sql.NullString
 	var ratings []byte
 	var keywords []byte
 
@@ -215,19 +216,19 @@ func (db Sqlite) GetSubmissionByID(submissionID int64) (Submission, error) {
 		return submission, fmt.Errorf("error: unmarshalling keywords: %w", err)
 	}
 
-	if auditID != nil && auditID.Valid {
-		audit, err := db.GetAuditByID((*auditID).Int64)
+	if auditID.Valid {
+		if auditID.Int64 == 0 {
+			return submission, errors.New("error: audit ID cannot be 0")
+		}
+		audit, err := db.GetAuditByID(auditID.Int64)
 		if err != nil {
 			if !errors.Is(err, sql.ErrNoRows) {
 				return submission, err
+			} else {
+				log.Printf("warning: audit %d is not null but couldn't find audit of %d", auditID.Int64, submissionID)
 			}
 		} else {
 			submission.Audit = &audit
-			// Store the audit id in the submission now
-			err = db.InsertSubmission(submission)
-			if err != nil {
-				return submission, err
-			}
 		}
 	} else {
 		// Try to get the audit by submission id
@@ -245,7 +246,7 @@ func (db Sqlite) GetSubmissionByID(submissionID int64) (Submission, error) {
 	}
 
 	// TODO: get files by fileID as comma separated string
-	//if fileID != nil && fileID.Valid {
+	//if fileID.Valid {
 	//	files, err := db.GetFilesByID(fileID.String)
 	//	if err != nil {
 	//		if !errors.Is(err, sql.ErrNoRows) { return submission, err }

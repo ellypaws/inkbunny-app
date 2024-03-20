@@ -455,7 +455,7 @@ func TestSqlite_InsertSubmission_SQLInjection(t *testing.T) {
 
 	submissions, err := db.GetSubmissionByID(submission.ID)
 	if err != nil {
-		t.Fatalf("GetSubmissions() failed: %v", err)
+		t.Fatalf("GetSubmissionByID() failed: %v", err)
 	}
 
 	if submissions.Description != descriptionSQLInjection {
@@ -626,4 +626,51 @@ func TestAllReal(t *testing.T) {
 	t.Run("TestSqlite_GetSubmissionByID", TestSqlite_GetSubmissionByID)
 	t.Run("TestSqlite_InsertSubmission_SQLInjection", TestSqlite_InsertSubmission_SQLInjection)
 	useVirtualDB = true
+}
+
+func TestSqlite_InsertFullSubmission(t *testing.T) {
+	useVirtualDB = false
+	resetDB(t)
+
+	submission := Submission{
+		ID:          456,
+		UserID:      789,
+		URL:         "url",
+		Title:       "title",
+		Description: "description",
+		Updated:     time.Now(),
+		Audit: &Audit{
+			ID:                 69,
+			Auditor:            &Auditor{UserID: 196417, Username: "Elly", Role: RoleAuditor, AuditCount: 0},
+			SubmissionID:       456,
+			SubmissionUsername: "User",
+			SubmissionUserID:   789,
+			Flags:              []Flag{FlagUndisclosed},
+			ActionTaken:        "none",
+		},
+	}
+
+	err := db.InsertSubmission(submission)
+	if err != nil {
+		t.Fatalf("InsertSubmission() failed: %v", err)
+	}
+
+	submission, err = db.GetSubmissionByID(456)
+	if err != nil {
+		t.Fatalf("GetSubmissionByID() failed: %v", err)
+	}
+
+	if submission.Audit == nil {
+		t.Fatalf("InsertSubmission() failed: expected non-nil, got nil")
+	}
+
+	if submission.Audit.ID != 69 {
+		t.Fatalf("InsertSubmission() failed: expected 69, got %v", submission.Audit.ID)
+	}
+
+	if submission.Audit.Auditor.UserID != 196417 {
+		t.Fatalf("InsertSubmission() failed: expected 196417, got %v", submission.Audit.Auditor.UserID)
+	}
+
+	t.Logf("TestSqlite_GetSubmissionByID2() passed: %+v", submission)
 }

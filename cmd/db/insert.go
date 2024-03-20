@@ -39,6 +39,10 @@ const (
 	                  action_taken=excluded.action_taken;
 	`
 
+	updateAuditID = `
+	UPDATE audits SET audit_id = ? WHERE submission_id = ?;
+	`
+
 	upsertFile = `
 	INSERT INTO files (file_id, file, info) VALUES (?, ?, ?)
 	ON CONFLICT(file_id) DO UPDATE SET file=excluded.file, info=excluded.info;
@@ -131,6 +135,13 @@ func (db Sqlite) InsertAudit(audit Audit) (int64, error) {
 	)
 	if err != nil {
 		return 0, err
+	}
+
+	if audit.ID != 0 {
+		_, err = db.ExecContext(db.context, updateAuditID, audit.ID, audit.SubmissionID)
+		if err != nil {
+			return 0, fmt.Errorf("error: updating audit id: %v", err)
+		}
 	}
 
 	audit, err = db.GetAuditBySubmissionID(audit.SubmissionID)

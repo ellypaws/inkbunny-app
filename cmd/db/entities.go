@@ -6,6 +6,8 @@ import (
 	"time"
 )
 
+type Flag string
+
 // Flag is the type of violation that had incurred in a Submission
 // In the event that the image is mostly or fully AI-generated:
 //   - The image must be tagged with the ai_generated keyword
@@ -22,8 +24,6 @@ import (
 //   - The image must be tagged with the ai_assisted keyword
 //   - You must indicate what parts of the image were AI generated in the description and follow the above rules in relation to keywords and descriptions
 //   - You may sell artwork with AI-generated backgrounds or assets, however it must be made clear that the image contains (or will contain) AI generated components
-type Flag string
-
 const (
 	FlagMissingPrompt Flag = "missing_prompt"
 	FlagAUPViolation  Flag = "aup_violation"

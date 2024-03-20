@@ -233,8 +233,10 @@ func (db Sqlite) GetSubmissionByID(submissionID int64) (Submission, error) {
 	} else {
 		// Try to get the audit by submission id
 		audit, err := db.GetAuditBySubmissionID(submission.ID)
-		if err != nil && !errors.Is(err, sql.ErrNoRows) {
-			return submission, err
+		if err != nil {
+			if !errors.Is(err, sql.ErrNoRows) {
+				return submission, err
+			}
 		} else {
 			submission.Audit = &audit
 			// Store the audit id in the submission now

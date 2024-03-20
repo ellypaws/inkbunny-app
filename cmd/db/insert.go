@@ -235,20 +235,25 @@ func (db Sqlite) InsertSubmission(submission Submission) error {
 	}
 
 	var auditIDNullable sql.NullInt64
+	var newAudit bool
 	if submission.Audit != nil {
 		auditIDNullable = sql.NullInt64{
 			Int64: submission.Audit.ID,
 			Valid: true,
 		}
+		newAudit = true
 	} else {
 		audit, err := db.GetAuditBySubmissionID(submission.ID)
-		if err != nil && !errors.Is(err, sql.ErrNoRows) {
-			return fmt.Errorf("error: getting audit by submission id: %v", err)
+		if err != nil {
+			if !errors.Is(err, sql.ErrNoRows) {
+				return fmt.Errorf("error: getting audit by submission id: %v", err)
+			}
 		} else {
 			auditIDNullable = sql.NullInt64{
 				Int64: audit.ID,
 				Valid: true,
 			}
+			submission.Audit = &audit
 		}
 	}
 
@@ -262,15 +267,10 @@ func (db Sqlite) InsertSubmission(submission Submission) error {
 		return fmt.Errorf("error: inserting submission: %v", err)
 	}
 
-	if submission.Audit != nil {
-		id, err := db.InsertAudit(*submission.Audit)
+	if newAudit {
+		_, err := db.InsertAudit(*submission.Audit)
 		if err != nil {
 			return fmt.Errorf("error: inserting audit: %v", err)
-		}
-
-		_, err = db.ExecContext(db.context, updateSubmissionAudit, id, submission.ID)
-		if err != nil {
-			return fmt.Errorf("error: setting audit in submission: %v", err)
 		}
 	}
 

@@ -354,6 +354,7 @@ func TestSqlite_GetSubmissionByID(t *testing.T) {
 }
 
 const descriptionSQLInjection = `description'); DROP TABLE submissions; --`
+const userIDSQLInjection = `123 OR 1=1`
 
 func TestSqlite_InsertSubmission_SQLInjection(t *testing.T) {
 	resetDB(t)
@@ -378,6 +379,11 @@ func TestSqlite_InsertSubmission_SQLInjection(t *testing.T) {
 
 	if submissions.Description != descriptionSQLInjection {
 		t.Fatalf("InsertSubmission() failed: expected %v, got %v", descriptionSQLInjection, submissions.Description)
+	}
+
+	submissions, err = db.GetSubmissionByID(userIDSQLInjection)
+	if !errors.Is(err, sql.ErrNoRows) {
+		t.Fatalf("GetSubmissions() failed: expected sql.ErrNoRows, got %v", err)
 	}
 
 	t.Logf("TestSqlite_InsertSubmission_SQLInjection() passed: %#v", submissions)

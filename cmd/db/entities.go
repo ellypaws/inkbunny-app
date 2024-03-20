@@ -109,3 +109,11 @@ type Keyword struct {
 	KeywordName string `json:"keyword_name"`
 	Suggested   bool   `json:"contributed"`
 }
+
+type SIDHash struct {
+	UserID   int64   `json:"user_id"`
+	Username string  `json:"username"`
+	Hashes   hashmap `json:"hashes"`
+}
+
+type hashmap map[string]struct{}

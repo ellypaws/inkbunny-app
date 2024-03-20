@@ -1,11 +1,14 @@
 package db
 
 import (
+	"crypto/sha256"
 	"database/sql"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/ellypaws/inkbunny/api"
 	"log"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -78,6 +81,11 @@ const (
 	// IF submission exists, update the audit_id field
 	updateSubmissionAudit = `
 	UPDATE submissions SET audit_id = ? WHERE submission_id = ?;
+	`
+
+	insertSIDHash = `
+	INSERT INTO sids (user_id, username, sid_hash) VALUES (?, ?, ?)
+	ON CONFLICT(user_id) DO UPDATE SET username=excluded.username, sid_hash=excluded.sid_hash;
 	`
 )
 
@@ -291,4 +299,90 @@ func (db Sqlite) InsertSubmission(submission Submission) error {
 func (db Sqlite) UpdateDescription(submission Submission) error {
 	_, err := db.ExecContext(db.context, updateSubmissionDescription, submission.Description, submission.ID)
 	return err
+}
+
+func (db Sqlite) InsertSIDHash(sid SIDHash) error {
+	stored, err := db.GetSIDsFromUserID(sid.UserID)
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+		return err
+	}
+
+	var hashes hashmap = make(hashmap)
+	if len(stored.Hashes) > 0 {
+		for hash := range stored.Hashes {
+			hashes[hash] = struct{}{}
+		}
+	}
+
+	for hash := range sid.Hashes {
+		hashes[hash] = struct{}{}
+	}
+
+	var marshal []byte
+	if len(hashes) > 0 {
+		marshal, err = json.Marshal(hashes)
+		if err != nil {
+			return fmt.Errorf("error: marshalling hashes: %v", err)
+		}
+	}
+
+	_, err = db.ExecContext(db.context, insertSIDHash, sid.UserID, sid.Username, marshal)
+	return err
+}
+
+func (db Sqlite) RemoveSIDHash(sid SIDHash) error {
+	stored, err := db.GetSIDsFromUserID(sid.UserID)
+	switch {
+	case errors.Is(err, sql.ErrNoRows):
+		return nil
+	case err != nil:
+		return fmt.Errorf("error: could not get hashes: %v", err)
+	}
+
+	for hashToRemove := range sid.Hashes {
+		delete(stored.Hashes, hashToRemove)
+	}
+
+	return db.InsertSIDHash(stored)
+}
+
+func HashCredentials(user api.Credentials) SIDHash {
+	var id int64
+	if user.UserID != "" {
+		id, _ = strconv.ParseInt(user.UserID, 10, 64)
+	}
+
+	checksum := hash(user.Sid)
+	return SIDHash{
+		UserID:   id,
+		Username: user.Username,
+		Hashes:   checksum,
+	}
+}
+
+func hash(s any) hashmap {
+	h := sha256.New()
+	h.Write([]byte(fmt.Sprintf("%v", s)))
+	return hashmap{fmt.Sprintf("%x", h.Sum(nil)): struct{}{}}
+}
+
+func (db Sqlite) ValidSID(user api.Credentials) bool {
+	var id int64
+	if user.UserID != "" {
+		id, _ = strconv.ParseInt(user.UserID, 10, 64)
+	}
+
+	stored, err := db.GetSIDsFromUserID(id)
+	if err != nil {
+		return false
+	}
+
+	checksum := hash(user.Sid)
+	for hash := range stored.Hashes {
+		if _, ok := checksum[hash]; ok {
+			return true
+		}
+	}
+
+	return false
 }

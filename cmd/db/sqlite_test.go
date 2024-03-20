@@ -674,3 +674,43 @@ func TestSqlite_InsertFullSubmission(t *testing.T) {
 
 	t.Logf("TestSqlite_GetSubmissionByID2() passed: %+v", submission)
 }
+
+func TestSqlite_ValidSID(t *testing.T) {
+	resetDB(t)
+	user := &api.Credentials{
+		UserID:   "196417",
+		Username: "Elly",
+		Sid:      "sid",
+	}
+
+	hash := HashCredentials(*user)
+	t.Logf("hash: %v", hash)
+	err := db.InsertSIDHash(hash)
+	if err != nil {
+		t.Fatalf("InsertSIDHash() failed: %v", err)
+	}
+
+	stored, err := db.GetSIDsFromUserID(196417)
+	if err != nil {
+		t.Fatalf("GetSIDsFromUserID() failed: %v", err)
+	}
+	t.Logf("stored: %v", stored)
+
+	if !db.ValidSID(*user) {
+		t.Fatalf("ValidSID() failed: expected true, got false")
+	}
+
+	user, err = api.Guest().Login()
+	if err != nil {
+		t.Fatalf("Login() failed: %v", err)
+	}
+
+	err = db.InsertSIDHash(HashCredentials(*user))
+	if err != nil {
+		t.Fatalf("InsertSIDHash() failed: %v", err)
+	}
+
+	if !db.ValidSID(*user) {
+		t.Fatalf("ValidSID() failed: expected true, got false")
+	}
+}

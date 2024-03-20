@@ -79,6 +79,14 @@ const (
 	            FOREIGN KEY(submission_id) REFERENCES submissions(submission_id)
 	)
 	`
+
+	createSIDs = `
+	CREATE TABLE IF NOT EXISTS sids (
+	    		user_id TEXT PRIMARY KEY,
+	    		username TEXT NOT NULL,
+	    		sid_hash TEXT NOT NULL
+	)
+	`
 )
 
 type Sqlite struct {
@@ -96,6 +104,7 @@ var migrations = []migration{
 	{migrationName: "create files table", migrationQuery: createFiles},
 	{migrationName: "create submissions table", migrationQuery: createSubmissions},
 	{migrationName: "create audits table", migrationQuery: createAudits},
+	{migrationName: "create sids table", migrationQuery: createSIDs},
 }
 
 func New(ctx context.Context) (*Sqlite, error) {

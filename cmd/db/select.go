@@ -76,6 +76,8 @@ const (
 	`
 
 	selectAudits = `SELECT audit_id, submission_id FROM audits`
+
+	selectSIDsFromUserID = `SELECT user_id, username, sid_hash FROM sids WHERE user_id = ?;`
 )
 
 func (db Sqlite) GetAuditBySubmissionID(submissionID int64) (Audit, error) {
@@ -257,4 +259,20 @@ func (db Sqlite) GetSubmissionByID(submissionID int64) (Submission, error) {
 	//}
 
 	return submission, nil
+}
+
+func (db Sqlite) GetSIDsFromUserID(userID int64) (SIDHash, error) {
+	var hashes []byte
+	var sid SIDHash
+
+	err := db.QueryRowContext(db.context, selectSIDsFromUserID, userID).Scan(
+		&sid.UserID, &sid.Username, &hashes,
+	)
+	if err != nil {
+		return sid, err
+	}
+
+	err = json.Unmarshal(hashes, &sid.Hashes)
+
+	return sid, nil
 }

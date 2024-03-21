@@ -190,3 +190,5 @@ type SIDHash struct {
 }
 
 type hashmap map[string]struct{}
+
+type ModelHashes map[string][]string

@@ -85,6 +85,11 @@ const (
 	INSERT INTO sids (user_id, username, sid_hash) VALUES (?, ?, ?)
 	ON CONFLICT(user_id) DO UPDATE SET username=excluded.username, sid_hash=excluded.sid_hash;
 	`
+
+	upsertModel = `
+	INSERT INTO models (hash, models) VALUES (?, ?)
+	ON CONFLICT(hash) DO UPDATE SET models=excluded.models;
+	`
 )
 
 func (db Sqlite) InsertAuditor(auditor Auditor) error {
@@ -361,4 +366,23 @@ func (db Sqlite) ValidSID(user api.Credentials) bool {
 	}
 
 	return false
+}
+
+func (db Sqlite) InsertModel(models ModelHashes) error {
+	if models == nil {
+		return nil
+	}
+
+	for hash, model := range models {
+		marshal, err := json.Marshal(model)
+		if err != nil {
+			return fmt.Errorf("error: marshalling model: %v", err)
+		}
+		_, err = db.ExecContext(db.context, upsertModel, hash, marshal)
+		if err != nil {
+			return fmt.Errorf("error: inserting model: %v", err)
+		}
+	}
+
+	return nil
 }

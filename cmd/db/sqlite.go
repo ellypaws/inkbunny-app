@@ -35,6 +35,7 @@ var migrations = []migration{
 	{migrationName: "create submissions table", migrationQuery: createSubmissions},
 	{migrationName: "create audits table", migrationQuery: createAudits},
 	{migrationName: "create sids table", migrationQuery: createSIDs},
+	{migrationName: "create models table", migrationQuery: createModels},
 }
 
 // sql statements
@@ -90,6 +91,13 @@ const (
 	    		user_id TEXT PRIMARY KEY,
 	    		username TEXT NOT NULL,
 	    		sid_hash TEXT NOT NULL
+	)
+	`
+
+	createModels = `
+	CREATE TABLE IF NOT EXISTS models (
+	    hash TEXT PRIMARY KEY,
+	    models BLOB
 	)
 	`
 )

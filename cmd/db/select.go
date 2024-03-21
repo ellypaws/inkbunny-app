@@ -84,6 +84,8 @@ const (
 	isAnAuditor = `SELECT EXISTS(SELECT 1 FROM auditors WHERE auditor_id = ?);`
 
 	selectRole = `SELECT role FROM auditors WHERE auditor_id = ?;`
+
+	selectModels = `SELECT hash, models FROM models;`
 )
 
 func (db Sqlite) GetAuditBySubmissionID(submissionID int64) (Audit, error) {
@@ -310,4 +312,49 @@ func (db Sqlite) GetRole(auditorID int64) (Role, error) {
 	var role string
 	err := db.QueryRowContext(db.context, selectRole, auditorID).Scan(&role)
 	return RoleLevel(role), err
+}
+
+// GetKnownModels returns a map of model hashes to a list of known model names
+func (db Sqlite) GetKnownModels() (ModelHashes, error) {
+	var modelHashes ModelHashes
+	var hashes []byte
+
+	rows, err := db.QueryContext(db.context, selectModels)
+	if err != nil {
+		return modelHashes, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		if modelHashes == nil {
+			modelHashes = make(ModelHashes)
+		}
+		var hash string
+		err = rows.Scan(&hash, &hashes)
+		if err != nil {
+			return modelHashes, err
+		}
+		var models []string
+		err = json.Unmarshal(hashes, &models)
+		modelHashes[hash] = models
+	}
+
+	return modelHashes, nil
+}
+
+func (db Sqlite) ModelNamesFromHash(hash string) []string {
+	models, err := db.GetKnownModels()
+	if err != nil {
+		return nil
+	}
+
+	if models == nil {
+		return nil
+	}
+
+	if names, ok := models[hash]; ok {
+		return names
+	}
+
+	return nil
 }

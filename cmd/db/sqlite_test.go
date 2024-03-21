@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"github.com/ellypaws/inkbunny/api"
+	"slices"
 	"testing"
 	"time"
 )
@@ -614,18 +615,29 @@ func TestAllReal(t *testing.T) {
 	useVirtualDB = false
 	//t.Run("TestPhysical", TestPhysical)
 	t.Run("TestNew", TestNew)
-	t.Run("TestSqlite_InsertAuditor", TestSqlite_InsertAuditor)
-	t.Run("TestSqlite_IncreaseAuditCount", TestSqlite_IncreaseAuditCount)
-	t.Run("TestSqlite_InsertFile", TestSqlite_InsertFile)
 	t.Run("TestSqlite_InsertSubmission", TestSqlite_InsertSubmission)
+	t.Run("TestSqlite_InsertFile", TestSqlite_InsertFile)
+	t.Run("TestSqlite_InsertAuditor", TestSqlite_InsertAuditor)
+	t.Run("TestSqlite_InsertModel", TestSqlite_InsertModel)
+
+	t.Run("TestSqlite_InsertSubmission_SQLInjection", TestSqlite_InsertSubmission_SQLInjection)
+
+	t.Run("TestSqlite_InsertFullSubmission", TestSqlite_InsertFullSubmission)
 	t.Run("TestSqlite_InsertAudit", TestSqlite_InsertAudit)
+
+	t.Run("TestSqlite_IncreaseAuditCount", TestSqlite_IncreaseAuditCount)
 	t.Run("TestSqlite_SyncAuditCount", TestSqlite_SyncAuditCount)
 	t.Run("TestSqlite_FixAuditsInSubmissions", TestSqlite_FixAuditsInSubmissions)
+
+	t.Run("TestSqlite_GetSubmissionByID", TestSqlite_GetSubmissionByID)
+
 	t.Run("TestSqlite_GetAuditsByAuditor", TestSqlite_GetAuditsByAuditor)
 	t.Run("TestSqlite_GetAuditorByID", TestSqlite_GetAuditorByID)
+
+	t.Run("TestSqlite_GetAuditByID", TestSqlite_GetAuditByID)
 	t.Run("TestSqlite_GetAuditBySubmissionID", TestSqlite_GetAuditBySubmissionID)
-	t.Run("TestSqlite_GetSubmissionByID", TestSqlite_GetSubmissionByID)
-	t.Run("TestSqlite_InsertSubmission_SQLInjection", TestSqlite_InsertSubmission_SQLInjection)
+
+	t.Run("TestSqlite_ValidSID", TestSqlite_ValidSID)
 	useVirtualDB = true
 }
 
@@ -713,5 +725,24 @@ func TestSqlite_ValidSID(t *testing.T) {
 
 	if !db.ValidSID(*user) {
 		t.Fatalf("ValidSID() failed: expected true, got false")
+	}
+}
+
+func TestSqlite_InsertModel(t *testing.T) {
+	resetDB(t)
+	models := ModelHashes{"18202d0ba2": []string{"furtasticv20_furtasticv20"}}
+
+	err := db.InsertModel(models)
+	if err != nil {
+		t.Fatalf("InsertModel() failed: %v", err)
+	}
+
+	known := db.ModelNamesFromHash("18202d0ba2")
+	if len(known) == 0 {
+		t.Fatalf("ModelNamesFromHash() failed: expected > 0, got 0")
+	}
+
+	if !slices.Contains(known, "furtasticv20_furtasticv20") {
+		t.Fatalf("ModelNamesFromHash() failed: expected furtasticv20_furtasticv20, got %v", known[0])
 	}
 }

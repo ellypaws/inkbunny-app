@@ -43,10 +43,6 @@ func GetInkbunnyDescription(c echo.Context) error {
 	var request DescriptionRequest
 	_ = c.Bind(&request)
 
-	if sid := c.QueryParams().Get("sid"); sid != "" {
-		request.SID = sid
-	}
-
 	if request.SID == "" {
 		return c.JSON(http.StatusBadRequest, crashy.ErrorResponse{Error: "missing SID"})
 	}
@@ -120,7 +116,12 @@ func GetInkbunnySubmission(c echo.Context) error {
 // It requires a valid SID to be passed in the request.
 // It returns api.SubmissionSearchResponse as JSON.
 func GetInkbunnySearch(c echo.Context) error {
-	var request api.SubmissionSearchRequest
+	var request = api.SubmissionSearchRequest{
+		Text:               "ai_generated",
+		SubmissionsPerPage: 10,
+		Random:             api.Yes,
+		Type:               api.SubmissionTypePicturePinup,
+	}
 	err := c.Bind(&request)
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, crashy.Wrap(err))
@@ -130,24 +131,7 @@ func GetInkbunnySearch(c echo.Context) error {
 		return c.JSONBlob(http.StatusOK, app.Temp())
 	}
 
-	if request.Text == "" {
-		if text := c.QueryParam("text"); text != "" {
-			request.Text = text
-		} else {
-			request.Text = string(app.Generated)
-			request.SubmissionsPerPage = 10
-			request.Random = api.Yes
-			request.Type = api.SubmissionTypePicturePinup
-		}
-	}
-
 	user := &api.Credentials{Sid: request.SID}
-
-	if user.Sid == "" {
-		if sid := c.QueryParam("sid"); sid != "" {
-			user.Sid = sid
-		}
-	}
 
 	if user.Sid == "guest" {
 		user, err = api.Guest().Login()
@@ -271,12 +255,6 @@ func GetAuditHandler(c echo.Context) error {
 	err := c.Bind(&user)
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, crashy.Wrap(err))
-	}
-
-	if user.Sid == "" {
-		if sid := c.QueryParam("sid"); sid != "" {
-			user.Sid = sid
-		}
 	}
 
 	if !database.ValidSID(*user) {

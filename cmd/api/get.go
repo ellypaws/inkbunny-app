@@ -4,8 +4,10 @@ import (
 	"fmt"
 	"github.com/ellypaws/inkbunny-app/cmd/app"
 	"github.com/ellypaws/inkbunny-app/cmd/crashy"
+	"github.com/ellypaws/inkbunny-app/cmd/db"
 	"github.com/ellypaws/inkbunny/api"
 	"github.com/labstack/echo/v4"
+	"log"
 	"net/http"
 	"slices"
 	"strings"
@@ -257,6 +259,10 @@ func GetAuditHandler(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, crashy.Wrap(err))
 	}
 
+	if err := db.Error(database); err != nil {
+		return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
+	}
+
 	if !database.ValidSID(*user) {
 		return c.JSON(http.StatusUnauthorized, crashy.ErrorResponse{Error: "invalid SID"})
 	}
@@ -267,7 +273,7 @@ func GetAuditHandler(c echo.Context) error {
 		}
 	}
 
-	if !validAuditor(user) {
+	if !validAuditor(*user) {
 		return c.JSON(http.StatusUnauthorized, crashy.ErrorResponse{Error: "invalid auditor"})
 	}
 
@@ -279,6 +285,10 @@ func GetAuditHandler(c echo.Context) error {
 	return c.JSON(http.StatusOK, audits)
 }
 
-func validAuditor(user *api.Credentials) bool {
+func validAuditor(user api.Credentials) bool {
+	if err := db.Error(database); err != nil {
+		log.Printf("warning: validAuditor was called with a nil database: %v", err)
+		return false
+	}
 	return database.IsAuditorRole(int64(user.UserID.Int()))
 }

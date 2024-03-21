@@ -71,7 +71,7 @@ const (
 		img2img,
 		ratings,
 		keywords,
-		file_id
+		files
 	FROM submissions WHERE submission_id = ?;
 	`
 

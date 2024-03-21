@@ -31,18 +31,6 @@ const (
 	)
 	`
 
-	createFiles = `
-	CREATE TABLE IF NOT EXISTS files (
-	    file_id INTEGER PRIMARY KEY,
--- 	    store file as a json string
-	    file BLOB NOT NULL,
--- 	    store info as a json string
-	    info BLOB
---		blob is not stored in the db (for now)
--- 	    blob BLOB
-	)
-	`
-
 	createSubmissions = `
 	CREATE TABLE IF NOT EXISTS submissions (
 		submission_id TEXT PRIMARY KEY,
@@ -60,8 +48,8 @@ const (
 -- 		store keywords as a json string
 		keywords BLOB,
 -- 		get files from files table, store only the file ids
-		file_id TEXT
--- 	    FOREIGN KEY(file_id) REFERENCES files(file_id)
+		files BLOB
+-- 	    FOREIGN KEY(file) REFERENCES files(file)
 	)
 	`
 
@@ -101,7 +89,6 @@ type migration struct {
 
 var migrations = []migration{
 	{migrationName: "create auditors table", migrationQuery: createAuditors},
-	{migrationName: "create files table", migrationQuery: createFiles},
 	{migrationName: "create submissions table", migrationQuery: createSubmissions},
 	{migrationName: "create audits table", migrationQuery: createAudits},
 	{migrationName: "create sids table", migrationQuery: createSIDs},

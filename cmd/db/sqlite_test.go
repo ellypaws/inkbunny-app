@@ -260,8 +260,9 @@ func TestSqlite_InsertFile(t *testing.T) {
 
 	file := File{
 		File: api.File{
-			FileID:   "123",
-			FileName: "file",
+			FileID:       "123",
+			FileName:     "file",
+			SubmissionID: "123",
 		},
 		Info: &GenerationInfo{
 			Generator: "generator",

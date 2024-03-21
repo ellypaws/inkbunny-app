@@ -45,9 +45,8 @@ const (
 	UPDATE audits SET audit_id = ? WHERE submission_id = ?;
 	`
 
-	upsertFile = `
-	INSERT INTO files (file_id, file, info) VALUES (?, ?, ?)
-	ON CONFLICT(file_id) DO UPDATE SET file=excluded.file, info=excluded.info;
+	updateSubmissionFile = `
+	UPDATE submissions SET files = ? WHERE submission_id = ?;
 	`
 
 	upsertSubmission = `
@@ -55,7 +54,7 @@ const (
 	INSERT INTO submissions (submission_id, user_id, url, audit_id,
 	                         title, description, updated_at,
 	                         ai_generated, ai_assisted, img2img,
-	                         ratings, keywords, file_id)
+	                         ratings, keywords, files)
 	VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 	ON CONFLICT(submission_id)
 	    DO UPDATE SET
@@ -70,7 +69,7 @@ const (
 	                  img2img=excluded.img2img,
 	                  ratings=excluded.ratings,
 	                  keywords=excluded.keywords,
-	                  file_id=excluded.file_id;
+	                  files=excluded.files;
 	`
 
 	updateSubmissionDescription = `
@@ -205,18 +204,17 @@ func (db Sqlite) FixAuditsInSubmissions() error {
 }
 
 func (db Sqlite) InsertFile(file File) error {
-	marshal, err := json.Marshal(file.File)
+	if file.File.SubmissionID == "" {
+		return errors.New("error: submission id is empty")
+	}
+
+	marshal, err := json.Marshal(file)
 	if err != nil {
 		return fmt.Errorf("error: marshalling file: %v", err)
 	}
 
-	info, err := json.Marshal(file.Info)
-	if err != nil {
-		return fmt.Errorf("error: marshalling info: %v", err)
-	}
-
-	_, err = db.ExecContext(db.context, upsertFile,
-		file.File.FileID, marshal, info,
+	_, err = db.ExecContext(db.context, updateSubmissionFile,
+		marshal, file.File.SubmissionID,
 	)
 
 	return err
@@ -233,22 +231,11 @@ func (db Sqlite) InsertSubmission(submission Submission) error {
 		return fmt.Errorf("error: marshalling keywords: %v", err)
 	}
 
-	var fileIDs []string
+	var filesMarshal sql.RawBytes
 	if len(submission.Files) > 0 {
-		for _, file := range submission.Files {
-			err = db.InsertFile(file)
-			if err != nil {
-				return fmt.Errorf("error: inserting file: %v", err)
-			}
-			fileIDs = append(fileIDs, file.File.FileID)
-		}
-	}
-
-	var fileIDsNullable sql.NullString
-	if len(fileIDs) > 0 {
-		fileIDsNullable = sql.NullString{
-			String: strings.Join(fileIDs, ","),
-			Valid:  true,
+		filesMarshal, err = json.Marshal(submission.Files)
+		if err != nil {
+			return fmt.Errorf("error: marshalling files: %v", err)
 		}
 	}
 
@@ -279,7 +266,7 @@ func (db Sqlite) InsertSubmission(submission Submission) error {
 		submission.ID, submission.UserID, submission.URL, auditIDNullable,
 		submission.Title, submission.Description, submission.Updated.UTC().Format(time.RFC3339),
 		submission.Generated, submission.Assisted, submission.Img2Img,
-		ratings, keywords, fileIDsNullable,
+		ratings, keywords, filesMarshal,
 	)
 	if err != nil {
 		return fmt.Errorf("error: inserting submission: %v", err)

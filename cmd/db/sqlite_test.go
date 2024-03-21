@@ -678,7 +678,7 @@ func TestSqlite_InsertFullSubmission(t *testing.T) {
 func TestSqlite_ValidSID(t *testing.T) {
 	resetDB(t)
 	user := &api.Credentials{
-		UserID:   "196417",
+		UserID:   196417,
 		Username: "Elly",
 		Sid:      "sid",
 	}

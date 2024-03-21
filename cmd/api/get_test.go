@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"github.com/ellypaws/inkbunny-app/cmd/app"
 	"github.com/ellypaws/inkbunny/api"
 	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
@@ -119,7 +120,7 @@ func TestGetInkbunnySearch(t *testing.T) {
 	}
 
 	e := echo.New()
-	req := httptest.NewRequest(http.MethodGet, "/inkbunny/search", bytes.NewReader(userJSON))
+	req := httptest.NewRequest(http.MethodGet, "/inkbunny/search?output=json&temp=no", bytes.NewReader(userJSON))
 	req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
 	rec := httptest.NewRecorder()
 	c := e.NewContext(req, rec)
@@ -131,7 +132,22 @@ func TestGetInkbunnySearch(t *testing.T) {
 		err := json.Unmarshal(rec.Body.Bytes(), &searchResponse)
 		assert.NoError(t, err)
 		assert.NotEmpty(t, searchResponse.Submissions)
-		err = user.Logout()
-		assert.NoError(t, err)
 	}
+
+	req = httptest.NewRequest(http.MethodGet, "/inkbunny/search?output=mail&temp=yes", bytes.NewReader(userJSON))
+	req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+	rec = httptest.NewRecorder()
+	c = e.NewContext(req, rec)
+
+	// Assertions
+	if assert.NoError(t, GetInkbunnySearch(c)) {
+		assert.Equal(t, http.StatusOK, rec.Code)
+		var mails []app.Mail
+		err := json.Unmarshal(rec.Body.Bytes(), &mails)
+		assert.NoError(t, err)
+		assert.NotEmpty(t, mails)
+	}
+
+	err = user.Logout()
+	assert.NoError(t, err)
 }

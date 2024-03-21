@@ -20,6 +20,23 @@ const (
 	setForeignKeyCheck  string = `PRAGMA foreign_keys = ON;`
 )
 
+type Sqlite struct {
+	*sql.DB
+	context context.Context
+}
+
+type migration struct {
+	migrationName  string
+	migrationQuery string
+}
+
+var migrations = []migration{
+	{migrationName: "create auditors table", migrationQuery: createAuditors},
+	{migrationName: "create submissions table", migrationQuery: createSubmissions},
+	{migrationName: "create audits table", migrationQuery: createAudits},
+	{migrationName: "create sids table", migrationQuery: createSIDs},
+}
+
 // sql statements
 const (
 	createAuditors = `
@@ -76,23 +93,6 @@ const (
 	)
 	`
 )
-
-type Sqlite struct {
-	*sql.DB
-	context context.Context
-}
-
-type migration struct {
-	migrationName  string
-	migrationQuery string
-}
-
-var migrations = []migration{
-	{migrationName: "create auditors table", migrationQuery: createAuditors},
-	{migrationName: "create submissions table", migrationQuery: createSubmissions},
-	{migrationName: "create audits table", migrationQuery: createAudits},
-	{migrationName: "create sids table", migrationQuery: createSIDs},
-}
 
 func New(ctx context.Context) (*Sqlite, error) {
 	filename, err := DBFilename()

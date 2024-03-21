@@ -11,6 +11,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 )
 
 const (
@@ -131,6 +132,10 @@ func New(ctx context.Context) (*Sqlite, error) {
 	return &Sqlite{db, ctx}, nil
 }
 
+func (db Sqlite) Context() context.Context {
+	return db.context
+}
+
 func DBFilename() (string, error) {
 	dir, err := os.Getwd()
 	if err != nil {
@@ -214,4 +219,17 @@ func execMigration(ctx context.Context, db *sql.DB, migrationNum int) error {
 	}
 
 	return nil
+}
+
+var nilDatabase = errors.New("database error")
+
+const timeout = 15 * time.Second
+
+func Error(db *Sqlite) error {
+	if db == nil {
+		return nilDatabase
+	}
+	ctx, cancel := context.WithTimeout(db.Context(), timeout)
+	defer cancel()
+	return db.PingContext(ctx)
 }

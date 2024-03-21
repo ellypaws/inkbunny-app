@@ -48,6 +48,10 @@ func login(c echo.Context) error {
 		return c.JSON(http.StatusUnauthorized, crashy.Wrap(err))
 	}
 
+	if err := db.Error(database); err != nil {
+		return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
+	}
+
 	err = database.InsertSIDHash(db.HashCredentials(*user))
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
@@ -71,6 +75,10 @@ func logout(c echo.Context) error {
 		return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
 	}
 
+	if err := db.Error(database); err != nil {
+		return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
+	}
+
 	err = database.RemoveSIDHash(db.HashCredentials(*user))
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
@@ -87,6 +95,10 @@ func validate(c echo.Context) error {
 
 	if user.Sid == "" {
 		return c.JSON(http.StatusBadRequest, crashy.ErrorResponse{Error: "SID is required"})
+	}
+
+	if err := db.Error(database); err != nil {
+		return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
 	}
 
 	if !database.ValidSID(user) {

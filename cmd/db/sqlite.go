@@ -104,14 +104,31 @@ const (
 )
 
 func New(ctx context.Context) (*Sqlite, error) {
-	filename, err := DBFilename()
-	if err != nil {
-		return nil, err
+	if ctx == nil {
+		ctx = context.Background()
 	}
 
-	err = touchDBFile(filename)
-	if err != nil {
-		return nil, errors.New("failed to create db file")
+	var filename string
+	if ctx.Value(":memory:") != nil {
+		filename = ":memory:"
+	}
+	if ctx.Value("filename") != nil {
+		if s, ok := ctx.Value("filename").(string); ok {
+			filename = s
+		}
+	}
+
+	if filename == "" {
+		var err error
+		filename, err = DBFilename()
+		if err != nil {
+			return nil, err
+		}
+
+		err = touchDBFile(filename)
+		if err != nil {
+			return nil, errors.New("failed to create db file")
+		}
 	}
 
 	db, err := sql.Open("sqlite", filename)

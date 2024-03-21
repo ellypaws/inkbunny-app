@@ -2,7 +2,9 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
+	"github.com/ellypaws/inkbunny-app/cmd/db"
 	"github.com/ellypaws/inkbunny-sd/entities"
 	"github.com/ellypaws/inkbunny-sd/llm"
 	"github.com/ellypaws/inkbunny-sd/utils"
@@ -15,6 +17,14 @@ import (
 	"testing"
 )
 
+func tempDB() *db.Sqlite {
+	database, err := db.New(context.WithValue(context.Background(), ":memory:", true))
+	if err != nil {
+		return nil
+	}
+	return database
+}
+
 func TestLogin(t *testing.T) {
 	// Setup
 	userJSON := `{"username":"guest","password":""}`
@@ -23,6 +33,11 @@ func TestLogin(t *testing.T) {
 	req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
 	rec := httptest.NewRecorder()
 	c := e.NewContext(req, rec)
+
+	database = tempDB()
+	if !assert.NoError(t, db.Error(database)) {
+		return
+	}
 
 	// Assertions
 	if assert.NoError(t, login(c)) {

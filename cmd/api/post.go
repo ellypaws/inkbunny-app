@@ -33,12 +33,6 @@ func login(c echo.Context) error {
 	if err := c.Bind(&loginRequest); err != nil {
 		return err
 	}
-	if loginRequest.Username == "" {
-		loginRequest.Username = c.QueryParam("username")
-	}
-	if loginRequest.Password == "" {
-		loginRequest.Password = c.QueryParam("password")
-	}
 	user := &api.Credentials{
 		Username: loginRequest.Username,
 		Password: loginRequest.Password,

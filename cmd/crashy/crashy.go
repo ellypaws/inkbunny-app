@@ -93,10 +93,12 @@ func MapPath(s string) map[string]any {
 			keepNext = false
 		case strings.Contains(line, projectPrefix):
 			lines[i] = removePrefix(line, projectPrefix)
+			lines[i] = removeMemoryAddress(lines[i])
 			out[lines[i]] = lines[i]
 			keepNext = true
 		case strings.Contains(line, apiPrefix):
 			lines[i] = removePrefix(line, apiPrefix)
+			lines[i] = removeMemoryAddress(lines[i])
 			out[lines[i]] = lines[i]
 			keepNext = true
 		}
@@ -107,4 +109,13 @@ func MapPath(s string) map[string]any {
 func removePrefix(line string, prefix string) string {
 	index := strings.Index(line, prefix)
 	return line[index:]
+}
+
+func removeSuffix(line string, suffix string) string {
+	index := strings.LastIndex(line, suffix)
+	return line[:index]
+}
+
+func removeMemoryAddress(line string) string {
+	return removeSuffix(line, " (0x")
 }

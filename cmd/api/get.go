@@ -60,6 +60,10 @@ func GetInkbunnyDescription(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, crashy.ErrorResponse{Error: "missing submission ID"})
 	}
 
+	if cookie, err := c.Cookie("sid"); request.SID == "" && err == nil {
+		request.SID = cookie.Value
+	}
+
 	if request.SID == "guest" {
 		user, err := api.Guest().Login()
 		if err != nil {
@@ -103,6 +107,10 @@ func GetInkbunnySubmission(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, crashy.Wrap(err))
 	}
 
+	if cookie, err := c.Cookie("sid"); request.SID == "" && err == nil {
+		request.SID = cookie.Value
+	}
+
 	details, err := api.Credentials{Sid: request.SID}.SubmissionDetails(request)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
@@ -131,6 +139,10 @@ func GetInkbunnySearch(c echo.Context) error {
 
 	if temp := c.QueryParam("temp"); temp != "no" {
 		return c.JSONBlob(http.StatusOK, app.Temp())
+	}
+
+	if cookie, err := c.Cookie("sid"); request.SID == "" && err == nil {
+		request.SID = cookie.Value
 	}
 
 	user := &api.Credentials{Sid: request.SID}
@@ -257,6 +269,13 @@ func GetAuditHandler(c echo.Context) error {
 	err := c.Bind(&user)
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, crashy.Wrap(err))
+	}
+
+	if cookie, err := c.Cookie("sid"); err == nil {
+		if user == nil {
+			user = &api.Credentials{Sid: cookie.Value}
+		}
+		user.Sid = cookie.Value
 	}
 
 	if err := db.Error(database); err != nil {

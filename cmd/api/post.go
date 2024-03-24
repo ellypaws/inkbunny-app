@@ -11,6 +11,7 @@ import (
 	"github.com/labstack/echo/v4"
 	"net/http"
 	"strconv"
+	"time"
 )
 
 var postRoutes = map[string]func(c echo.Context) error{
@@ -51,6 +52,26 @@ func login(c echo.Context) error {
 		return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
 	}
 
+	const twoYears = 2 * 365 * 24 * 60 * 60
+
+	c.SetCookie(&http.Cookie{
+		Name:     "sid",
+		Value:    user.Sid,
+		Expires:  time.Now().Add(24 * time.Hour),
+		Secure:   true,
+		SameSite: http.SameSiteStrictMode,
+		MaxAge:   twoYears,
+	})
+
+	c.SetCookie(&http.Cookie{
+		Name:     "username",
+		Value:    user.Username,
+		Expires:  time.Now().Add(24 * time.Hour),
+		Secure:   true,
+		SameSite: http.SameSiteDefaultMode,
+		MaxAge:   twoYears,
+	})
+
 	return c.JSON(http.StatusOK, user)
 }
 
@@ -58,6 +79,20 @@ func logout(c echo.Context) error {
 	var user *api.Credentials
 	if err := c.Bind(&user); err != nil {
 		return c.JSON(http.StatusBadRequest, crashy.Wrap(err))
+	}
+
+	if sid, err := c.Cookie("sid"); err == nil {
+		if user == nil {
+			user = &api.Credentials{Sid: sid.Value}
+		}
+		user.Sid = sid.Value
+	}
+
+	if username, err := c.Cookie("username"); err == nil {
+		if user == nil {
+			user = &api.Credentials{Username: username.Value}
+		}
+		user.Username = username.Value
 	}
 
 	if user.Sid == "" {
@@ -85,6 +120,10 @@ func validate(c echo.Context) error {
 	var user api.Credentials
 	if err := c.Bind(user); err != nil {
 		return err
+	}
+
+	if cookie, err := c.Cookie("sid"); err == nil {
+		user.Sid = cookie.Value
 	}
 
 	if user.Sid == "" {
@@ -179,6 +218,14 @@ func stable(c echo.Context) error {
 	}
 
 	user := &subRequest.User
+
+	if cookie, err := c.Cookie("sid"); err == nil {
+		if user == nil {
+			user = &api.Credentials{Sid: cookie.Value}
+		}
+		user.Sid = cookie.Value
+	}
+
 	if user.Sid == "" {
 		user, err = user.Login()
 		if err != nil {

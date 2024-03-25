@@ -13,7 +13,7 @@ import (
 	"strings"
 )
 
-var getRoutes = map[string]func(c echo.Context) error{
+var getHandlers = pathHandler{
 	"/":                     Hello,
 	"/inkbunny/description": GetInkbunnyDescription,
 	"/inkbunny/submission":  GetInkbunnySubmission,
@@ -23,9 +23,7 @@ var getRoutes = map[string]func(c echo.Context) error{
 }
 
 func registerGetRoutes(e *echo.Echo) {
-	for path, handler := range getRoutes {
-		e.GET(path, handler)
-	}
+	registerAs(e.GET, getHandlers)
 }
 
 func Hello(c echo.Context) error {

@@ -14,7 +14,7 @@ import (
 	"time"
 )
 
-var postRoutes = map[string]func(c echo.Context) error{
+var postHandlers = pathHandler{
 	"/login":    login,
 	"/logout":   logout,
 	"/validate": validate,
@@ -24,9 +24,7 @@ var postRoutes = map[string]func(c echo.Context) error{
 }
 
 func registerPostRoutes(e *echo.Echo) {
-	for path, handler := range postRoutes {
-		e.POST(path, handler)
-	}
+	registerAs(e.POST, postHandlers)
 }
 
 func login(c echo.Context) error {

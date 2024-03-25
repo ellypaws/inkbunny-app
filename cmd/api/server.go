@@ -25,9 +25,18 @@ func main() {
 	}
 
 	// Routes
-	registerGetRoutes(e)
-	registerPostRoutes(e)
+	registerAs(e.GET, getHandlers)
+	registerAs(e.POST, postHandlers)
 
 	// Start server
 	e.Logger.Fatal(e.Start(":1323"))
+}
+
+type route = func(path string, h echo.HandlerFunc, m ...echo.MiddlewareFunc) *echo.Route
+type pathHandler = map[string]func(c echo.Context) error
+
+func registerAs(route route, pathHandler pathHandler) {
+	for path, handler := range pathHandler {
+		route(path, handler)
+	}
 }

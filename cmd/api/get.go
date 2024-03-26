@@ -14,12 +14,13 @@ import (
 )
 
 var getHandlers = pathHandler{
-	"/":                     Hello,
-	"/inkbunny/description": GetInkbunnyDescription,
-	"/inkbunny/submission":  GetInkbunnySubmission,
-	"/inkbunny/search":      GetInkbunnySearch,
-	"/image":                app.GetImageHandler,
-	"/tickets/audits":       GetAuditHandler,
+	"/":                        Hello,
+	"/inkbunny/description":    GetInkbunnyDescription,
+	"/inkbunny/submission":     GetInkbunnySubmission,
+	"/inkbunny/submission/:id": GetInkbunnySubmission,
+	"/inkbunny/search":         GetInkbunnySearch,
+	"/image":                   app.GetImageHandler,
+	"/tickets/audits":          GetAuditHandler,
 }
 
 func registerGetRoutes(e *echo.Echo) {
@@ -103,6 +104,10 @@ func GetInkbunnySubmission(c echo.Context) error {
 	err := c.Bind(&request)
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, crashy.Wrap(err))
+	}
+
+	if id := c.Param("id"); id != "" {
+		request.SubmissionIDs = id
 	}
 
 	if cookie, err := c.Cookie("sid"); request.SID == "" && err == nil {

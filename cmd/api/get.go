@@ -23,6 +23,7 @@ var getHandlers = pathHandler{
 	"/tickets/audits":           GetAuditHandler,
 }
 
+// Deprecated: use registerAs((*echo.Echo).GET, getHandlers) instead
 func registerGetRoutes(e *echo.Echo) {
 	registerAs(e.GET, getHandlers)
 }

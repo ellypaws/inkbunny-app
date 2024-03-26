@@ -23,6 +23,7 @@ var postHandlers = pathHandler{
 	"/prefill":  prefill,
 }
 
+// Deprecated: use registerAs((*echo.Echo).POST, postHandlers) instead
 func registerPostRoutes(e *echo.Echo) {
 	registerAs(e.POST, postHandlers)
 }

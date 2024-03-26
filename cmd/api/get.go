@@ -14,13 +14,13 @@ import (
 )
 
 var getHandlers = pathHandler{
-	"/":                        Hello,
-	"/inkbunny/description":    GetInkbunnyDescription,
-	"/inkbunny/submission":     GetInkbunnySubmission,
-	"/inkbunny/submission/:id": GetInkbunnySubmission,
-	"/inkbunny/search":         GetInkbunnySearch,
-	"/image":                   app.GetImageHandler,
-	"/tickets/audits":          GetAuditHandler,
+	"/":                         Hello,
+	"/inkbunny/description":     GetInkbunnyDescription,
+	"/inkbunny/submission":      GetInkbunnySubmission,
+	"/inkbunny/submission/:ids": GetInkbunnySubmission,
+	"/inkbunny/search":          GetInkbunnySearch,
+	"/image":                    app.GetImageHandler,
+	"/tickets/audits":           GetAuditHandler,
 }
 
 func registerGetRoutes(e *echo.Echo) {
@@ -99,19 +99,37 @@ func GetInkbunnyDescription(c echo.Context) error {
 // GetInkbunnySubmission returns the details of a submission using api.SubmissionDetailsRequest
 // It requires a valid SID to be passed in the request.
 // It returns api.SubmissionDetailsResponse as JSON.
+// The order of preference for the SID is (where the rightmost value takes precedence):
+//
+//	request body -> cookie -> query parameter
+//
+// Similarly, the order of preference for the submission ID is:
+//
+//	request body -> query parameter -> path parameter
 func GetInkbunnySubmission(c echo.Context) error {
-	var request api.SubmissionDetailsRequest
-	err := c.Bind(&request)
+	var bind struct {
+		api.SubmissionDetailsRequest
+		SubmissionIDs *string `query:"submission_ids" param:"ids"`
+		SessionID     *string `query:"sid"`
+	}
+
+	err := c.Bind(&bind)
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, crashy.Wrap(err))
 	}
 
-	if id := c.Param("id"); id != "" {
-		request.SubmissionIDs = id
+	request := bind.SubmissionDetailsRequest
+
+	if bind.SubmissionIDs != nil {
+		request.SubmissionIDs = *bind.SubmissionIDs
 	}
 
 	if cookie, err := c.Cookie("sid"); request.SID == "" && err == nil {
 		request.SID = cookie.Value
+	}
+
+	if bind.SessionID != nil {
+		request.SID = *bind.SessionID
 	}
 
 	details, err := api.Credentials{Sid: request.SID}.SubmissionDetails(request)
@@ -135,7 +153,14 @@ func GetInkbunnySearch(c echo.Context) error {
 		Random:             api.Yes,
 		Type:               api.SubmissionTypePicturePinup,
 	}
-	err := c.Bind(&request)
+	var bind = struct {
+		*api.SubmissionSearchRequest
+		SessionID  *string `query:"sid"`
+		SearchTerm *string `query:"text"`
+	}{
+		SubmissionSearchRequest: &request,
+	}
+	err := c.Bind(&bind)
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, crashy.Wrap(err))
 	}
@@ -146,6 +171,14 @@ func GetInkbunnySearch(c echo.Context) error {
 
 	if cookie, err := c.Cookie("sid"); request.SID == "" && err == nil {
 		request.SID = cookie.Value
+	}
+
+	if bind.SessionID != nil {
+		request.SID = *bind.SessionID
+	}
+
+	if bind.SearchTerm != nil {
+		request.Text = *bind.SearchTerm
 	}
 
 	user := &api.Credentials{Sid: request.SID}

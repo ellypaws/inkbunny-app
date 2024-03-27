@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"github.com/ellypaws/inkbunny/api"
 	"log"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -214,6 +215,73 @@ func (db Sqlite) InsertFile(file File) error {
 	)
 
 	return err
+}
+
+// e.g. 2010-03-03 13:26:46.357649+00
+const inkbunnyTimeLayout = "2006-01-02 15:04:05.999999-07"
+
+func InkbunnySubmissionToDBSubmission(submission api.Submission) Submission {
+	id, _ := strconv.ParseInt(submission.SubmissionID, 10, 64)
+	userID, _ := strconv.ParseInt(submission.UserID, 10, 64)
+
+	parsedTime, err := time.Parse(inkbunnyTimeLayout, submission.UpdateDateSystem)
+	if err != nil {
+		log.Printf("error: parsing date: %v", err)
+		parsedTime = time.Now().UTC()
+	}
+
+	dbSubmission := Submission{
+		ID:          id,
+		UserID:      userID,
+		URL:         fmt.Sprintf("https://inkbunny.net/s/%v", id),
+		Title:       submission.Title,
+		Description: submission.Description,
+		Updated:     parsedTime,
+		Ratings:     submission.Ratings,
+		Keywords:    submission.Keywords,
+	}
+
+	SetTagsFromKeywords(&dbSubmission)
+
+	for _, f := range submission.Files {
+		dbSubmission.Files = append(dbSubmission.Files, File{
+			File: f,
+			Info: nil,
+			Blob: nil,
+		})
+	}
+
+	return dbSubmission
+}
+
+func SetTagsFromKeywords(submission *Submission) {
+	if submission == nil {
+		return
+	}
+	for _, keyword := range submission.Keywords {
+		switch strings.ReplaceAll(keyword.KeywordName, " ", "_") {
+		case "ai_generated":
+			submission.Generated = true
+		case "ai_assisted":
+			submission.Assisted = true
+		case "img2img":
+			submission.Img2Img = true
+		}
+	}
+}
+
+func SubmissionLabels(submission Submission) []TicketLabel {
+	var labels []TicketLabel
+	if submission.Generated {
+		labels = append(labels, LabelAIGenerated)
+	}
+	if submission.Assisted {
+		labels = append(labels, LabelAIAssisted)
+	}
+	if submission.Img2Img {
+		labels = append(labels, LabelImg2Img)
+	}
+	return labels
 }
 
 func (db Sqlite) InsertSubmission(submission Submission) error {

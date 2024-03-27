@@ -15,78 +15,88 @@ import (
 
 // Insert statements
 const (
+	// upsertAuditor statement for Auditor
 	upsertAuditor = `
 	INSERT INTO auditors (auditor_id, username, role, audit_count) VALUES (?, ?, ?, ?)
 	ON CONFLICT(auditor_id) DO UPDATE SET username=excluded.username, role=excluded.role, audit_count=excluded.audit_count;
 	`
 
+	// increaseAuditCount statement for Auditor
 	increaseAuditCount = `
 	UPDATE auditors SET audit_count = audit_count + 1 WHERE auditor_id = ?;
 	`
 
+	// updateAuditCount statement for Auditor
 	updateAuditCount = `
 	UPDATE auditors SET audit_count = ? WHERE auditor_id = ?;
 	`
 
+	// upsertAudit statement for Audit
 	upsertAudit = `
 	INSERT INTO audits (auditor_id,
-	                    submission_id, submission_username, submission_user_id,
-	                    flags, action_taken)
+						submission_id, submission_username, submission_user_id,
+						flags, action_taken)
 	VALUES (?, ?, ?, ?, ?, ?)
 	ON CONFLICT(submission_id)
-	    DO UPDATE SET
-	                  auditor_id=excluded.auditor_id,
-	                  submission_username=excluded.submission_username,
-	                  submission_user_id=excluded.submission_user_id,
-	                  flags=excluded.flags,
-	                  action_taken=excluded.action_taken;
+		DO UPDATE SET
+					  auditor_id=excluded.auditor_id,
+					  submission_username=excluded.submission_username,
+					  submission_user_id=excluded.submission_user_id,
+					  flags=excluded.flags,
+					  action_taken=excluded.action_taken;
 	`
 
+	// updateAuditID statement for Audit
 	updateAuditID = `
 	UPDATE audits SET audit_id = ? WHERE submission_id = ?;
 	`
 
+	// updateSubmissionFile statement for Submission
 	updateSubmissionFile = `
 	UPDATE submissions SET files = ? WHERE submission_id = ?;
 	`
 
+	// upsertSubmission statement for Submission
 	upsertSubmission = `
 --  Audit is a foreign key, but it's not required. Only give an integer if it exists.
 	INSERT INTO submissions (submission_id, user_id, url, audit_id,
-	                         title, description, updated_at,
-	                         ai_generated, ai_assisted, img2img,
-	                         ratings, keywords, files)
+							 title, description, updated_at,
+							 ai_generated, ai_assisted, img2img,
+							 ratings, keywords, files)
 	VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 	ON CONFLICT(submission_id)
-	    DO UPDATE SET
-	                  user_id=excluded.user_id,
-	                  url=excluded.url,
-	                  audit_id=excluded.audit_id,
-	                  title=excluded.title,
-	                  description=excluded.description,
-	                  updated_at=excluded.updated_at,
-	                  ai_generated=excluded.ai_generated,
-	                  ai_assisted=excluded.ai_assisted,
-	                  img2img=excluded.img2img,
-	                  ratings=excluded.ratings,
-	                  keywords=excluded.keywords,
-	                  files=excluded.files;
+		DO UPDATE SET
+					  user_id=excluded.user_id,
+					  url=excluded.url,
+					  audit_id=excluded.audit_id,
+					  title=excluded.title,
+					  description=excluded.description,
+					  updated_at=excluded.updated_at,
+					  ai_generated=excluded.ai_generated,
+					  ai_assisted=excluded.ai_assisted,
+					  img2img=excluded.img2img,
+					  ratings=excluded.ratings,
+					  keywords=excluded.keywords,
+					  files=excluded.files;
 	`
 
+	// updateSubmissionDescription statement for Submission
 	updateSubmissionDescription = `
 	UPDATE submissions SET description = ? WHERE submission_id = ?;
 	`
 
-	// IF submission exists, update the audit_id field
+	// updateSubmissionAudit statement for Submission
 	updateSubmissionAudit = `
 	UPDATE submissions SET audit_id = ? WHERE submission_id = ?;
 	`
 
+	// insertSIDHash statement for SIDHash
 	insertSIDHash = `
 	INSERT INTO sids (user_id, username, sid_hash) VALUES (?, ?, ?)
 	ON CONFLICT(user_id) DO UPDATE SET username=excluded.username, sid_hash=excluded.sid_hash;
 	`
 
+	// upsertModel statement for ModelHashes
 	upsertModel = `
 	INSERT INTO models (hash, models) VALUES (?, ?)
 	ON CONFLICT(hash) DO UPDATE SET models=excluded.models;

@@ -12,10 +12,11 @@ import (
 
 // Selection statements
 const (
+	// selectAuditBySubmissionID statement for Audit
 	selectAuditBySubmissionID = `
 	SELECT 
-	    audit_id,
-	    auditor_id,
+		audit_id,
+		auditor_id,
 		submission_id,
 		submission_username,
 		submission_user_id,
@@ -24,10 +25,11 @@ const (
 	FROM audits WHERE submission_id = ?;
 	`
 
+	// selectAuditByID statement for Audit
 	selectAuditByID = `
 	SELECT 
-	    audit_id,
-	    auditor_id,
+		audit_id,
+		auditor_id,
 		submission_id,
 		submission_username,
 		submission_user_id,
@@ -36,19 +38,21 @@ const (
 	FROM audits WHERE audit_id = ?;
 	`
 
+	// selectAuditorByID statement for Auditor
 	selectAuditorByID = `
 	SELECT
-	    auditor_id,
-	    username,
-	    role,
-	    audit_count
+		auditor_id,
+		username,
+		role,
+		audit_count
 	FROM auditors WHERE auditor_id = ?;
 	`
 
+	// selectAuditsByAuditor statement for Audit
 	selectAuditsByAuditor = `
 	SELECT
-	    audit_id,
-	    auditor_id,
+		audit_id,
+		auditor_id,
 		submission_id,
 		submission_username,
 		submission_user_id,
@@ -57,6 +61,7 @@ const (
 	FROM audits WHERE auditor_id = ?;
 	`
 
+	// selectSubmissionByID statement for Submission
 	selectSubmissionByID = `
 	SELECT
 		submission_id,
@@ -75,16 +80,22 @@ const (
 	FROM submissions WHERE submission_id = ?;
 	`
 
+	// selectAudits statement for Audit
 	selectAudits = `SELECT audit_id, submission_id FROM audits`
 
+	// selectSIDsFromUserID statement for SIDHash
 	selectSIDsFromUserID = `SELECT user_id, username, sid_hash FROM sids WHERE user_id = ?;`
 
+	// selectUsernameFromSID statement for SIDHash
 	selectUsernameFromSID = `SELECT username FROM sids WHERE sid_hash = ?;`
 
+	// isAnAuditor statement for Auditor
 	isAnAuditor = `SELECT EXISTS(SELECT 1 FROM auditors WHERE auditor_id = ?);`
 
+	// selectRole statement for Auditor
 	selectRole = `SELECT role FROM auditors WHERE auditor_id = ?;`
 
+	// selectModels statement for ModelHashes
 	selectModels = `SELECT hash, models FROM models;`
 )
 

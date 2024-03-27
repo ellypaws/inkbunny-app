@@ -41,6 +41,7 @@ var migrations = []migration{
 
 // sql statements
 const (
+	// createAuditors statement for Auditor
 	createAuditors = `
 	CREATE TABLE IF NOT EXISTS auditors (
 		auditor_id INTEGER PRIMARY KEY,
@@ -50,12 +51,13 @@ const (
 	)
 	`
 
+	// createSubmissions statement for Submission
 	createSubmissions = `
 	CREATE TABLE IF NOT EXISTS submissions (
 		submission_id TEXT PRIMARY KEY,
 		user_id TEXT NOT NULL,
 		url TEXT NOT NULL,
--- 		get audit from audits table, store only the audit id
+--		get audit from audits table, store only the audit id
 		audit_id INTEGER UNIQUE,
 		title TEXT NOT NULL,
 		description TEXT NOT NULL,
@@ -64,41 +66,44 @@ const (
 		ai_assisted BOOLEAN NOT NULL,
 		img2img BOOLEAN NOT NULL,
 		ratings BLOB NOT NULL,
--- 		store keywords as a json string
+--		store keywords as a json string
 		keywords BLOB,
--- 		get files from files table, store only the file ids
+--		get files from files table, store only the file ids
 		files BLOB
--- 	    FOREIGN KEY(file) REFERENCES files(file)
+--		FOREIGN KEY(file) REFERENCES files(file)
 	)
 	`
 
+	// createAudits statement for Audit
 	createAudits = `
 	CREATE TABLE IF NOT EXISTS audits (
-	    		audit_id INTEGER PRIMARY KEY AUTOINCREMENT,
--- 	    		get auditor from auditors table, store only the auditor id
-	    		auditor_id INTEGER,
-	    		submission_id TEXT NOT NULL UNIQUE,
-	    		submission_username TEXT NOT NULL,
-	    		submission_user_id TEXT NOT NULL,
-	    		flags TEXT NOT NULL,
-	    		action_taken TEXT NOT NULL,
-	    		FOREIGN KEY(auditor_id) REFERENCES auditors(auditor_id),
-	            FOREIGN KEY(submission_id) REFERENCES submissions(submission_id)
+				audit_id INTEGER PRIMARY KEY AUTOINCREMENT,
+--				get auditor from auditors table, store only the auditor id
+				auditor_id INTEGER,
+				submission_id TEXT NOT NULL UNIQUE,
+				submission_username TEXT NOT NULL,
+				submission_user_id TEXT NOT NULL,
+				flags TEXT NOT NULL,
+				action_taken TEXT NOT NULL,
+				FOREIGN KEY(auditor_id) REFERENCES auditors(auditor_id),
+				FOREIGN KEY(submission_id) REFERENCES submissions(submission_id)
 	)
 	`
 
+	// createSIDs statement for SIDHash
 	createSIDs = `
 	CREATE TABLE IF NOT EXISTS sids (
-	    		user_id TEXT PRIMARY KEY,
-	    		username TEXT NOT NULL,
-	    		sid_hash TEXT NOT NULL
+				user_id TEXT PRIMARY KEY,
+				username TEXT NOT NULL,
+				sid_hash TEXT NOT NULL
 	)
 	`
 
+	// createModels statement for ModelHashes
 	createModels = `
 	CREATE TABLE IF NOT EXISTS models (
-	    hash TEXT PRIMARY KEY,
-	    models BLOB
+		hash TEXT PRIMARY KEY,
+		models BLOB
 	)
 	`
 )

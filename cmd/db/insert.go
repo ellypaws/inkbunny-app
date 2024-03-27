@@ -139,22 +139,22 @@ func (db Sqlite) InsertAudit(audit Audit) (int64, error) {
 		strings.Join(flags, ","), audit.ActionTaken,
 	)
 	if err != nil {
-		return 0, fmt.Errorf("error: inserting audit: %v", err)
+		return 0, fmt.Errorf("error: inserting audit: %w", err)
 	}
 
 	audit, err = db.GetAuditBySubmissionID(audit.SubmissionID)
 	if err != nil {
-		return 0, fmt.Errorf("error: getting audit by submission id: %v", err)
+		return 0, fmt.Errorf("error: getting audit by submission id: %w", err)
 	}
 
 	if id, err := res.LastInsertId(); err != nil && id != audit.ID() {
-		return 0, fmt.Errorf("error: last insert id does not match audit id: %v", err)
+		return 0, fmt.Errorf("error: last insert id does not match audit id: %w", err)
 	}
 
 	// set audit in submission if it exists in the database
 	res, err = db.ExecContext(db.context, updateSubmissionAudit, audit.id, audit.SubmissionID)
 	if err != nil {
-		return 0, fmt.Errorf("error: updating submission audit: %v", err)
+		return 0, fmt.Errorf("error: updating submission audit: %w", err)
 	}
 
 	rowCount, err := res.RowsAffected()
@@ -192,7 +192,7 @@ func (db Sqlite) FixAuditsInSubmissions() error {
 	for _, audit := range audits {
 		_, err = db.ExecContext(db.context, updateSubmissionAudit, audit.id, audit.SubmissionID)
 		if err != nil {
-			return fmt.Errorf("error: updating submission audit: %v", err)
+			return fmt.Errorf("error: updating submission audit: %w", err)
 		}
 	}
 
@@ -206,7 +206,7 @@ func (db Sqlite) InsertFile(file File) error {
 
 	marshal, err := json.Marshal(file)
 	if err != nil {
-		return fmt.Errorf("error: marshalling file: %v", err)
+		return fmt.Errorf("error: marshalling file: %w", err)
 	}
 
 	_, err = db.ExecContext(db.context, updateSubmissionFile,
@@ -219,19 +219,19 @@ func (db Sqlite) InsertFile(file File) error {
 func (db Sqlite) InsertSubmission(submission Submission) error {
 	ratings, err := json.Marshal(submission.Ratings)
 	if err != nil {
-		return fmt.Errorf("error: marshalling ratings: %v", err)
+		return fmt.Errorf("error: marshalling ratings: %w", err)
 	}
 
 	keywords, err := json.Marshal(submission.Keywords)
 	if err != nil {
-		return fmt.Errorf("error: marshalling keywords: %v", err)
+		return fmt.Errorf("error: marshalling keywords: %w", err)
 	}
 
 	var filesMarshal sql.RawBytes
 	if len(submission.Files) > 0 {
 		filesMarshal, err = json.Marshal(submission.Files)
 		if err != nil {
-			return fmt.Errorf("error: marshalling files: %v", err)
+			return fmt.Errorf("error: marshalling files: %w", err)
 		}
 	}
 
@@ -239,7 +239,7 @@ func (db Sqlite) InsertSubmission(submission Submission) error {
 		audit, err := db.GetAuditBySubmissionID(submission.ID)
 		if err != nil {
 			if !errors.Is(err, sql.ErrNoRows) {
-				return fmt.Errorf("error: getting audit by submission id: %v", err)
+				return fmt.Errorf("error: getting audit by submission id: %w", err)
 			}
 		} else {
 			submission.AuditID = &audit.id
@@ -254,7 +254,7 @@ func (db Sqlite) InsertSubmission(submission Submission) error {
 		ratings, keywords, filesMarshal,
 	)
 	if err != nil {
-		return fmt.Errorf("error: inserting submission: %v", err)
+		return fmt.Errorf("error: inserting submission: %w", err)
 	}
 
 	return nil
@@ -286,7 +286,7 @@ func (db Sqlite) InsertSIDHash(sid SIDHash) error {
 	if len(hashes) > 0 {
 		marshal, err = json.Marshal(hashes)
 		if err != nil {
-			return fmt.Errorf("error: marshalling hashes: %v", err)
+			return fmt.Errorf("error: marshalling hashes: %w", err)
 		}
 	}
 
@@ -300,7 +300,7 @@ func (db Sqlite) RemoveSIDHash(sid SIDHash) error {
 	case errors.Is(err, sql.ErrNoRows):
 		return nil
 	case err != nil:
-		return fmt.Errorf("error: could not get hashes: %v", err)
+		return fmt.Errorf("error: could not get hashes: %w", err)
 	}
 
 	for hashToRemove := range sid.Hashes {
@@ -349,11 +349,11 @@ func (db Sqlite) InsertModel(models ModelHashes) error {
 	for hash, model := range models {
 		marshal, err := json.Marshal(model)
 		if err != nil {
-			return fmt.Errorf("error: marshalling model: %v", err)
+			return fmt.Errorf("error: marshalling model: %w", err)
 		}
 		_, err = db.ExecContext(db.context, upsertModel, hash, marshal)
 		if err != nil {
-			return fmt.Errorf("error: inserting model: %v", err)
+			return fmt.Errorf("error: inserting model: %w", err)
 		}
 	}
 

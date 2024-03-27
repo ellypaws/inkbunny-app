@@ -3,7 +3,6 @@ package db
 import (
 	"context"
 	"database/sql"
-	"errors"
 	"github.com/ellypaws/inkbunny/api"
 	"slices"
 	"testing"
@@ -17,25 +16,10 @@ const tempPhysicalDB = "temp.sqlite"
 
 func tempDB(ctx context.Context) (*Sqlite, error) {
 	if !useVirtualDB {
-		db := newPhysical(tempPhysicalDB, nil)
-		return db, nil
-	}
-	db, err := sql.Open("sqlite", ":memory:")
-	if err != nil {
-		return nil, err
+		return New(context.WithValue(ctx, "filename", tempPhysicalDB))
 	}
 
-	_, err = db.Exec(setForeignKeyCheck)
-	if err != nil {
-		return nil, errors.New("failed to enable foreign key checks")
-	}
-
-	err = migrate(ctx, db)
-	if err != nil {
-		return nil, err
-	}
-
-	return &Sqlite{db, ctx}, nil
+	return New(context.WithValue(ctx, ":memory:", useVirtualDB))
 }
 
 func resetDB(t *testing.T) {
@@ -47,7 +31,7 @@ func resetDB(t *testing.T) {
 }
 
 func TestPhysical(t *testing.T) {
-	db, err := New(context.Background())
+	db, err := New(context.WithValue(context.Background(), "filename", tempPhysicalDB))
 	if db == nil {
 		t.Fatal("New() failed: db is nil")
 	}

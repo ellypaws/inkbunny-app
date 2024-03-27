@@ -340,13 +340,13 @@ func (db Sqlite) InsertSIDHash(sid SIDHash) error {
 	}
 
 	var hashes hashmap = make(hashmap)
-	if len(stored.Hashes) > 0 {
-		for hash := range stored.Hashes {
+	if len(stored.hashes) > 0 {
+		for hash := range stored.hashes {
 			hashes[hash] = struct{}{}
 		}
 	}
 
-	for hash := range sid.Hashes {
+	for hash := range sid.hashes {
 		hashes[hash] = struct{}{}
 	}
 
@@ -371,8 +371,8 @@ func (db Sqlite) RemoveSIDHash(sid SIDHash) error {
 		return fmt.Errorf("error: could not get hashes: %w", err)
 	}
 
-	for hashToRemove := range sid.Hashes {
-		delete(stored.Hashes, hashToRemove)
+	for hashToRemove := range sid.hashes {
+		delete(stored.hashes, hashToRemove)
 	}
 
 	return db.InsertSIDHash(stored)
@@ -383,8 +383,14 @@ func HashCredentials(user api.Credentials) SIDHash {
 	return SIDHash{
 		UserID:   int64(user.UserID.Int()),
 		Username: user.Username,
-		Hashes:   checksum,
+		hashes:   checksum,
 	}
+}
+
+func (sidHash SIDHash) SetHash(sid string) SIDHash {
+	checksum := hash(sid)
+	sidHash.hashes = checksum
+	return sidHash
 }
 
 func hash(s any) hashmap {
@@ -401,7 +407,7 @@ func (db Sqlite) ValidSID(user api.Credentials) bool {
 
 	checksum := hash(user.Sid)
 	for hash := range checksum {
-		if _, ok := stored.Hashes[hash]; ok {
+		if _, ok := stored.hashes[hash]; ok {
 			return true
 		}
 	}

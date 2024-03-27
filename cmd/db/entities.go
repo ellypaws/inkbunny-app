@@ -192,9 +192,9 @@ type File struct {
 }
 
 type SIDHash struct {
-	UserID   int64   `json:"user_id"`
-	Username string  `json:"username"`
-	Hashes   hashmap `json:"hashes"`
+	UserID   int64  `json:"user_id"`
+	Username string `json:"username"`
+	hashes   hashmap
 }
 
 type hashmap map[string]struct{}

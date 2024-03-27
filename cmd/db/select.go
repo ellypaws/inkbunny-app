@@ -290,7 +290,7 @@ func (db Sqlite) GetSIDsFromUserID(userID int64) (SIDHash, error) {
 		return sid, err
 	}
 
-	err = json.Unmarshal(hashes, &sid.Hashes)
+	err = json.Unmarshal(hashes, &sid.hashes)
 
 	return sid, nil
 }

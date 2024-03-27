@@ -317,7 +317,7 @@ func (db Sqlite) InsertSubmission(submission Submission) error {
 
 	_, err = db.ExecContext(db.context, upsertSubmission,
 		submission.ID, submission.UserID, submission.URL, submission.AuditID,
-		submission.Title, submission.Description, submission.Updated.UTC().Format(time.RFC3339),
+		submission.Title, submission.Description, submission.Updated.UTC().Format(time.RFC3339Nano),
 		submission.Generated, submission.Assisted, submission.Img2Img,
 		ratings, keywords, filesMarshal,
 	)

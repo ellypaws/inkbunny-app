@@ -217,7 +217,7 @@ func (db Sqlite) GetSubmissionByID(submissionID int64) (Submission, error) {
 		return submission, err
 	}
 
-	submission.Updated, err = time.Parse(time.RFC3339, timeString)
+	submission.Updated, err = time.Parse(time.RFC3339Nano, timeString)
 	if err != nil {
 		return submission, err
 	}

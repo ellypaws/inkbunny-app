@@ -108,13 +108,13 @@ func TestSqlite_InsertAuditor(t *testing.T) {
 func TestSqlite_IncreaseAuditCount(t *testing.T) {
 	resetDB(t)
 
-	auditor := &Auditor{
+	auditor := Auditor{
 		UserID:   196417,
 		Username: "Elly",
 		Role:     RoleAuditor,
 	}
 
-	err := db.InsertAuditor(*auditor)
+	err := db.InsertAuditor(auditor)
 	if err != nil {
 		t.Fatalf("InsertAuditor() failed: %v", err)
 	}
@@ -139,13 +139,13 @@ func TestSqlite_IncreaseAuditCount(t *testing.T) {
 func TestSqlite_SyncAuditCount(t *testing.T) {
 	resetDB(t)
 
-	auditor := &Auditor{
+	auditor := Auditor{
 		UserID:   196417,
 		Username: "Elly",
 		Role:     RoleAuditor,
 	}
 
-	err := db.InsertAuditor(*auditor)
+	err := db.InsertAuditor(auditor)
 	if err != nil {
 		t.Fatalf("InsertAuditor() failed: %v", err)
 	}
@@ -190,14 +190,7 @@ func TestSqlite_SyncAuditCount(t *testing.T) {
 		URL:         "url",
 		Title:       "title",
 		Description: "description",
-		Audit: &Audit{
-			Auditor:            auditor,
-			SubmissionID:       123,
-			SubmissionUsername: "User",
-			SubmissionUserID:   456,
-			Flags:              []Flag{FlagUndisclosed},
-			ActionTaken:        "none",
-		},
+		AuditID:     nil,
 		Files: []File{
 			{
 				File: api.File{
@@ -218,6 +211,29 @@ func TestSqlite_SyncAuditCount(t *testing.T) {
 		t.Fatalf("InsertSubmission() failed: %v", err)
 	}
 
+	audit := Audit{
+		AuditorID:          &auditor.UserID,
+		SubmissionID:       123,
+		SubmissionUsername: "User",
+		SubmissionUserID:   456,
+		Flags:              []Flag{FlagUndisclosed},
+		ActionTaken:        "none",
+	}
+
+	auditID, err := db.InsertAudit(audit)
+	if err != nil {
+		t.Fatalf("InsertAudit() failed: %v", err)
+	}
+
+	checkSubmission, _ := db.GetSubmissionByID(123)
+	if checkSubmission.AuditID == nil {
+		t.Fatalf("InsertAudit() failed: expected non-nil audit, got nil")
+	}
+
+	if *checkSubmission.AuditID != auditID {
+		t.Fatalf("InsertAudit() failed: expected %v, got %v", auditID, *checkSubmission.AuditID)
+	}
+
 	err = db.SyncAuditCount(auditor.UserID)
 	if err != nil {
 		t.Fatalf("SyncAuditCount() failed: %v", err)
@@ -236,7 +252,9 @@ func TestSqlite_SyncAuditCount(t *testing.T) {
 }
 
 func TestSqlite_GetAuditsByAuditor(t *testing.T) {
-	resetDB(t)
+	if useVirtualDB == true {
+		t.Skip("skipping test in virtual db")
+	}
 
 	audits, err := db.GetAuditsByAuditor(196417)
 	if err != nil {
@@ -313,7 +331,7 @@ func TestSqlite_InsertAudit(t *testing.T) {
 	}
 
 	audit := Audit{
-		Auditor:            auditor,
+		AuditorID:          &auditor.UserID,
 		SubmissionID:       123,
 		SubmissionUsername: "User",
 		SubmissionUserID:   456,
@@ -332,13 +350,13 @@ func TestSqlite_InsertAudit(t *testing.T) {
 func TestSqlite_GetAuditorByID(t *testing.T) {
 	resetDB(t)
 
-	auditor := &Auditor{
+	auditor := Auditor{
 		UserID:   196417,
 		Username: "Elly",
 		Role:     RoleAuditor,
 	}
 
-	err := db.InsertAuditor(*auditor)
+	err := db.InsertAuditor(auditor)
 	if err != nil {
 		t.Fatalf("InsertAuditor() failed: %v", err)
 	}
@@ -403,7 +421,7 @@ func TestSqlite_GetAuditBySubmissionID(t *testing.T) {
 	}
 
 	audit := Audit{
-		Auditor:            auditor,
+		AuditorID:          &auditor.UserID,
 		SubmissionID:       submission.ID,
 		SubmissionUsername: "User",
 		SubmissionUserID:   456,
@@ -427,12 +445,12 @@ func TestSqlite_GetAuditBySubmissionID(t *testing.T) {
 		t.Fatalf("GetSubmissionByID() failed: %v", err)
 	}
 
-	if submission.Audit == nil {
-		t.Fatalf("GetAuditBySubmissionID() failed: expected non-nil, got nil")
+	if submission.audit == nil {
+		t.Fatalf("GetAuditBySubmissionID() failed: expected non-nil audit, got nil")
 	}
 
-	if submission.Audit.ID != id {
-		t.Fatalf("GetAuditBySubmissionID() failed: expected %v, got %v", audit.ID, submission.Audit.ID)
+	if submission.AuditID == nil || *submission.AuditID != id {
+		t.Fatalf("GetAuditBySubmissionID() failed: expected %v, got %v", audit.id, submission.AuditID)
 	}
 }
 
@@ -502,7 +520,7 @@ func TestSqlite_FixAuditsInSubmissions(t *testing.T) {
 	}
 
 	audit := Audit{
-		Auditor:            auditor,
+		AuditorID:          &auditor.UserID,
 		SubmissionID:       submission.ID,
 		SubmissionUsername: "User",
 		SubmissionUserID:   456,
@@ -525,8 +543,8 @@ func TestSqlite_FixAuditsInSubmissions(t *testing.T) {
 		t.Fatalf("GetSubmissionByID() failed: %v", err)
 	}
 
-	if submission.Audit == nil {
-		t.Fatalf("FixAuditsInSubmissions() failed: expected non-nil, got nil")
+	if submission.audit == nil {
+		t.Fatalf("FixAuditsInSubmissions() failed: expected non-nil audit, got nil")
 	}
 
 	t.Log("TestSqlite_FixAuditsInSubmissions() passed")
@@ -561,7 +579,7 @@ func TestSqlite_GetAuditByID(t *testing.T) {
 	}
 
 	audit := Audit{
-		Auditor:            auditor,
+		AuditorID:          &auditor.UserID,
 		SubmissionID:       submission.ID,
 		SubmissionUsername: "User",
 		SubmissionUserID:   456,
@@ -579,8 +597,8 @@ func TestSqlite_GetAuditByID(t *testing.T) {
 		t.Fatalf("GetAuditByID() failed: %v", err)
 	}
 
-	if audit.ID != id {
-		t.Fatalf("GetAuditByID() failed: expected %v, got %v", id, audit.ID)
+	if audit.id != id {
+		t.Fatalf("GetAuditByID() failed: expected %v, got %v", id, audit.id)
 	}
 
 	t.Log("TestSqlite_GetAuditByID() passed")
@@ -642,7 +660,6 @@ func TestAllReal(t *testing.T) {
 }
 
 func TestSqlite_InsertFullSubmission(t *testing.T) {
-	useVirtualDB = false
 	resetDB(t)
 
 	submission := Submission{
@@ -652,15 +669,7 @@ func TestSqlite_InsertFullSubmission(t *testing.T) {
 		Title:       "title",
 		Description: "description",
 		Updated:     time.Now(),
-		Audit: &Audit{
-			ID:                 69,
-			Auditor:            &Auditor{UserID: 196417, Username: "Elly", Role: RoleAuditor, AuditCount: 0},
-			SubmissionID:       456,
-			SubmissionUsername: "User",
-			SubmissionUserID:   789,
-			Flags:              []Flag{FlagUndisclosed},
-			ActionTaken:        "none",
-		},
+		AuditID:     nil,
 	}
 
 	err := db.InsertSubmission(submission)
@@ -673,16 +682,43 @@ func TestSqlite_InsertFullSubmission(t *testing.T) {
 		t.Fatalf("GetSubmissionByID() failed: %v", err)
 	}
 
-	if submission.Audit == nil {
-		t.Fatalf("InsertSubmission() failed: expected non-nil, got nil")
+	auditor := &Auditor{UserID: 196417, Username: "Elly", Role: RoleAuditor, AuditCount: 0}
+
+	err = db.InsertAuditor(*auditor)
+	if err != nil {
+		t.Fatalf("InsertAuditor() failed: %v", err)
 	}
 
-	if submission.Audit.ID != 69 {
-		t.Fatalf("InsertSubmission() failed: expected 69, got %v", submission.Audit.ID)
+	audit := Audit{
+		AuditorID:          &auditor.UserID,
+		SubmissionID:       456,
+		SubmissionUsername: "User",
+		SubmissionUserID:   789,
+		Flags:              []Flag{FlagUndisclosed},
+		ActionTaken:        "none",
 	}
 
-	if submission.Audit.Auditor.UserID != 196417 {
-		t.Fatalf("InsertSubmission() failed: expected 196417, got %v", submission.Audit.Auditor.UserID)
+	auditID, err := db.InsertAudit(audit)
+
+	submission, err = db.GetSubmissionByID(456)
+	if err != nil {
+		t.Fatalf("GetSubmissionByID() failed: %v", err)
+	}
+
+	if submission.Audit() == nil {
+		t.Fatalf("InsertSubmission() failed: expected non-nil audit, got nil")
+	}
+
+	if submission.AuditID == nil || *submission.AuditID != auditID {
+		t.Fatalf("InsertSubmission() failed: expected %v, got %v", auditID, submission.AuditID)
+	}
+
+	if submission.Audit().AuditorID == nil || *submission.Audit().AuditorID != 196417 {
+		t.Fatalf("InsertSubmission() failed: expected 196417, got %v", submission.audit.auditor.UserID)
+	}
+
+	if submission.Audit().Auditor().UserID != 196417 {
+		t.Fatalf("InsertSubmission() failed: expected 196417, got %v", submission.audit.auditor.UserID)
 	}
 
 	t.Logf("TestSqlite_GetSubmissionByID2() passed: %+v", submission)

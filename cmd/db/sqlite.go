@@ -103,6 +103,12 @@ const (
 	`
 )
 
+// New creates a new Sqlite database connection
+// Use context to pass in the filename of the database
+//
+//	context.WithValue(context.Background(), "filename", "audits.sqlite")
+//
+// Alternatively, use context to pass in ":memory:" to create an in-memory database
 func New(ctx context.Context) (*Sqlite, error) {
 	if ctx == nil {
 		ctx = context.Background()

@@ -76,13 +76,22 @@ const (
 )
 
 type Audit struct {
-	ID                 int64    `json:"id"`
-	Auditor            *Auditor `json:"auditor"`
-	SubmissionID       int64    `json:"submission"`
-	SubmissionUsername string   `json:"submission_username"` // The username of the user who submitted the image
-	SubmissionUserID   int64    `json:"submission_user_id"`  // The user ID of the user who submitted the image
-	Flags              []Flag   `json:"flags"`
-	ActionTaken        string   `json:"action_taken"`
+	id                 int64
+	auditor            Auditor
+	AuditorID          *int64 `json:"auditor_id"`
+	SubmissionID       int64  `json:"submission"`
+	SubmissionUsername string `json:"submission_username"` // The username of the user who submitted the image
+	SubmissionUserID   int64  `json:"submission_user_id"`  // The user ID of the user who submitted the image
+	Flags              []Flag `json:"flags"`
+	ActionTaken        string `json:"action_taken"`
+}
+
+func (a *Audit) ID() int64 {
+	return a.id
+}
+
+func (a *Audit) Auditor() Auditor {
+	return a.auditor
 }
 
 type Auditor struct {
@@ -156,31 +165,30 @@ type GenerationInfo struct {
 }
 
 type Submission struct {
-	ID          int64                `json:"id"`
-	UserID      int64                `json:"user_id"`
-	URL         string               `json:"url"`
-	Audit       *Audit               `json:"audit,omitempty"`
-	Title       string               `json:"title"`
-	Description string               `json:"description"`
-	Updated     time.Time            `json:"updated_at"`
-	Generated   bool                 `json:"generated"`
-	Assisted    bool                 `json:"assisted"`
-	Img2Img     bool                 `json:"img2img"`
-	Ratings     api.SubmissionRating `json:"ratings"`
-	Keywords    []Keyword            `json:"keywords,omitempty"`
-	Files       []File               `json:"files,omitempty"`
+	ID          int64  `json:"id"`
+	UserID      int64  `json:"user_id"`
+	URL         string `json:"url"`
+	audit       *Audit
+	AuditID     *int64                 `json:"audit_id"`
+	Title       string                 `json:"title"`
+	Description string                 `json:"description"`
+	Updated     time.Time              `json:"updated_at"`
+	Generated   bool                   `json:"generated"`
+	Assisted    bool                   `json:"assisted"`
+	Img2Img     bool                   `json:"img2img"`
+	Ratings     []api.SubmissionRating `json:"ratings"`
+	Keywords    []api.Keyword          `json:"keywords,omitempty"`
+	Files       []File                 `json:"files,omitempty"`
+}
+
+func (s *Submission) Audit() *Audit {
+	return s.audit
 }
 
 type File struct {
 	File api.File        `json:"file"`
 	Info *GenerationInfo `json:"info,omitempty"`
 	Blob *string         `json:"blob,omitempty"`
-}
-
-type Keyword struct {
-	KeywordID   int64  `json:"keyword_id"`
-	KeywordName string `json:"keyword_name"`
-	Suggested   bool   `json:"contributed"`
 }
 
 type SIDHash struct {

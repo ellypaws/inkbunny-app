@@ -12,7 +12,7 @@ import (
 
 // Selection statements
 const (
-	selectAuditBySubmission = `
+	selectAuditBySubmissionID = `
 	SELECT 
 	    audit_id,
 	    auditor_id,
@@ -90,11 +90,10 @@ const (
 
 func (db Sqlite) GetAuditBySubmissionID(submissionID int64) (Audit, error) {
 	var audit Audit
-	var auditorID int64
 	var flags string
 
-	err := db.QueryRowContext(db.context, selectAuditBySubmission, submissionID).Scan(
-		&audit.ID, &auditorID,
+	err := db.QueryRowContext(db.context, selectAuditBySubmissionID, submissionID).Scan(
+		&audit.id, &audit.AuditorID,
 		&audit.SubmissionID, &audit.SubmissionUsername, &audit.SubmissionUserID,
 		&flags, &audit.ActionTaken,
 	)
@@ -106,7 +105,11 @@ func (db Sqlite) GetAuditBySubmissionID(submissionID int64) (Audit, error) {
 		audit.Flags = append(audit.Flags, Flag(flag))
 	}
 
-	audit.Auditor, err = db.GetAuditorByID(auditorID)
+	if audit.AuditorID == nil {
+		return audit, errors.New("error: auditor id cannot be nil")
+	}
+
+	audit.auditor, err = db.GetAuditorByID(*audit.AuditorID)
 	if err != nil {
 		return audit, err
 	}
@@ -116,11 +119,10 @@ func (db Sqlite) GetAuditBySubmissionID(submissionID int64) (Audit, error) {
 
 func (db Sqlite) GetAuditByID(auditID int64) (Audit, error) {
 	var audit Audit
-	var auditorID int64
 	var flags string
 
 	err := db.QueryRowContext(db.context, selectAuditByID, auditID).Scan(
-		&audit.ID, &auditorID,
+		&audit.id, &audit.AuditorID,
 		&audit.SubmissionID, &audit.SubmissionUsername, &audit.SubmissionUserID,
 		&flags, &audit.ActionTaken,
 	)
@@ -132,7 +134,11 @@ func (db Sqlite) GetAuditByID(auditID int64) (Audit, error) {
 		audit.Flags = append(audit.Flags, Flag(flag))
 	}
 
-	audit.Auditor, err = db.GetAuditorByID(auditorID)
+	if audit.AuditorID == nil {
+		return audit, errors.New("error: auditor id cannot be nil")
+	}
+
+	audit.auditor, err = db.GetAuditorByID(*audit.AuditorID)
 	if err != nil {
 		return audit, err
 	}
@@ -142,8 +148,8 @@ func (db Sqlite) GetAuditByID(auditID int64) (Audit, error) {
 
 func (db Sqlite) GetAuditsByAuditor(auditorID int64) ([]Audit, error) {
 	auditor, err := db.GetAuditorByID(auditorID)
-	if err != nil && !errors.Is(err, sql.ErrNoRows) {
-		return nil, fmt.Errorf("got an error while getting auditor by id (not sql.ErrNoRows): %w", err)
+	if err != nil {
+		return nil, fmt.Errorf("got an error while getting auditor by id: %w", err)
 	}
 
 	rows, err := db.QueryContext(db.context, selectAuditsByAuditor, auditorID)
@@ -155,12 +161,12 @@ func (db Sqlite) GetAuditsByAuditor(auditorID int64) ([]Audit, error) {
 	var audits []Audit
 	for rows.Next() {
 		var audit = Audit{
-			Auditor: auditor,
+			auditor: auditor,
 		}
 
 		var flags string
 		err = rows.Scan(
-			&audit.ID, &auditorID,
+			&audit.id, &audit.AuditorID,
 			&audit.SubmissionID, &audit.SubmissionUsername, &audit.SubmissionUserID,
 			&flags, &audit.ActionTaken,
 		)
@@ -178,7 +184,7 @@ func (db Sqlite) GetAuditsByAuditor(auditorID int64) ([]Audit, error) {
 	return audits, nil
 }
 
-func (db Sqlite) GetAuditorByID(auditorID int64) (*Auditor, error) {
+func (db Sqlite) GetAuditorByID(auditorID int64) (Auditor, error) {
 	var auditor Auditor
 	var role string
 
@@ -186,24 +192,23 @@ func (db Sqlite) GetAuditorByID(auditorID int64) (*Auditor, error) {
 		&auditor.UserID, &auditor.Username, &role, &auditor.AuditCount,
 	)
 	if err != nil {
-		return nil, err
+		return auditor, err
 	}
 
 	auditor.Role = RoleLevel(role)
 
-	return &auditor, nil
+	return auditor, nil
 }
 
 func (db Sqlite) GetSubmissionByID(submissionID int64) (Submission, error) {
 	var submission Submission
 	var timeString string
-	var auditID sql.NullInt64
 	var fileID sql.NullString
 	var ratings []byte
 	var keywords []byte
 
 	err := db.QueryRowContext(db.context, selectSubmissionByID, submissionID).Scan(
-		&submission.ID, &submission.UserID, &submission.URL, &auditID,
+		&submission.ID, &submission.UserID, &submission.URL, &submission.AuditID,
 		&submission.Title, &submission.Description, &timeString,
 		&submission.Generated, &submission.Assisted, &submission.Img2Img, &ratings,
 		&keywords, &fileID,
@@ -229,19 +234,20 @@ func (db Sqlite) GetSubmissionByID(submissionID int64) (Submission, error) {
 		return submission, fmt.Errorf("error: unmarshalling keywords: %w", err)
 	}
 
-	if auditID.Valid {
-		if auditID.Int64 == 0 {
+	if submission.AuditID != nil {
+		if *submission.AuditID == 0 {
 			return submission, errors.New("error: audit ID cannot be 0")
 		}
-		audit, err := db.GetAuditByID(auditID.Int64)
+		audit, err := db.GetAuditByID(*submission.AuditID)
 		if err != nil {
 			if !errors.Is(err, sql.ErrNoRows) {
 				return submission, err
 			} else {
-				log.Printf("warning: audit %d is not null but couldn't find audit of %d", auditID.Int64, submissionID)
+				log.Printf("warning: audit %d is not null but couldn't find audit of %d", *submission.AuditID, submissionID)
 			}
 		} else {
-			submission.Audit = &audit
+			submission.audit = &audit
+			submission.AuditID = &audit.id
 		}
 	} else {
 		// Try to get the audit by submission id
@@ -251,7 +257,8 @@ func (db Sqlite) GetSubmissionByID(submissionID int64) (Submission, error) {
 				return submission, err
 			}
 		} else {
-			submission.Audit = &audit
+			submission.audit = &audit
+			submission.AuditID = &audit.id
 			// Store the audit id in the submission now
 			err = db.InsertSubmission(submission)
 			if err != nil {

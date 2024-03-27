@@ -116,43 +116,30 @@ func (db Sqlite) SyncAuditCount(auditorID int64) error {
 }
 
 // InsertAudit inserts an audit into the database. If the auditor is not in the database, it will be inserted.
-// Auditor needs to be non-empty or exist in the database before inserting an audit.
+// Audit.AuditorID needs to be non-nil and exist in the database before inserting an audit.
 // Similarly, the Submission needs to be in the database as well and be filled in the audit.
 // If successful, the submission will be updated with the new audit_id.
 func (db Sqlite) InsertAudit(audit Audit) (int64, error) {
-	if audit.Auditor == nil {
-		return 0, errors.New("error: auditor is nil")
-	}
-
-	if audit.Auditor != nil {
-		_, err := db.GetAuditorByID(audit.Auditor.UserID)
-		if err != nil && errors.Is(err, sql.ErrNoRows) {
-			// Only insert if new, otherwise keep old record
-			err := db.InsertAuditor(*audit.Auditor)
-			if err != nil {
-				return 0, fmt.Errorf("error: inserting auditor: %v", err)
-			}
+	if audit.AuditorID == nil {
+		if audit.auditor.UserID == 0 {
+			return 0, errors.New("error: auditor id cannot be nil")
 		}
+		// if auditor id is populated, use as fallback
+		audit.AuditorID = &audit.auditor.UserID
 	}
 
 	var flags []string
 	for _, flag := range audit.Flags {
 		flags = append(flags, string(flag))
 	}
+
 	res, err := db.ExecContext(db.context, upsertAudit,
-		audit.Auditor.UserID,
+		audit.AuditorID,
 		audit.SubmissionID, audit.SubmissionUsername, audit.SubmissionUserID,
 		strings.Join(flags, ","), audit.ActionTaken,
 	)
 	if err != nil {
-		return 0, err
-	}
-
-	if audit.ID != 0 {
-		_, err = db.ExecContext(db.context, updateAuditID, audit.ID, audit.SubmissionID)
-		if err != nil {
-			return 0, fmt.Errorf("error: updating audit id: %v", err)
-		}
+		return 0, fmt.Errorf("error: inserting audit: %v", err)
 	}
 
 	audit, err = db.GetAuditBySubmissionID(audit.SubmissionID)
@@ -160,8 +147,12 @@ func (db Sqlite) InsertAudit(audit Audit) (int64, error) {
 		return 0, fmt.Errorf("error: getting audit by submission id: %v", err)
 	}
 
-	// set audit in submission if it exists in database
-	res, err = db.ExecContext(db.context, updateSubmissionAudit, audit.ID, audit.SubmissionID)
+	if id, err := res.LastInsertId(); err != nil && id != audit.ID() {
+		return 0, fmt.Errorf("error: last insert id does not match audit id: %v", err)
+	}
+
+	// set audit in submission if it exists in the database
+	res, err = db.ExecContext(db.context, updateSubmissionAudit, audit.id, audit.SubmissionID)
 	if err != nil {
 		return 0, fmt.Errorf("error: updating submission audit: %v", err)
 	}
@@ -176,7 +167,7 @@ func (db Sqlite) InsertAudit(audit Audit) (int64, error) {
 		log.Printf("warning: submission %d doesn't exist in the database", audit.SubmissionID)
 	}
 
-	return audit.ID, nil
+	return audit.id, nil
 }
 
 // FixAuditsInSubmissions updates all submissions with the correct audit_id.
@@ -189,17 +180,17 @@ func (db Sqlite) FixAuditsInSubmissions() error {
 
 	var audits []Audit
 	for rows.Next() {
-		var auditID, submissionID int64
-		err = rows.Scan(&auditID, &submissionID)
+		var audit Audit
+		err = rows.Scan(&audit.id, &audit.SubmissionID)
 		if err != nil {
 			return err
 		}
 
-		audits = append(audits, Audit{ID: auditID, SubmissionID: submissionID})
+		audits = append(audits, audit)
 	}
 
 	for _, audit := range audits {
-		_, err = db.ExecContext(db.context, updateSubmissionAudit, audit.ID, audit.SubmissionID)
+		_, err = db.ExecContext(db.context, updateSubmissionAudit, audit.id, audit.SubmissionID)
 		if err != nil {
 			return fmt.Errorf("error: updating submission audit: %v", err)
 		}
@@ -244,44 +235,26 @@ func (db Sqlite) InsertSubmission(submission Submission) error {
 		}
 	}
 
-	var auditIDNullable sql.NullInt64
-	var newAudit bool
-	if submission.Audit != nil {
-		auditIDNullable = sql.NullInt64{
-			Int64: submission.Audit.ID,
-			Valid: true,
-		}
-		newAudit = true
-	} else {
+	if submission.AuditID == nil {
 		audit, err := db.GetAuditBySubmissionID(submission.ID)
 		if err != nil {
 			if !errors.Is(err, sql.ErrNoRows) {
 				return fmt.Errorf("error: getting audit by submission id: %v", err)
 			}
 		} else {
-			auditIDNullable = sql.NullInt64{
-				Int64: audit.ID,
-				Valid: true,
-			}
-			submission.Audit = &audit
+			submission.AuditID = &audit.id
+			submission.audit = &audit
 		}
 	}
 
 	_, err = db.ExecContext(db.context, upsertSubmission,
-		submission.ID, submission.UserID, submission.URL, auditIDNullable,
+		submission.ID, submission.UserID, submission.URL, submission.AuditID,
 		submission.Title, submission.Description, submission.Updated.UTC().Format(time.RFC3339),
 		submission.Generated, submission.Assisted, submission.Img2Img,
 		ratings, keywords, filesMarshal,
 	)
 	if err != nil {
 		return fmt.Errorf("error: inserting submission: %v", err)
-	}
-
-	if newAudit {
-		_, err := db.InsertAudit(*submission.Audit)
-		if err != nil {
-			return fmt.Errorf("error: inserting audit: %v", err)
-		}
 	}
 
 	return nil

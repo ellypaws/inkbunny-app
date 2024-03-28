@@ -1,6 +1,7 @@
 package db
 
 import (
+	"bytes"
 	"crypto/sha256"
 	"database/sql"
 	"encoding/json"
@@ -8,6 +9,8 @@ import (
 	"fmt"
 	"github.com/ellypaws/inkbunny/api"
 	"log"
+	"reflect"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -88,6 +91,30 @@ const (
 	// updateSubmissionAudit statement for Submission
 	updateSubmissionAudit = `
 	UPDATE submissions SET audit_id = ? WHERE submission_id = ?;
+	`
+
+	// upsertTicket statement for Ticket
+	upsertTicket = `
+	INSERT INTO tickets (ticket_id, subject, date_opened, status, labels, priority, closed, responses, submissions_ids, auditor_id, involved)
+	VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+	ON CONFLICT(ticket_id)
+		DO UPDATE SET
+					  subject=excluded.subject,
+					  date_opened=excluded.date_opened,
+					  status=excluded.status,
+					  labels=excluded.labels,
+					  priority=excluded.priority,
+					  closed=excluded.closed,
+					  responses=excluded.responses,
+					  submissions_ids=excluded.submissions_ids,
+					  auditor_id=excluded.auditor_id,
+					  involved=excluded.involved;
+	`
+
+	// newTicket statement for Ticket
+	newTicket = `
+	INSERT INTO tickets (subject, date_opened, status, labels, priority, closed, responses, submissions_ids, auditor_id, involved)
+	VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
 	`
 
 	// insertSIDHash statement for SIDHash
@@ -341,6 +368,129 @@ func (db Sqlite) InsertSubmission(submission Submission) error {
 func (db Sqlite) UpdateDescription(submission Submission) error {
 	_, err := db.ExecContext(db.context, updateSubmissionDescription, submission.Description, submission.ID)
 	return err
+}
+
+// ErrTicketIsSet is returned when a ticket ID is set but Sqlite.InsertTicket was called.
+// Use Sqlite.UpsertTicket instead.
+var ErrTicketIsSet = errors.New("error: ticket id is set but InsertTicket was called")
+
+// InsertTicket inserts a new ticket into the database.
+// The ID is expected to be non-zero as it's a new ticket.
+// This ensures that InsertTicket is only for new tickets.
+// Set force to true to unset the ticket ID and always insert a new ticket.
+func (db Sqlite) InsertTicket(ticket Ticket, force ...bool) error {
+	if len(force) > 0 && force[0] {
+		ticket.ID = 0
+	}
+	if ticket.ID != 0 {
+		return ErrTicketIsSet
+	}
+	return db.UpsertTicket(ticket)
+}
+
+// UpsertTicket inserts or updates a ticket in the database.
+// If the ticket ID is unset, it will insert a new ticket.
+func (db Sqlite) UpsertTicket(ticket Ticket) error {
+	args, err := assertArgs(
+		ticket.ID, ticket.Subject, ticket.DateOpened.UTC().Format(time.RFC3339Nano),
+		ticket.Status, ticket.Labels, ticket.Priority, ticket.Closed,
+		ticket.Responses, ticket.SubmissionIDs, ticket.AssignedID, ticket.UsersInvolved,
+	)
+
+	var isInsert bool = ticket.ID == 0
+	var query string = upsertTicket
+	if isInsert {
+		query = newTicket
+		args = args[1:]
+	}
+	res, err := db.ExecContext(db.context, query, args...)
+	if err != nil {
+		var process string = "up"
+		if isInsert {
+			process = "in"
+		}
+		return fmt.Errorf("error: %vserting ticket: %w", process, err)
+	}
+
+	if id, err := res.LastInsertId(); err != nil && id != ticket.ID {
+		return fmt.Errorf("error: last insert id does not match ticket id: %w", err)
+	}
+
+	return nil
+}
+
+// assertArgs asserts that the arguments are valid sqlite types and marshals them if necessary.
+func assertArgs(args ...any) ([]any, error) {
+	for i := range args {
+		var length = -1
+		switch a := args[i].(type) {
+		case *string, *int, *int64, *float32, *float64, *bool:
+
+		case string, int, int64, float32, float64, bool:
+
+		case *[]byte, []byte:
+
+		case nil:
+			args[i] = nil
+		default:
+			// use reflect to check if it's a slice
+			v := reflect.ValueOf(a)
+
+			if !slices.Contains([]reflect.Kind{
+				reflect.Array,
+				reflect.Func,
+				reflect.Map,
+				reflect.Pointer,
+				reflect.Slice,
+				reflect.Struct,
+				reflect.UnsafePointer,
+			}, v.Kind()) {
+				return nil, fmt.Errorf("error: invalid type: %T", a)
+			}
+
+			if slices.Contains([]reflect.Kind{
+				reflect.Array, reflect.Slice, reflect.Map,
+				reflect.Chan, reflect.Func, reflect.Interface, reflect.Pointer,
+			}, v.Kind()) && v.IsNil() {
+				continue
+			}
+
+			if slices.Contains([]reflect.Kind{
+				reflect.Slice, reflect.Array, reflect.Map,
+			}, v.Kind()) {
+				length = v.Len()
+			}
+
+			var err error
+			if length != -1 {
+				args[i], err = marshal(args[i], length)
+				if err != nil {
+					return nil, fmt.Errorf("error: marshalling %#v: %w", args[i], err)
+				}
+				if b, ok := args[i].([]byte); !ok || bytes.Equal(b, []byte("null")) {
+					args[i] = nil
+				}
+			} else {
+				args[i], err = json.Marshal(a)
+				if err != nil {
+					return nil, fmt.Errorf("error: marshalling %#v: %w", a, err)
+				}
+			}
+		}
+	}
+	return args, nil
+}
+
+func marshal(value any, length int) ([]byte, error) {
+	var marshal []byte
+	if value != nil && length > 0 {
+		var err error
+		marshal, err = json.Marshal(value)
+		if err != nil {
+			return nil, fmt.Errorf("error: marshalling labels: %w", err)
+		}
+	}
+	return marshal, nil
 }
 
 func (db Sqlite) InsertSIDHash(sid SIDHash) error {

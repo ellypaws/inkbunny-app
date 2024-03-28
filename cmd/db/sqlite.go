@@ -35,6 +35,7 @@ var migrations = []migration{
 	{migrationName: "create auditors table", migrationQuery: createAuditors},
 	{migrationName: "create submissions table", migrationQuery: createSubmissions},
 	{migrationName: "create audits table", migrationQuery: createAudits},
+	{migrationName: "create tickets table", migrationQuery: createTickets},
 	{migrationName: "create sids table", migrationQuery: createSIDs},
 	{migrationName: "create models table", migrationQuery: createModels},
 }
@@ -87,6 +88,24 @@ const (
 				action_taken TEXT NOT NULL,
 				FOREIGN KEY(auditor_id) REFERENCES auditors(auditor_id),
 				FOREIGN KEY(submission_id) REFERENCES submissions(submission_id)
+	)
+	`
+
+	// createTickets statement for Ticket
+	createTickets = `
+	CREATE TABLE IF NOT EXISTS tickets (
+				ticket_id INTEGER PRIMARY KEY AUTOINCREMENT,
+				subject TEXT NOT NULL,
+				date_opened TEXT NOT NULL,
+				status TEXT NOT NULL DEFAULT 'Open',
+				labels BLOB,
+				priority TEXT NOT NULL DEFAULT 'Low',
+				closed BOOLEAN NOT NULL DEFAULT FALSE,
+				responses BLOB NOT NULL,
+				submissions_ids BLOB,
+				auditor_id INTEGER,
+				involved BLOB,
+				FOREIGN KEY(auditor_id) REFERENCES auditors(auditor_id)
 	)
 	`
 

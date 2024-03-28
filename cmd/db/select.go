@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/go-errors/errors"
 	"log"
+	"reflect"
 	"strings"
 	"time"
 )
@@ -79,6 +80,36 @@ const (
 		files
 	FROM submissions WHERE submission_id = ?;
 	`
+
+	// selectTicketByID statement for Ticket
+	selectTicketByID = `
+	SELECT
+		ticket_id,
+		subject,
+		date_opened,
+		status,
+		labels,
+		priority,
+		closed,
+		responses,
+		submissions_ids,
+		auditor_id,
+		involved
+	FROM tickets WHERE ticket_id = ?;
+	`
+
+	// selectTicketsByAuditor statement for Ticket
+	selectTicketsByAuditor = `SELECT * FROM tickets WHERE auditor_id = ?;`
+	// selectTicketsByStatus statement for Ticket
+	selectTicketsByStatus = `SELECT * FROM tickets WHERE status = ?;`
+	// selectTicketsByLabel statement for Ticket
+	selectTicketsByLabel = `SELECT * FROM tickets WHERE CAST(labels as TEXT) LIKE ?;`
+	// selectTicketsByPriority statement for Ticket
+	selectTicketsByPriority = `SELECT * FROM tickets WHERE priority = ?;`
+	// selectOpenTickets statement for Ticket
+	selectOpenTickets = `SELECT * FROM tickets WHERE closed = false;`
+	// selectClosedTickets statement for Ticket
+	selectClosedTickets = `SELECT * FROM tickets WHERE closed = true;`
 
 	// selectAudits statement for Audit
 	selectAudits = `SELECT audit_id, submission_id FROM audits`
@@ -288,6 +319,138 @@ func (db Sqlite) GetSubmissionByID(submissionID int64) (Submission, error) {
 	//}
 
 	return submission, nil
+}
+
+func (db Sqlite) GetTicketByID(ticketID int64) (Ticket, error) {
+	var ticket Ticket
+	var dateOpened string
+	var labels []byte
+	var responses []byte
+	var submissionIDs []byte
+	var involved []byte
+
+	err := db.QueryRowContext(db.context, selectTicketByID, ticketID).Scan(
+		&ticket.ID, &ticket.Subject, &dateOpened,
+		&ticket.Status, &labels, &ticket.Priority, &ticket.Closed,
+		&responses, &submissionIDs, &ticket.AssignedID, &involved,
+	)
+	if err != nil {
+		return ticket, err
+	}
+
+	err = scan(map[any]any{
+		&ticket.DateOpened:    dateOpened,
+		&ticket.Labels:        labels,
+		&ticket.Responses:     responses,
+		&ticket.SubmissionIDs: submissionIDs,
+		&ticket.UsersInvolved: involved,
+	})
+
+	return ticket, nil
+}
+
+// GetTicketsByAuditor returns a list of tickets by auditor id
+func (db Sqlite) GetTicketsByAuditor(auditorID int64) ([]Ticket, error) {
+	return db.ticketsByQuery(selectTicketsByAuditor, auditorID)
+}
+func (db Sqlite) GetTicketsByStatus(status string) ([]Ticket, error) {
+	return db.ticketsByQuery(selectTicketsByStatus, status)
+}
+
+// GetTicketsByLabel returns a slice of Ticket by label using selectTicketsByLabel
+func (db Sqlite) GetTicketsByLabel(label string) ([]Ticket, error) {
+	label = strings.ReplaceAll(label, " ", "_")
+	return db.ticketsByQuery(selectTicketsByLabel, "%"+label+"%")
+}
+func (db Sqlite) GetTicketsByPriority(priority string) ([]Ticket, error) {
+	return db.ticketsByQuery(selectTicketsByPriority, priority)
+}
+func (db Sqlite) GetOpenTickets() ([]Ticket, error) {
+	return db.ticketsByQuery(selectOpenTickets)
+}
+func (db Sqlite) GetClosedTickets() ([]Ticket, error) {
+	return db.ticketsByQuery(selectClosedTickets)
+}
+
+func (db Sqlite) ticketsByQuery(query string, args ...any) ([]Ticket, error) {
+	rows, err := db.QueryContext(db.context, query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("error: querying tickets by auditor: %w", err)
+	}
+	defer rows.Close()
+
+	var tickets []Ticket
+	for rows.Next() {
+		var ticket Ticket
+		var dateOpened string
+		var labels []byte
+		var responses []byte
+		var submissionIDs []byte
+		var involved []byte
+
+		err := rows.Scan(
+			&ticket.ID, &ticket.Subject, &dateOpened,
+			&ticket.Status, &labels, &ticket.Priority, &ticket.Closed,
+			&responses, &submissionIDs, &ticket.AssignedID, &involved,
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		err = scan(map[any]any{
+			&ticket.DateOpened:    dateOpened,
+			&ticket.Labels:        labels,
+			&ticket.Responses:     responses,
+			&ticket.SubmissionIDs: submissionIDs,
+			&ticket.UsersInvolved: involved,
+		})
+		if err != nil {
+			return nil, err
+		}
+
+		tickets = append(tickets, ticket)
+	}
+
+	if len(tickets) == 0 {
+		return nil, fmt.Errorf("finished querying tickets by auditor: %w", sql.ErrNoRows)
+	}
+
+	return tickets, nil
+}
+
+// scan scans the map of addresses to values and sets the values to the addresses
+func scan(scan map[any]any) error {
+	for key, value := range scan {
+		k := reflect.ValueOf(key)
+		if k.Kind() != reflect.Pointer {
+			return fmt.Errorf("error: key %T is not a pointer", key)
+		}
+		e := k.Elem()
+		if !e.CanSet() {
+			return fmt.Errorf("error: key %T cannot be set", key)
+		}
+		if e.Type().AssignableTo(reflect.TypeFor[time.Time]()) {
+			s, ok := value.(string)
+			if !ok {
+				return fmt.Errorf("error: value %v is not a string", value)
+			}
+			p, err := time.Parse(time.RFC3339Nano, s)
+			if err != nil {
+				return err
+			}
+			e.Set(reflect.ValueOf(p))
+			continue
+		}
+		data, ok := value.([]byte)
+		if !ok {
+			return fmt.Errorf("error: value %v is not []byte for JSON unmarshalling", value)
+		}
+		if err := json.Unmarshal(data, k.Elem().Addr().Interface()); err != nil {
+			return fmt.Errorf("error unmarshalling JSON: %w", err)
+		}
+	}
+
+	return nil
 }
 
 func (db Sqlite) GetSIDsFromUserID(userID int64) (SIDHash, error) {

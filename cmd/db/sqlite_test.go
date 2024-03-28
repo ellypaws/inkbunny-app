@@ -640,6 +640,8 @@ func TestAllReal(t *testing.T) {
 	t.Run("TestSqlite_GetAuditBySubmissionID", TestSqlite_GetAuditBySubmissionID)
 
 	t.Run("TestSqlite_ValidSID", TestSqlite_ValidSID)
+
+	t.Run("TestSqlite_InsertTicket", TestSqlite_Tickets)
 	useVirtualDB = true
 }
 
@@ -764,5 +766,181 @@ func TestSqlite_InsertModel(t *testing.T) {
 
 	if !slices.Contains(known, "furtasticv20_furtasticv20") {
 		t.Fatalf("ModelNamesFromHash() failed: expected furtasticv20_furtasticv20, got %v", known[0])
+	}
+}
+
+func TestSqlite_Tickets(t *testing.T) {
+	useVirtualDB = false
+	resetDB(t)
+
+	submission := Submission{
+		ID:          123,
+		UserID:      456,
+		URL:         "url",
+		Title:       "title",
+		Description: "description",
+		Generated:   true,
+	}
+
+	err := db.InsertSubmission(submission)
+	if err != nil {
+		t.Fatalf("could not insert submission: %v", err)
+	}
+
+	auditor := &Auditor{UserID: 196417, Username: "Elly", Role: RoleAuditor, AuditCount: 0}
+
+	err = db.InsertAuditor(*auditor)
+	if err != nil {
+		t.Fatalf("could not insert auditor: %v", err)
+	}
+
+	ticket := Ticket{
+		ID:         1,
+		Subject:    "subject",
+		DateOpened: time.Now().UTC(),
+		Status:     "Open",
+		Labels:     []TicketLabel{LabelAIGenerated},
+		Priority:   "low",
+		Closed:     false,
+		Responses: []Response{
+			{
+				SupportTeam: false,
+				Date:        time.Now().UTC(),
+				Message:     "The following submission doesn't include the prompts: https://inkbunny.net/s/123",
+			},
+		},
+		SubmissionIDs: []int64{123},
+		AssignedID:    &auditor.UserID,
+		UsersInvolved: Involved{
+			Reporter:    api.UsernameID{UserID: "196417", Username: "Elly"},
+			ReportedIDs: []api.UsernameID{{UserID: "456", Username: "User"}},
+		},
+	}
+
+	err = db.UpsertTicket(ticket)
+	if err != nil {
+		t.Fatalf("could not insert ticket: %v", err)
+	}
+
+	ticket = Ticket{
+		ID:         2,
+		Subject:    ticket.Subject,
+		DateOpened: time.Now().UTC(),
+		Status:     "Closed",
+		Labels:     []TicketLabel{LabelAIGenerated, LabelAIAssisted},
+		Priority:   "high",
+		Closed:     true,
+		Responses: []Response{
+			{
+				SupportTeam: false,
+				Date:        time.Now().UTC(),
+				Message:     "The following submission doesn't include the prompts: https://inkbunny.net/s/123",
+			},
+		},
+		SubmissionIDs: []int64{123},
+		AssignedID:    &auditor.UserID,
+		UsersInvolved: Involved{
+			Reporter:    api.UsernameID{UserID: "196417", Username: "Elly"},
+			ReportedIDs: []api.UsernameID{{UserID: "456", Username: "User"}},
+		},
+	}
+
+	err = db.UpsertTicket(ticket)
+	if err != nil {
+		t.Fatalf("could not insert ticket: %v", err)
+	}
+
+	tickets, err := db.GetTicketsByAuditor(196417)
+	if err != nil {
+		t.Fatalf("could not get tickets: %v", err)
+	}
+
+	if len(tickets) == 0 {
+		t.Fatalf("GetTicketsByAuditor() failed: expected > 0, got 0")
+	}
+
+	stringFuncs := map[string]func(string) ([]Ticket, error){
+		"Open":                   db.GetTicketsByStatus,
+		"Closed":                 db.GetTicketsByStatus,
+		"low":                    db.GetTicketsByPriority,
+		"high":                   db.GetTicketsByPriority,
+		string(LabelAIGenerated): db.GetTicketsByLabel,
+		string(LabelAIAssisted):  db.GetTicketsByLabel,
+	}
+
+	for arg, f := range stringFuncs {
+		t.Logf("TestSqlite_Tickets() %v", arg)
+		tickets, err = f(arg)
+		if err != nil {
+			t.Errorf("failed: %v", err)
+		}
+
+		if len(tickets) == 0 {
+			t.Errorf("failed: expected > 0, got 0: %v", arg)
+		}
+	}
+
+	tickets, err = db.GetOpenTickets()
+	if err != nil {
+		t.Fatalf("could not get tickets: %v", err)
+	}
+
+	if len(tickets) == 0 {
+		t.Fatalf("GetOpenTickets() failed: expected > 0, got 0")
+	}
+
+	tickets, err = db.GetClosedTickets()
+	if err != nil {
+		t.Fatalf("could not get tickets: %v", err)
+	}
+
+	if len(tickets) == 0 {
+		t.Fatalf("GetClosedTickets() failed: expected > 0, got 0")
+	}
+}
+
+func TestAssertArgs(t *testing.T) {
+	float := float64(1)
+	s := "string"
+	slice := []string{s}
+	m := map[string]string{"key": "value"}
+	str := struct{ String string }{String: s}
+	strs := []struct{ String string }{{String: s}}
+
+	for i, args := range [][]any{
+		{
+			float,
+			s,
+			slice,
+			m,
+			str,
+			strs,
+		},
+		{
+			&float,
+			&s,
+			&slice,
+			&m,
+			&str,
+			&strs,
+		},
+		{
+			(*float64)(nil),
+			(*string)(nil),
+			(*[]string)(nil),
+			(*map[string]string)(nil),
+			(*struct{ String string })(nil),
+			(*[]struct{ String string })(nil),
+		},
+	} {
+		t.Logf("TestAssertArgs() %v", i)
+		args, err := assertArgs(args...)
+		if err != nil {
+			t.Fatalf("assertArgs() failed: %v", err)
+		}
+
+		if len(args) == 0 {
+			t.Fatalf("assertArgs() failed: expected > 0, got 0")
+		}
 	}
 }

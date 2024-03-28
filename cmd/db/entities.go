@@ -200,3 +200,41 @@ type SIDHash struct {
 type hashmap map[string]struct{}
 
 type ModelHashes map[string][]string
+
+type Ticket struct {
+	ID            int64         `json:"id"`
+	Subject       string        `json:"subject"`
+	DateOpened    time.Time     `json:"date_opened"`
+	Status        string        `json:"status,omitempty"`
+	Labels        []TicketLabel `json:"labels,omitempty"`
+	Priority      string        `json:"priority"`
+	Closed        bool          `json:"closed"`
+	Responses     []Response    `json:"responses,omitempty"`
+	SubmissionIDs []int64       `json:"submissions_ids,omitempty"`
+	auditor       *Auditor
+	AssignedID    *int64   `json:"assigned_id,omitempty"` // Auditor ID
+	UsersInvolved Involved `json:"involved"`
+}
+
+func (t Ticket) Auditor() *Auditor {
+	return t.auditor
+}
+
+type TicketLabel string
+
+const (
+	LabelAIGenerated TicketLabel = "ai_generated"
+	LabelAIAssisted  TicketLabel = "ai_assisted"
+	LabelImg2Img     TicketLabel = "img2img"
+)
+
+type Response struct {
+	SupportTeam bool      `json:"support_team"`
+	Date        time.Time `json:"date"`
+	Message     string    `json:"message"`
+}
+
+type Involved struct {
+	Reporter    api.UsernameID   `json:"reporter"`
+	ReportedIDs []api.UsernameID `json:"reported,omitempty"`
+}

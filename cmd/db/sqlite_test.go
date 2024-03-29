@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"github.com/ellypaws/inkbunny/api"
+	"os"
 	"slices"
 	"testing"
 	"time"
@@ -11,6 +12,7 @@ import (
 
 var db, _ = tempDB(context.Background())
 var useVirtualDB = true
+var slow = os.Getenv("SLOW") == "true"
 
 const tempPhysicalDB = "temp.sqlite"
 
@@ -735,9 +737,13 @@ func TestSqlite_ValidSID(t *testing.T) {
 		t.Fatalf("ValidSID() failed: expected true, got false")
 	}
 
-	user, err = api.Guest().Login()
-	if err != nil {
-		t.Fatalf("Login() failed: %v", err)
+	if slow {
+		user, err = api.Guest().Login()
+		if err != nil {
+			t.Fatalf("Login() failed: %v", err)
+		}
+	} else {
+		user.Sid = "sid"
 	}
 
 	err = db.InsertSIDHash(HashCredentials(*user))

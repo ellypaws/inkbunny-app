@@ -338,7 +338,7 @@ func (db Sqlite) GetTicketByID(ticketID int64) (Ticket, error) {
 		return ticket, err
 	}
 
-	err = scan(map[any]any{
+	err = Scan(map[any]any{
 		&ticket.DateOpened:    dateOpened,
 		&ticket.Labels:        labels,
 		&ticket.Responses:     responses,
@@ -397,7 +397,7 @@ func (db Sqlite) ticketsByQuery(query string, args ...any) ([]Ticket, error) {
 			return nil, err
 		}
 
-		err = scan(map[any]any{
+		err = Scan(map[any]any{
 			&ticket.DateOpened:    dateOpened,
 			&ticket.Labels:        labels,
 			&ticket.Responses:     responses,
@@ -405,7 +405,7 @@ func (db Sqlite) ticketsByQuery(query string, args ...any) ([]Ticket, error) {
 			&ticket.UsersInvolved: involved,
 		})
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("error: scanning ticket rows: %w", err)
 		}
 
 		tickets = append(tickets, ticket)
@@ -418,36 +418,71 @@ func (db Sqlite) ticketsByQuery(query string, args ...any) ([]Ticket, error) {
 	return tickets, nil
 }
 
-// scan scans the map of addresses to values and sets the values to the addresses
-func scan(scan map[any]any) error {
+// Scan scans the map of addresses to values and sets the values to the addresses.
+// It expects the values to be []byte for JSON unmarshalling, or string for time.Time
+func Scan(scan map[any]any) error {
 	for key, value := range scan {
 		k := reflect.ValueOf(key)
 		if k.Kind() != reflect.Pointer {
 			return fmt.Errorf("error: key %T is not a pointer", key)
 		}
-		e := k.Elem()
-		if !e.CanSet() {
-			return fmt.Errorf("error: key %T cannot be set", key)
+
+		if k.IsNil() {
+			return fmt.Errorf("error: key %T is nil", key)
 		}
-		if e.Type().AssignableTo(reflect.TypeFor[time.Time]()) {
-			s, ok := value.(string)
-			if !ok {
-				return fmt.Errorf("error: value %v is not a string", value)
-			}
-			p, err := time.Parse(time.RFC3339Nano, s)
-			if err != nil {
-				return err
-			}
-			e.Set(reflect.ValueOf(p))
+
+		p := k.Elem()
+		if value == nil {
+			p.Set(reflect.Zero(p.Type()))
 			continue
 		}
-		data, ok := value.([]byte)
-		if !ok {
-			return fmt.Errorf("error: value %v is not []byte for JSON unmarshalling", value)
+
+		if p.Kind() == reflect.Pointer {
+			// Allocate new memory if nil
+			if p.IsNil() {
+				p.Set(reflect.New(p.Type().Elem()))
+			}
+			p = p.Elem() // Dereference once to get to the actual target
 		}
-		if err := json.Unmarshal(data, k.Elem().Addr().Interface()); err != nil {
-			return fmt.Errorf("error unmarshalling JSON: %w", err)
+
+		if data, ok := value.([]byte); ok {
+			if err := json.Unmarshal(data, p.Addr().Interface()); err != nil {
+				return fmt.Errorf("error unmarshalling JSON: %w", err)
+			}
+			continue
 		}
+
+		v := reflect.ValueOf(value)
+		if v.Kind() == reflect.Pointer && p.Kind() != reflect.Pointer {
+			// If the value is a pointer but the element is not, dereference the value first
+			v = v.Elem()
+		} else if p.Kind() == reflect.Pointer && v.Kind() != reflect.Pointer {
+			// If the element is a pointer but the value is not, allocate a new pointer
+			newVal := reflect.New(v.Type())
+			newVal.Elem().Set(v)
+			v = newVal
+		}
+
+		// Direct assignment if types are compatible
+		if v.Type().AssignableTo(p.Type()) {
+			p.Set(v)
+			continue
+		}
+
+		// If the value is a string or *string and the element is a time.Time, parse the time
+		if p.Type().AssignableTo(reflect.TypeFor[time.Time]()) {
+			if v.Kind() == reflect.String {
+				t, err := time.Parse(time.RFC3339Nano, v.String())
+				if err != nil {
+					return fmt.Errorf("error parsing time: %w", err)
+				}
+				p.Set(reflect.ValueOf(t))
+				continue
+			}
+		}
+
+		// If none of the above cases apply, it's an unsupported type combination
+		return fmt.Errorf("error: unsupported type combination for key %T and value %T", key, value)
 	}
 
 	return nil

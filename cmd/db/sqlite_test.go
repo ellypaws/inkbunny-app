@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"github.com/ellypaws/inkbunny/api"
 	"os"
+	"reflect"
 	"slices"
 	"testing"
 	"time"
@@ -948,5 +949,289 @@ func TestAssertArgs(t *testing.T) {
 		if len(args) == 0 {
 			t.Fatalf("assertArgs() failed: expected > 0, got 0")
 		}
+	}
+}
+
+func TestScans(t *testing.T) {
+	t.Run("TestScan", TestScan)
+	t.Run("TestScanPointer", TestScanPointer)
+	t.Run("TestScanBoth", TestScanBoth)
+	t.Run("TestScanBytes", TestScanBytes)
+}
+
+func TestScan(t *testing.T) {
+	var fieldsToSet struct {
+		Float   float64
+		String  string
+		Slice   []string
+		Map     map[string]string
+		Struct  struct{ String string }
+		Structs []struct{ String string }
+	}
+
+	rows := map[any]any{
+		&fieldsToSet.Float:   1.0,
+		&fieldsToSet.String:  "string",
+		&fieldsToSet.Slice:   []string{"string"},
+		&fieldsToSet.Map:     map[string]string{"key": "value"},
+		&fieldsToSet.Struct:  struct{ String string }{"string"},
+		&fieldsToSet.Structs: []struct{ String string }{{"string"}},
+	}
+
+	err := Scan(rows)
+	if err != nil {
+		t.Fatalf("Scan() failed: %v", err)
+	}
+
+	tests := []struct {
+		name     string
+		got      any
+		expected any
+	}{
+		{"Float", fieldsToSet.Float, 1.0},
+		{"String", fieldsToSet.String, "string"},
+		{"Slice", fieldsToSet.Slice, []string{"string"}},
+		{"Map", fieldsToSet.Map, map[string]string{"key": "value"}},
+		{"Struct", fieldsToSet.Struct, struct{ String string }{"string"}},
+		{"Structs", fieldsToSet.Structs, []struct{ String string }{{"string"}}},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if !reflect.DeepEqual(tt.got, tt.expected) {
+				t.Errorf("Expected %v to be %+v, got %+v", tt.name, tt.expected, tt.got)
+			} else {
+				t.Logf("TestScan() %v passed, expected %+v, got %+v", tt.name, tt.expected, tt.got)
+			}
+		})
+	}
+}
+
+func TestScanPointer(t *testing.T) {
+	var fieldsToSet struct {
+		Float   *float64
+		String  *string
+		Slice   *[]string
+		Map     *map[string]string
+		Struct  *struct{ String string }
+		Structs *[]struct{ String string }
+	}
+
+	rows := map[any]any{
+		&fieldsToSet.Float:   1.0,
+		&fieldsToSet.String:  "string",
+		&fieldsToSet.Slice:   &[]string{"string"},
+		&fieldsToSet.Map:     &map[string]string{"key": "value"},
+		&fieldsToSet.Struct:  &struct{ String string }{"string"},
+		&fieldsToSet.Structs: &[]struct{ String string }{{"string"}},
+	}
+
+	err := Scan(rows)
+	if err != nil {
+		t.Fatalf("ScanPointer() failed: %v", err)
+	}
+
+	tests := []struct {
+		name     string
+		got      any
+		expected any
+	}{
+		{"Float", *fieldsToSet.Float, 1.0},
+		{"String", *fieldsToSet.String, "string"},
+		{"Slice", *fieldsToSet.Slice, []string{"string"}},
+		{"Map", *fieldsToSet.Map, map[string]string{"key": "value"}},
+		{"Struct", *fieldsToSet.Struct, struct{ String string }{"string"}},
+		{"Structs", *fieldsToSet.Structs, []struct{ String string }{{"string"}}},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if !reflect.DeepEqual(tt.got, tt.expected) {
+				t.Errorf("Expected %v to be %+v, got %+v", tt.name, tt.expected, tt.got)
+			} else {
+				t.Logf("TestScanPointer() %v passed, expected %+v, got %+v", tt.name, tt.expected, tt.got)
+			}
+		})
+	}
+}
+
+func TestScanBoth(t *testing.T) {
+	var fieldsToSet struct {
+		Float              float64
+		FloatPtr           *float64
+		FloatPtrValue      float64
+		FloatPtrField      *float64
+		String             string
+		StringPtr          *string
+		StringPtrValue     string
+		StringPtrField     *string
+		Slice              []string
+		SlicePtr           *[]string
+		SlicePtrValue      []string
+		SlicePtrField      *[]string
+		Map                map[string]string
+		MapPtr             *map[string]string
+		MapPtrValue        map[string]string
+		MapPtrField        *map[string]string
+		Time               time.Time
+		TimePtr            *time.Time
+		TimePtrValue       time.Time
+		TimePtrField       *time.Time
+		TimeString         time.Time
+		TimeStringPtr      *time.Time
+		TimeStringPtrValue time.Time
+		TimeStringPtrField *time.Time
+		Nil                *string
+	}
+
+	float := float64(1)
+	str := "string"
+	now := time.Now().UTC()
+	formatted := now.Format(time.RFC3339Nano)
+
+	fieldsToSet.Nil = &str
+
+	rows := map[any]any{
+		&fieldsToSet.Float:              1.0,
+		&fieldsToSet.FloatPtr:           &float,
+		&fieldsToSet.FloatPtrValue:      &float,
+		&fieldsToSet.FloatPtrField:      1.0,
+		&fieldsToSet.String:             "string",
+		&fieldsToSet.StringPtr:          &str,
+		&fieldsToSet.StringPtrValue:     &str,
+		&fieldsToSet.StringPtrField:     "string",
+		&fieldsToSet.Slice:              []string{"string"},
+		&fieldsToSet.SlicePtr:           &[]string{"string"},
+		&fieldsToSet.SlicePtrValue:      &[]string{"string"},
+		&fieldsToSet.SlicePtrField:      []string{"string"},
+		&fieldsToSet.Map:                map[string]string{"key": "value"},
+		&fieldsToSet.MapPtr:             &map[string]string{"key": "value"},
+		&fieldsToSet.MapPtrValue:        &map[string]string{"key": "value"},
+		&fieldsToSet.MapPtrField:        map[string]string{"key": "value"},
+		&fieldsToSet.Time:               now,
+		&fieldsToSet.TimePtr:            &now,
+		&fieldsToSet.TimePtrValue:       &now,
+		&fieldsToSet.TimePtrField:       now,
+		&fieldsToSet.TimeString:         formatted,
+		&fieldsToSet.TimeStringPtr:      &formatted,
+		&fieldsToSet.TimeStringPtrValue: &formatted,
+		&fieldsToSet.TimeStringPtrField: formatted,
+		&fieldsToSet.Nil:                nil,
+	}
+
+	err := Scan(rows)
+	if err != nil {
+		t.Fatalf("ScanPointer() failed: %v", err)
+	}
+
+	tests := []struct {
+		name     string
+		got      any
+		expected any
+	}{
+		{"Float", fieldsToSet.Float, 1.0},
+		{"FloatPtr", *fieldsToSet.FloatPtr, 1.0},
+		{"FloatPtrValue", fieldsToSet.FloatPtrValue, 1.0},
+		{"FloatPtrField", *fieldsToSet.FloatPtrField, 1.0},
+		{"String", fieldsToSet.String, "string"},
+		{"StringPtr", *fieldsToSet.StringPtr, "string"},
+		{"StringPtrValue", fieldsToSet.StringPtrValue, "string"},
+		{"StringPtrField", *fieldsToSet.StringPtrField, "string"},
+		{"Slice", fieldsToSet.Slice, []string{"string"}},
+		{"SlicePtr", *fieldsToSet.SlicePtr, []string{"string"}},
+		{"SlicePtrValue", fieldsToSet.SlicePtrValue, []string{"string"}},
+		{"SlicePtrField", *fieldsToSet.SlicePtrField, []string{"string"}},
+		{"Map", fieldsToSet.Map, map[string]string{"key": "value"}},
+		{"MapPtr", *fieldsToSet.MapPtr, map[string]string{"key": "value"}},
+		{"MapPtrValue", fieldsToSet.MapPtrValue, map[string]string{"key": "value"}},
+		{"MapPtrField", *fieldsToSet.MapPtrField, map[string]string{"key": "value"}},
+		{"Time", fieldsToSet.Time, now},
+		{"TimePtr", *fieldsToSet.TimePtr, now},
+		{"TimePtrValue", fieldsToSet.TimePtrValue, now},
+		{"TimePtrField", *fieldsToSet.TimePtrField, now},
+		{"TimeString", fieldsToSet.TimeString, now},
+		{"TimeStringPtr", *fieldsToSet.TimeStringPtr, now},
+		{"TimeStringPtrValue", fieldsToSet.TimeStringPtrValue, now},
+		{"TimeStringPtrField", *fieldsToSet.TimeStringPtrField, now},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if !reflect.DeepEqual(tt.got, tt.expected) {
+				t.Errorf("Expected %v to be %+v, got %+v", tt.name, tt.expected, tt.got)
+			} else {
+				t.Logf("TestScanPointer() %v passed, expected %+v, got %+v", tt.name, tt.expected, tt.got)
+			}
+		})
+	}
+
+	if fieldsToSet.Nil != nil {
+		t.Errorf("Expected nil, got %v", fieldsToSet.Nil)
+	}
+}
+
+func TestScanBytes(t *testing.T) {
+	var fieldsToSet struct {
+		Float      float64
+		FloatPtr   *float64
+		String     string
+		StringPtr  *string
+		Slice      []string
+		SlicePtr   *[]string
+		Map        map[string]string
+		MapPtr     *map[string]string
+		Struct     struct{ String string }
+		StructPtr  *struct{ String string }
+		Structs    []struct{ String string }
+		StructsPtr *[]struct{ String string }
+	}
+
+	rows := map[any]any{
+		&fieldsToSet.Float:      []byte(`1.0`),
+		&fieldsToSet.FloatPtr:   []byte(`1.0`),
+		&fieldsToSet.String:     []byte(`"string"`),
+		&fieldsToSet.StringPtr:  []byte(`"string"`),
+		&fieldsToSet.Slice:      []byte(`["string"]`),
+		&fieldsToSet.SlicePtr:   []byte(`["string"]`),
+		&fieldsToSet.Map:        []byte(`{"key":"value"}`),
+		&fieldsToSet.MapPtr:     []byte(`{"key":"value"}`),
+		&fieldsToSet.Struct:     []byte(`{"String":"string"}`),
+		&fieldsToSet.StructPtr:  []byte(`{"String":"string"}`),
+		&fieldsToSet.Structs:    []byte(`[{"String":"string"}]`),
+		&fieldsToSet.StructsPtr: []byte(`[{"String":"string"}]`),
+	}
+
+	err := Scan(rows)
+	if err != nil {
+		t.Fatalf("Scan() failed: %v", err)
+	}
+
+	tests := []struct {
+		name     string
+		got      any
+		expected any
+	}{
+		{"Float", fieldsToSet.Float, 1.0},
+		{"FloatPtr", *fieldsToSet.FloatPtr, 1.0},
+		{"String", fieldsToSet.String, "string"},
+		{"StringPtr", *fieldsToSet.StringPtr, "string"},
+		{"Slice", fieldsToSet.Slice, []string{"string"}},
+		{"SlicePtr", *fieldsToSet.SlicePtr, []string{"string"}},
+		{"Map", fieldsToSet.Map, map[string]string{"key": "value"}},
+		{"MapPtr", *fieldsToSet.MapPtr, map[string]string{"key": "value"}},
+		{"Struct", fieldsToSet.Struct, struct{ String string }{"string"}},
+		{"StructPtr", *fieldsToSet.StructPtr, struct{ String string }{"string"}},
+		{"Structs", fieldsToSet.Structs, []struct{ String string }{{"string"}}},
+		{"StructsPtr", *fieldsToSet.StructsPtr, []struct{ String string }{{"string"}}},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if !reflect.DeepEqual(tt.got, tt.expected) {
+				t.Errorf("Expected %v to be %+v, got %+v", tt.name, tt.expected, tt.got)
+			} else {
+				t.Logf("TestScan() %v passed, expected %+v, got %+v", tt.name, tt.expected, tt.got)
+			}
+		})
 	}
 }

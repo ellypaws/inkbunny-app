@@ -55,7 +55,7 @@ const (
 	// createSubmissions statement for Submission
 	createSubmissions = `
 	CREATE TABLE IF NOT EXISTS submissions (
-		submission_id TEXT PRIMARY KEY,
+		submission_id INTEGER PRIMARY KEY,
 		user_id TEXT NOT NULL,
 		url TEXT NOT NULL,
 --		get audit from audits table, store only the audit id
@@ -110,7 +110,7 @@ const (
 	// createSIDs statement for SIDHash
 	createSIDs = `
 	CREATE TABLE IF NOT EXISTS sids (
-				user_id TEXT PRIMARY KEY,
+				user_id INTEGER PRIMARY KEY,
 				username TEXT NOT NULL,
 				sid_hash TEXT NOT NULL
 	)

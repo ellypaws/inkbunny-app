@@ -1,6 +1,7 @@
 package db
 
 import (
+	"bytes"
 	"database/sql"
 	"encoding/json"
 	"fmt"
@@ -446,10 +447,19 @@ func Scan(scan map[any]any) error {
 		}
 
 		if data, ok := value.([]byte); ok {
-			if err := json.Unmarshal(data, p.Addr().Interface()); err != nil {
-				return fmt.Errorf("error unmarshalling JSON: %w", err)
+			if key, ok := key.(*[]byte); ok {
+				if data == nil || bytes.Equal(data, []byte("null")) {
+					*key = nil
+					continue
+				}
+				*key = data
+				continue
+			} else {
+				if err := json.Unmarshal(data, p.Addr().Interface()); err != nil {
+					return fmt.Errorf("error unmarshalling JSON: %w", err)
+				}
+				continue
 			}
-			continue
 		}
 
 		v := reflect.ValueOf(value)

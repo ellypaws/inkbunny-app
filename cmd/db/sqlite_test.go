@@ -1153,6 +1153,7 @@ func TestScanBoth(t *testing.T) {
 		{"TimeStringPtr", *fieldsToSet.TimeStringPtr, now},
 		{"TimeStringPtrValue", fieldsToSet.TimeStringPtrValue, now},
 		{"TimeStringPtrField", *fieldsToSet.TimeStringPtrField, now},
+		{"Nil", fieldsToSet.Nil == nil, true},
 	}
 
 	for _, tt := range tests {
@@ -1163,10 +1164,6 @@ func TestScanBoth(t *testing.T) {
 				t.Logf("TestScanPointer() %v passed, expected %+v, got %+v", tt.name, tt.expected, tt.got)
 			}
 		})
-	}
-
-	if fieldsToSet.Nil != nil {
-		t.Errorf("Expected nil, got %v", fieldsToSet.Nil)
 	}
 }
 
@@ -1184,7 +1181,16 @@ func TestScanBytes(t *testing.T) {
 		StructPtr  *struct{ String string }
 		Structs    []struct{ String string }
 		StructsPtr *[]struct{ String string }
+		Nil        *string
+		NilBytes   []byte
+		Bytes      []byte
 	}
+
+	str := "string"
+	byteStr := []byte(`"string"`)
+
+	fieldsToSet.Nil = &str
+	fieldsToSet.NilBytes = byteStr
 
 	rows := map[any]any{
 		&fieldsToSet.Float:      []byte(`1.0`),
@@ -1199,6 +1205,9 @@ func TestScanBytes(t *testing.T) {
 		&fieldsToSet.StructPtr:  []byte(`{"String":"string"}`),
 		&fieldsToSet.Structs:    []byte(`[{"String":"string"}]`),
 		&fieldsToSet.StructsPtr: []byte(`[{"String":"string"}]`),
+		&fieldsToSet.Nil:        nil,
+		&fieldsToSet.NilBytes:   []byte(`null`),
+		&fieldsToSet.Bytes:      byteStr,
 	}
 
 	err := Scan(rows)
@@ -1223,6 +1232,9 @@ func TestScanBytes(t *testing.T) {
 		{"StructPtr", *fieldsToSet.StructPtr, struct{ String string }{"string"}},
 		{"Structs", fieldsToSet.Structs, []struct{ String string }{{"string"}}},
 		{"StructsPtr", *fieldsToSet.StructsPtr, []struct{ String string }{{"string"}}},
+		{"Nil", fieldsToSet.Nil == nil, true},
+		{"NilBytes", fieldsToSet.NilBytes == nil, true},
+		{"Bytes", fieldsToSet.Bytes, byteStr},
 	}
 
 	for _, tt := range tests {

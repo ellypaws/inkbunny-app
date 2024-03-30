@@ -64,9 +64,8 @@ const (
 --  Audit is a foreign key, but it's not required. Only give an integer if it exists.
 	INSERT INTO submissions (submission_id, user_id, url, audit_id,
 							 title, description, updated_at,
-							 ai_generated, ai_assisted, img2img,
-							 ratings, keywords, files)
-	VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+							 metadata, ratings, keywords, files)
+	VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 	ON CONFLICT(submission_id)
 		DO UPDATE SET
 					  user_id=excluded.user_id,
@@ -75,9 +74,7 @@ const (
 					  title=excluded.title,
 					  description=excluded.description,
 					  updated_at=excluded.updated_at,
-					  ai_generated=excluded.ai_generated,
-					  ai_assisted=excluded.ai_assisted,
-					  img2img=excluded.img2img,
+					  metadata=excluded.metadata,
 					  ratings=excluded.ratings,
 					  keywords=excluded.keywords,
 					  files=excluded.files;
@@ -298,48 +295,30 @@ func SetTagsFromKeywords(submission *Submission) {
 	for _, keyword := range submission.Keywords {
 		switch strings.ReplaceAll(keyword.KeywordName, " ", "_") {
 		case "ai_generated":
-			submission.Generated = true
+			submission.Metadata.Generated = true
 		case "ai_assisted":
-			submission.Assisted = true
+			submission.Metadata.Assisted = true
 		case "img2img":
-			submission.Img2Img = true
+			submission.Metadata.Img2Img = true
 		}
 	}
 }
 
 func SubmissionLabels(submission Submission) []TicketLabel {
 	var labels []TicketLabel
-	if submission.Generated {
+	if submission.Metadata.Generated {
 		labels = append(labels, LabelAIGenerated)
 	}
-	if submission.Assisted {
+	if submission.Metadata.Assisted {
 		labels = append(labels, LabelAIAssisted)
 	}
-	if submission.Img2Img {
+	if submission.Metadata.Img2Img {
 		labels = append(labels, LabelImg2Img)
 	}
 	return labels
 }
 
 func (db Sqlite) InsertSubmission(submission Submission) error {
-	ratings, err := json.Marshal(submission.Ratings)
-	if err != nil {
-		return fmt.Errorf("error: marshalling ratings: %w", err)
-	}
-
-	keywords, err := json.Marshal(submission.Keywords)
-	if err != nil {
-		return fmt.Errorf("error: marshalling keywords: %w", err)
-	}
-
-	var filesMarshal sql.RawBytes
-	if len(submission.Files) > 0 {
-		filesMarshal, err = json.Marshal(submission.Files)
-		if err != nil {
-			return fmt.Errorf("error: marshalling files: %w", err)
-		}
-	}
-
 	if submission.AuditID == nil {
 		audit, err := db.GetAuditBySubmissionID(submission.ID)
 		if err != nil {
@@ -352,12 +331,16 @@ func (db Sqlite) InsertSubmission(submission Submission) error {
 		}
 	}
 
-	_, err = db.ExecContext(db.context, upsertSubmission,
+	args, err := assertArgs(
 		submission.ID, submission.UserID, submission.URL, submission.AuditID,
-		submission.Title, submission.Description, submission.Updated.UTC().Format(time.RFC3339Nano),
-		submission.Generated, submission.Assisted, submission.Img2Img,
-		ratings, keywords, filesMarshal,
+		submission.Title, submission.Description, submission.Updated,
+		submission.Metadata, submission.Ratings, submission.Keywords, submission.Files,
 	)
+	if err != nil {
+		return fmt.Errorf("error: asserting metadata: %w", err)
+	}
+
+	_, err = db.ExecContext(db.context, upsertSubmission, args...)
 	if err != nil {
 		return fmt.Errorf("error: inserting submission: %w", err)
 	}
@@ -420,8 +403,12 @@ func (db Sqlite) UpsertTicket(ticket Ticket) error {
 }
 
 // assertArgs asserts that the arguments are valid sqlite types and marshals them if necessary.
+// TODO: Include creation query to check what type is expected.
 func assertArgs(args ...any) ([]any, error) {
 	for i := range args {
+		if args[i] == nil {
+			continue
+		}
 		var length = -1
 		switch a := args[i].(type) {
 		case *string, *int, *int64, *float32, *float64, *bool:
@@ -432,6 +419,10 @@ func assertArgs(args ...any) ([]any, error) {
 
 		case nil:
 			args[i] = nil
+		case time.Time:
+			args[i] = parseTime(a)
+		case *time.Time:
+			args[i] = parseTime(a)
 		default:
 			// use reflect to check if it's a slice
 			v := reflect.ValueOf(a)
@@ -448,10 +439,8 @@ func assertArgs(args ...any) ([]any, error) {
 				return nil, fmt.Errorf("error: invalid type: %T", a)
 			}
 
-			if slices.Contains([]reflect.Kind{
-				reflect.Array, reflect.Slice, reflect.Map,
-				reflect.Chan, reflect.Func, reflect.Interface, reflect.Pointer,
-			}, v.Kind()) && v.IsNil() {
+			if isNil(v) {
+				args[i] = nil
 				continue
 			}
 
@@ -479,6 +468,26 @@ func assertArgs(args ...any) ([]any, error) {
 		}
 	}
 	return args, nil
+}
+
+func parseTime(t interface{ UTC() time.Time }) string {
+	return t.UTC().Format(time.RFC3339Nano)
+}
+
+func isNil(v reflect.Value) bool {
+	if v.Kind() == reflect.Pointer || v.Kind() == reflect.Interface {
+		if v.IsNil() {
+			return true
+		}
+		return isNil(v.Elem())
+	}
+	if slices.Contains([]reflect.Kind{
+		reflect.Array, reflect.Slice, reflect.Map,
+		reflect.Chan, reflect.Func,
+	}, v.Kind()) {
+		return v.IsNil()
+	}
+	return false
 }
 
 func marshal(value any, length int) ([]byte, error) {

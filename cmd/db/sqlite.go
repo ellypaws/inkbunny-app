@@ -63,10 +63,8 @@ const (
 		title TEXT NOT NULL,
 		description TEXT NOT NULL,
 		updated_at TEXT NOT NULL,
-		ai_generated BOOLEAN NOT NULL,
-		ai_assisted BOOLEAN NOT NULL,
-		img2img BOOLEAN NOT NULL,
-		ratings BLOB NOT NULL,
+		metadata BLOB,
+		ratings BLOB,
 --		store keywords as a json string
 		keywords BLOB,
 --		get files from files table, store only the file ids

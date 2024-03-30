@@ -73,9 +73,7 @@ const (
 		title,
 		description,
 		updated_at,
-		ai_generated,
-		ai_assisted,
-		img2img,
+		metadata,
 		ratings,
 		keywords,
 		files
@@ -247,14 +245,14 @@ func (db Sqlite) GetSubmissionByID(submissionID int64) (Submission, error) {
 	var submission Submission
 	var timeString string
 	var fileID sql.NullString
+	var metadata []byte
 	var ratings []byte
 	var keywords []byte
 
 	err := db.QueryRowContext(db.context, selectSubmissionByID, submissionID).Scan(
 		&submission.ID, &submission.UserID, &submission.URL, &submission.AuditID,
 		&submission.Title, &submission.Description, &timeString,
-		&submission.Generated, &submission.Assisted, &submission.Img2Img, &ratings,
-		&keywords, &fileID,
+		&metadata, &ratings, &keywords, &fileID,
 	)
 	if err != nil {
 		return submission, err
@@ -268,13 +266,23 @@ func (db Sqlite) GetSubmissionByID(submissionID int64) (Submission, error) {
 		submission.Updated = time.Now().UTC()
 	}
 
-	err = json.Unmarshal(ratings, &submission.Ratings)
-	if err != nil {
-		return submission, fmt.Errorf("error: unmarshalling ratings: %w", err)
+	if metadata != nil {
+		err = json.Unmarshal(metadata, &submission.Metadata)
+		if err != nil {
+			return submission, fmt.Errorf("error: unmarshalling metadata: %w", err)
+		}
 	}
-	err = json.Unmarshal(keywords, &submission.Keywords)
-	if err != nil {
-		return submission, fmt.Errorf("error: unmarshalling keywords: %w", err)
+	if ratings != nil {
+		err = json.Unmarshal(ratings, &submission.Ratings)
+		if err != nil {
+			return submission, fmt.Errorf("error: unmarshalling ratings: %w", err)
+		}
+	}
+	if keywords != nil {
+		err = json.Unmarshal(keywords, &submission.Keywords)
+		if err != nil {
+			return submission, fmt.Errorf("error: unmarshalling keywords: %w", err)
+		}
 	}
 
 	if submission.AuditID != nil {

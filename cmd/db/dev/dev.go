@@ -140,24 +140,20 @@ func searchSubmissions() {
 	}
 
 	for i := range submissions.Submissions {
-		fmt.Printf("Submission [%d]: %v\n", i, submissions.Submissions[i].Title)
+		fmt.Printf("Submission [%s]: %v\n", submissions.Submissions[i].SubmissionID, submissions.Submissions[i].Title)
 	}
 
+Prompt:
+	prompt = ""
 	fmt.Print("Enter submission ID: ")
 	fmt.Scanln(&prompt)
 
 	if prompt == "" {
-		prompt = "1"
-	}
-
-	submissionID, err := strconv.ParseInt(prompt, 10, 64)
-	if err != nil {
-		log.Printf("Invalid submission ID: %v", err)
-		searchSubmissions()
+		goto Prompt
 	}
 
 	submissionDetails, err := user.SubmissionDetails(api.SubmissionDetailsRequest{
-		SubmissionIDs: submissions.Submissions[submissionID].SubmissionID,
+		SubmissionIDs: prompt,
 	})
 	if err != nil {
 		log.Printf("could not get submission details: %v", err)
@@ -165,13 +161,12 @@ func searchSubmissions() {
 	}
 
 	submission := submissionDetails.Submissions[0]
-	fmt.Printf("You entered: [%v]\n\n%s", submissionID, submission.Description)
+	fmt.Printf("You entered: [%v]\n\n%s", prompt, submission.Description)
 
-	var heuristics *entities.TextToImageRequest
+	var imageRequests []entities.TextToImageRequest
 	for _, file := range submission.Files {
-		if strings.HasPrefix(file.MimeType, "text") {
-			url := file.FileURLFull
-			r, err := http.Get(url)
+		if file.MimeType == "text/plain" {
+			r, err := http.Get(file.FileURLFull)
 			if err != nil {
 				log.Printf("could not get file: %v", err)
 			}
@@ -182,27 +177,75 @@ func searchSubmissions() {
 				log.Printf("could not read file: %v", err)
 			}
 
-			_ = os.WriteFile("file.txt", b, 0644)
+			_ = os.WriteFile(file.FileName, b, 0644)
 
-			parameterHeuristics, err := utils.ParameterHeuristics(string(b))
-			if err != nil {
-				log.Printf("could not get heuristics: %v", err)
+			dataset := ParseDataset(utils.NameContent{file.FileName: b})
+
+			for imageName, data := range dataset {
+				_ = os.WriteFile(imageName, data, 0644)
+				parameterHeuristics, err := utils.ParameterHeuristics(string(data))
+				if err != nil {
+					log.Printf("could not get heuristics: %v", err)
+					break
+				}
+				imageRequests = append(imageRequests, parameterHeuristics)
 			}
-
-			heuristics = &parameterHeuristics
 			break
 		}
 	}
 
-	if heuristics == nil {
+	if imageRequests == nil {
 		descriptionHeuristics, err := utils.DescriptionHeuristics(submissionDetails.Submissions[0].Description)
 		if err != nil {
 			log.Printf("could not get heuristics: %v", err)
 		}
-		heuristics = &descriptionHeuristics
+		imageRequests = append(imageRequests, descriptionHeuristics)
 	}
-	marshal, _ := json.MarshalIndent(heuristics, "", "  ")
+	marshal, _ := json.MarshalIndent(imageRequests, "", "  ")
 	fmt.Printf("Heuristics: %s\n", string(marshal))
+}
+
+// ParseDataset splits multiple prompts into separate keys
+func ParseDataset(file utils.NameContent) utils.NameContent {
+	var dataset = make(map[string][]byte)
+	for name, input := range file {
+		// Because some artists already have standardized txt files, opt to split each file separately
+		autoSnep := strings.Contains(name, "_AutoSnep_")
+		druge := strings.Contains(name, "_druge_")
+		aiBean := strings.Contains(name, "_AIBean_")
+		artieDragon := strings.Contains(name, "_artiedragon_")
+		picker52578 := strings.Contains(name, "_picker52578_")
+		if autoSnep || druge || aiBean || artieDragon || picker52578 {
+			var inputResponse map[string]utils.InputResponse
+			switch {
+			case autoSnep:
+				inputResponse = utils.MapParams(utils.AutoSnep, utils.WithBytes(input))
+			case druge:
+				inputResponse = utils.MapParams(utils.Common, utils.WithBytes(input), utils.UseDruge())
+			case aiBean:
+				inputResponse = utils.MapParams(utils.Common, utils.WithBytes(input), utils.UseAIBean())
+			case artieDragon:
+				inputResponse = utils.MapParams(utils.Common, utils.WithBytes(input), utils.UseArtie())
+			case picker52578:
+				inputResponse = utils.MapParams(
+					utils.Common,
+					utils.WithBytes(input),
+					utils.WithFilename("picker52578_"),
+					utils.WithKeyCondition(func(line string) bool { return strings.HasPrefix(line, "File Name") }))
+			}
+			if inputResponse != nil {
+				for name, s := range inputResponse {
+					if s.Input == "" {
+						continue
+					}
+					dataset[name] = s.Response
+				}
+				continue
+			}
+		}
+		dataset[name] = input
+	}
+	return dataset
 }
 
 func setTicketStatus() {

@@ -275,7 +275,7 @@ func InkbunnySubmissionToDBSubmission(submission api.Submission) Submission {
 		Keywords:    submission.Keywords,
 	}
 
-	SetTagsFromKeywords(&dbSubmission)
+	SetMetadata(&dbSubmission)
 
 	for _, f := range submission.Files {
 		dbSubmission.Files = append(dbSubmission.Files, File{
@@ -288,19 +288,63 @@ func InkbunnySubmissionToDBSubmission(submission api.Submission) Submission {
 	return dbSubmission
 }
 
-func SetTagsFromKeywords(submission *Submission) {
+// The keyword IDs from Inkbunny
+const (
+	AIID              = "10503" // Deprecated: too generic, use AIGeneratedID
+	AIGeneratedID     = "530560"
+	AIAssistedID      = "677476"
+	ComfyUIID         = "767686"
+	ComfyUI           = "704819"
+	Img2ImgID         = "730314"
+	StableDiffusionID = "672195"
+	AIArt             = "672082"
+)
+
+func SetMetadata(submission *Submission) {
 	if submission == nil {
 		return
 	}
 	for _, keyword := range submission.Keywords {
-		switch strings.ReplaceAll(keyword.KeywordName, " ", "_") {
-		case "ai_generated":
+		switch keyword.KeywordName {
+		case "ai generated", "ai art":
 			submission.Metadata.Generated = true
-		case "ai_assisted":
+		case "ai assisted":
 			submission.Metadata.Assisted = true
 		case "img2img":
 			submission.Metadata.Img2Img = true
+		case "stable diffusion":
+			submission.Metadata.StableDiffusion = true
+		case "comfyui", "comfy ui":
+			submission.Metadata.ComfyUI = true
 		}
+		switch keyword.KeywordID {
+		case AIGeneratedID, AIArt:
+			submission.Metadata.Generated = true
+		case AIAssistedID:
+			submission.Metadata.Assisted = true
+		case Img2ImgID:
+			submission.Metadata.Img2Img = true
+		case StableDiffusionID:
+			submission.Metadata.StableDiffusion = true
+		case ComfyUIID, ComfyUI:
+			submission.Metadata.ComfyUI = true
+		}
+	}
+	var images int
+	for _, file := range submission.Files {
+		if strings.HasPrefix(file.File.MimeType, "image") {
+			images++
+		}
+		if file.File.MimeType == "text/plain" {
+			submission.Metadata.HasTxt = true
+		}
+		if file.File.MimeType == "application/json" {
+			submission.Metadata.HasJSON = true
+		}
+
+	}
+	if images > 1 {
+		submission.Metadata.MultipleFiles = true
 	}
 }
 

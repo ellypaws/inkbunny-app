@@ -74,6 +74,7 @@ func options() {
 	fmt.Println("2. View tickets")
 	fmt.Println("3. Search submissions")
 	fmt.Println("4. New Auditor")
+	fmt.Println("5. Record model hash")
 	fmt.Println("all. Insert all")
 	fmt.Println("exit. Exit")
 	fmt.Println("------------------")
@@ -106,6 +107,8 @@ func options() {
 		searchSubmissions()
 	case "4":
 		newAuditor()
+	case "5":
+		recordModelHash()
 	case "all":
 		insertAll()
 	case "sid":
@@ -117,6 +120,31 @@ func options() {
 	}
 
 	options()
+}
+
+func recordModelHash() {
+	var hash string
+	fmt.Print("Enter model hash: ")
+	fmt.Scanln(&hash)
+
+	if hash == "" {
+		fmt.Println("Empty model hash")
+		recordModelHash()
+	}
+
+	var model string
+	fmt.Print("Enter model: ")
+	fmt.Scanln(&model)
+
+	modelHash := db.ModelHashes{
+		hash: []string{model},
+	}
+
+	err := sqlite.UpsertModel(modelHash)
+	if err != nil {
+		log.Printf("could not insert model hash: %v", err)
+		recordModelHash()
+	}
 }
 
 func searchSubmissions() {

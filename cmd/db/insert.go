@@ -646,3 +646,30 @@ func (db Sqlite) InsertModel(models ModelHashes) error {
 
 	return nil
 }
+
+func (db Sqlite) UpsertModel(models ModelHashes) error {
+	if models == nil {
+		return nil
+	}
+
+	for hash, model := range models {
+		stored := db.ModelNamesFromHash(hash)
+		for _, newModels := range model {
+			if slices.Contains(stored, newModels) {
+				continue
+			}
+			stored = append(stored, newModels)
+		}
+
+		marshal, err := json.Marshal(stored)
+		if err != nil {
+			return fmt.Errorf("error: marshalling model: %w", err)
+		}
+		_, err = db.ExecContext(db.context, upsertModel, hash, marshal)
+		if err != nil {
+			return fmt.Errorf("error: upserting model: %w", err)
+		}
+	}
+
+	return nil
+}

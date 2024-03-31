@@ -173,21 +173,21 @@ type Submission struct {
 	Title       string                 `json:"title"`
 	Description string                 `json:"description"`
 	Updated     time.Time              `json:"updated_at"`
-	Metadata    *Metadata              `json:"metadata"`
+	Metadata    Metadata               `json:"metadata,omitempty"`
 	Ratings     []api.SubmissionRating `json:"ratings"`
 	Keywords    []api.Keyword          `json:"keywords,omitempty"`
 	Files       []File                 `json:"files,omitempty"`
 }
 
 type Metadata struct {
-	Generated       bool `json:"generated"`
-	Assisted        bool `json:"assisted"`
-	Img2Img         bool `json:"img2img"` // includes inpaint
-	HasJSON         bool `json:"has_json"`
-	HasTxt          bool `json:"has_txt"`
-	StableDiffusion bool `json:"stable_diffusion"`
-	ComfyUI         bool `json:"comfy_ui"`
-	MultipleFiles   bool `json:"multiple_files"`
+	Generated       bool `json:"generated,omitempty"`
+	Assisted        bool `json:"assisted,omitempty"`
+	Img2Img         bool `json:"img2img,omitempty"` // includes inpaint
+	HasJSON         bool `json:"has_json,omitempty"`
+	HasTxt          bool `json:"has_txt,omitempty"`
+	StableDiffusion bool `json:"stable_diffusion,omitempty"`
+	ComfyUI         bool `json:"comfy_ui,omitempty"`
+	MultipleFiles   bool `json:"multiple_files,omitempty"`
 }
 
 func (s *Submission) Audit() *Audit {

@@ -786,7 +786,7 @@ func TestSqlite_Tickets(t *testing.T) {
 		URL:         "url",
 		Title:       "title",
 		Description: "description",
-		Metadata:    &Metadata{Generated: true},
+		Metadata:    Metadata{Generated: true},
 	}
 
 	err := db.InsertSubmission(submission)

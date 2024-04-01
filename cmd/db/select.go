@@ -89,6 +89,7 @@ const (
 		status,
 		labels,
 		priority,
+		flags,
 		closed,
 		responses,
 		submissions_ids,
@@ -334,13 +335,14 @@ func (db Sqlite) GetTicketByID(ticketID int64) (Ticket, error) {
 	var ticket Ticket
 	var dateOpened string
 	var labels []byte
+	var flags []byte
 	var responses []byte
 	var submissionIDs []byte
 	var involved []byte
 
 	err := db.QueryRowContext(db.context, selectTicketByID, ticketID).Scan(
 		&ticket.ID, &ticket.Subject, &dateOpened,
-		&ticket.Status, &labels, &ticket.Priority, &ticket.Closed,
+		&ticket.Status, &labels, &ticket.Priority, &flags, &ticket.Closed,
 		&responses, &submissionIDs, &ticket.AssignedID, &involved,
 	)
 	if err != nil {
@@ -350,6 +352,7 @@ func (db Sqlite) GetTicketByID(ticketID int64) (Ticket, error) {
 	err = Scan(map[any]any{
 		&ticket.DateOpened:    dateOpened,
 		&ticket.Labels:        labels,
+		&ticket.Flags:         flags,
 		&ticket.Responses:     responses,
 		&ticket.SubmissionIDs: submissionIDs,
 		&ticket.UsersInvolved: involved,
@@ -393,13 +396,14 @@ func (db Sqlite) ticketsByQuery(query string, args ...any) ([]Ticket, error) {
 		var ticket Ticket
 		var dateOpened string
 		var labels []byte
+		var flags []byte
 		var responses []byte
 		var submissionIDs []byte
 		var involved []byte
 
 		err := rows.Scan(
 			&ticket.ID, &ticket.Subject, &dateOpened,
-			&ticket.Status, &labels, &ticket.Priority, &ticket.Closed,
+			&ticket.Status, &labels, &ticket.Priority, &flags, &ticket.Closed,
 			&responses, &submissionIDs, &ticket.AssignedID, &involved,
 		)
 		if err != nil {
@@ -409,6 +413,7 @@ func (db Sqlite) ticketsByQuery(query string, args ...any) ([]Ticket, error) {
 		err = Scan(map[any]any{
 			&ticket.DateOpened:    dateOpened,
 			&ticket.Labels:        labels,
+			&ticket.Flags:         flags,
 			&ticket.Responses:     responses,
 			&ticket.SubmissionIDs: submissionIDs,
 			&ticket.UsersInvolved: involved,
@@ -455,11 +460,11 @@ func Scan(scan map[any]any) error {
 		}
 
 		if data, ok := value.([]byte); ok {
+			if len(data) == 0 || bytes.Equal(data, []byte("null")) {
+				p.Set(reflect.Zero(p.Type()))
+				continue
+			}
 			if key, ok := key.(*[]byte); ok {
-				if data == nil || bytes.Equal(data, []byte("null")) {
-					*key = nil
-					continue
-				}
 				*key = data
 				continue
 			} else {

@@ -98,6 +98,7 @@ const (
 				status TEXT NOT NULL DEFAULT 'Open',
 				labels BLOB,
 				priority TEXT NOT NULL DEFAULT 'Low',
+				flags BLOB,
 				closed BOOLEAN NOT NULL DEFAULT FALSE,
 				responses BLOB NOT NULL,
 				submissions_ids BLOB,

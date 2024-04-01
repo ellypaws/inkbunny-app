@@ -92,8 +92,8 @@ const (
 
 	// upsertTicket statement for Ticket
 	upsertTicket = `
-	INSERT INTO tickets (ticket_id, subject, date_opened, status, labels, priority, closed, responses, submissions_ids, auditor_id, involved)
-	VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+	INSERT INTO tickets (ticket_id, subject, date_opened, status, labels, priority, flags, closed, responses, submissions_ids, auditor_id, involved)
+	VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 	ON CONFLICT(ticket_id)
 		DO UPDATE SET
 					  subject=excluded.subject,
@@ -101,6 +101,7 @@ const (
 					  status=excluded.status,
 					  labels=excluded.labels,
 					  priority=excluded.priority,
+					  flags=excluded.flags,
 					  closed=excluded.closed,
 					  responses=excluded.responses,
 					  submissions_ids=excluded.submissions_ids,
@@ -110,8 +111,8 @@ const (
 
 	// newTicket statement for Ticket
 	newTicket = `
-	INSERT INTO tickets (subject, date_opened, status, labels, priority, closed, responses, submissions_ids, auditor_id, involved)
-	VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+	INSERT INTO tickets (subject, date_opened, status, labels, priority, flags, closed, responses, submissions_ids, auditor_id, involved)
+	VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
 	`
 
 	// insertSIDHash statement for SIDHash
@@ -420,7 +421,7 @@ func (db Sqlite) InsertTicket(ticket Ticket, force ...bool) error {
 func (db Sqlite) UpsertTicket(ticket Ticket) error {
 	args, err := assertArgs(
 		ticket.ID, ticket.Subject, ticket.DateOpened.UTC().Format(time.RFC3339Nano),
-		ticket.Status, ticket.Labels, ticket.Priority, ticket.Closed,
+		ticket.Status, ticket.Labels, ticket.Priority, ticket.Flags, ticket.Closed,
 		ticket.Responses, ticket.SubmissionIDs, ticket.AssignedID, ticket.UsersInvolved,
 	)
 

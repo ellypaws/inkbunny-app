@@ -75,6 +75,106 @@ const (
 	FlagMismatched Flag = "mismatched"
 )
 
+// These describe the general acceptable content policy of Inkbunny from the [official wiki]
+// Inkbunny is an art community for sharing your best work.
+// We welcome sketches, works in progress, and other incomplete work,
+// but we encourage you to dedicate most of your gallery to your best completed creations.
+//
+// This Acceptable Content Policy forms part of the overall [Terms of Service].
+//
+// [official wiki]: https://wiki.inkbunny.net/wiki/ACP
+// [Terms of Service]: https://inkbunny.net/tos.php
+const (
+	// FlagOwnership is a [Flag] for a [Ticket] that does not have the proper ownership of the artwork.
+	//
+	// The work you upload must be created by you, or for you.
+	// If you did not create the artwork and it was created for you then you must indicate in the Description who created it.
+	// You must be the copyright owner of the artwork and all the characters they contain, or you must have permission from the copyright owners to post their art or characters.
+	// https://wiki.inkbunny.net/wiki/ACP#Ownership
+	FlagOwnership Flag = "ownership"
+	// FlagCommercial is a [Flag] for a [Ticket] that does not have proper commercial rights of the artwork.
+	// "Fan art" of commercial copyright characters is allowed in free uploads,
+	// provided you do not sell the work on Inkbunny and you indicate who owns the characters.
+	// https://wiki.inkbunny.net/wiki/ACP#Ownership
+	FlagCommercial Flag = "fan_art"
+	// FlagDerivative is a [Flag] for a [Ticket] that does not have enough changes to be considered a new creation.
+	//
+	// Posting submissions that contain portions of other artists'
+	// work (such as using them for backgrounds or other components)
+	// is allowed only if you have received their permission to do so.
+	// The works you create using portions of other artists'
+	// work must be sufficiently unique to be considered a new creation.
+	//
+	// Posting re-colors or shading of other artists' work is allowed if they have given permission directly to you,
+	// and when it is clear you put in significant effort to change or enhance that work.
+	// Simply adjusting hue and color balance values, or other superficial changes are not sufficient.
+	// https://wiki.inkbunny.net/wiki/ACP#Derivative_Works
+	FlagDerivative Flag = "permission"
+	// FlagTracing is a [Flag] for a [Ticket] where the artwork is traced from another artist's work.
+	//
+	// Using portions of other artists' work,
+	// such as [Tracing], is not permitted without the artist's permission.
+	//
+	// [Tracing]: https://wiki.inkbunny.net/wiki/ACP#Tracing
+	FlagTracing Flag = "tracing"
+	// FlagSampling is a [Flag] for a [Ticket] that is not significantly original.
+	//
+	// Sampling tracks for use in music or creating "mashups"
+	// is permitted in audio submissions as long as the work you create is something significantly original,
+	// and you credit the source.
+	// Where possible, you should seek permission from the source.
+	// https://wiki.inkbunny.net/wiki/ACP#Remixes_and_Mashups
+	FlagSampling Flag = "ai_sampling"
+	// FlagHumanContent is a [Flag] for a [Ticket] that does not follow the guidelines for [human] content.
+	//
+	// Human characters are permitted in artwork,
+	// however they must not appear in sexual situations and must not show genitals, anal details, or sexual arousal.
+	// Censored art involving humans must plausibly depict a non-sexual situation.
+	//
+	// Human characters are permitted in stories only so long as they are not involved in sexual situations of any kind.
+	// This policy also applies to thumbnails for stories and music.
+	//
+	// Characters that are essentially [human] (pixies, faeries, elves, orcs, trolls, etc)
+	// or just have ears/tails or other superficial animal features applied are considered human for this rule.
+	//
+	// [human]: https://wiki.inkbunny.net/wiki/ACP#Human_Characters
+	FlagHumanContent Flag = "human_content"
+	FlagPhotography  Flag = "photography"
+	// FlagAIGenerated is a [Flag] for a [Ticket] that does not follow the guidelines for [AI] generated content.
+	//
+	// Use of open-source [AI] tools combined with freely-available models is permitted,
+	// with appropriate keywords and limits on excessive or commercial use
+	// Verbose [Flag] are available above such as but not limited to
+	// [FlagMissingPrompt], [FlagMissingTags], [FlagPrivateModel]
+	//
+	// [AI]: https://wiki.inkbunny.net/wiki/ACP#AI
+	FlagAIGenerated    Flag = "ai_generated"
+	FlagAIAssisted     Flag = "ai_assisted"
+	FlagVideoContent   Flag = "video_content"
+	FlagHarassment     Flag = "harassment"
+	FlagGameScreenshot Flag = "game_screenshot"
+	FlagMovieContent   Flag = "movie_content"
+	FlagUserIcon       Flag = "user_icon"
+	// FlagKeywordPolicy is a [Flag] for a [Ticket] that does not follow the [Keyword Policy].
+	//
+	// All users must abide by the [Keyword Policy] which forms part of this [Acceptable Content Policy].
+	//
+	// [Keyword Policy]: https://wiki.inkbunny.net/wiki/ACP#Keyword_Policy
+	// [Acceptable Content Policy]: https://wiki.inkbunny.net/wiki/ACP
+	FlagKeywordPolicy Flag = "keyword_policy"
+	// FlagContentRepost is a [Flag] for a [Ticket] that reposts too much or too frequently.
+	//
+	// The same work must not be posted to your own account more than once within 72 hours,
+	// or more than three times in total, regardless of whether other posts are subsequently deleted.
+	// Journals referencing or [including thumbnails of submissions] do not count for this purpose.
+	//
+	// [including thumbnails of submissions]: https://wiki.inkbunny.net/wiki/BBCode#Linking_to_Images
+	//
+	// https://wiki.inkbunny.net/wiki/ACP#Reposting_and_Reminders
+	FlagContentRepost Flag = "content_repost"
+	FlagSiteHarm      Flag = "site_harm"
+)
+
 type Audit struct {
 	id                 int64
 	auditor            Auditor
@@ -218,6 +318,7 @@ type Ticket struct {
 	Labels        []TicketLabel `json:"labels,omitempty"`
 	Priority      string        `json:"priority"`
 	Closed        bool          `json:"closed"`
+	Flags         []Flag        `json:"flags,omitempty"`
 	Responses     []Response    `json:"responses,omitempty"`
 	SubmissionIDs []int64       `json:"submissions_ids,omitempty"`
 	auditor       *Auditor

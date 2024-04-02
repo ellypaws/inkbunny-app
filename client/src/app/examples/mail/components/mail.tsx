@@ -129,10 +129,11 @@ function LeftNav(props: {
                 isCollapsed={props.collapsed}
                 links={[
                     {
-                        title: "Social",
+                        title: "Tasks",
                         label: "972",
                         icon: Users2,
                         variant: "ghost",
+                        path: "/tasks",
                     },
                     {
                         title: "Updates",

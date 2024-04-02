@@ -8,6 +8,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/ellypaws/inkbunny-app/cmd/cli/components/list"
+	"github.com/ellypaws/inkbunny-app/cmd/cli/components/tabs"
 	api "github.com/ellypaws/inkbunny-app/cmd/cli/requests"
 	"github.com/ellypaws/inkbunny-sd/entities"
 	zone "github.com/lrstanley/bubblezone"
@@ -28,6 +29,7 @@ type model struct {
 	activeIndex uint8
 	threshold   uint8
 	submissions list.List
+	tabs        tabs.Tabs
 }
 
 const (
@@ -101,6 +103,11 @@ func (m model) propagate(msg tea.Msg) (tea.Model, tea.Cmd) {
 	if cmd != nil {
 		cmds = append(cmds, cmd)
 	}
+	model, cmd = m.tabs.Update(msg)
+	m.tabs = model.(tabs.Tabs)
+	if cmd != nil {
+		cmds = append(cmds, cmd)
+	}
 	return m, tea.Batch(cmds...)
 }
 
@@ -163,13 +170,16 @@ func (m model) View() string {
 	if m.activeIndex == 1 {
 		s.WriteString(m.submissions.View())
 	}
-	return zone.Scan(lipgloss.PlaceHorizontal(
-		m.width, lipgloss.Center,
-		lipgloss.PlaceVertical(
-			m.height, lipgloss.Center,
-			s.String(),
-		)),
-	)
+	return zone.Scan(lipgloss.JoinVertical(
+		lipgloss.Center,
+		m.tabs.View(), "",
+		lipgloss.PlaceHorizontal(
+			m.width, lipgloss.Center,
+			lipgloss.PlaceVertical(
+				m.height-6, lipgloss.Center,
+				s.String(),
+			)),
+	))
 }
 
 func main() {
@@ -180,6 +190,12 @@ func main() {
 		progress:    progress.New(progress.WithDefaultGradient()),
 		submissions: list.New(),
 		threshold:   128 / 2,
+		tabs: tabs.New([]string{
+			"Tickets",
+			"Submissions",
+			"Audit",
+			"Generation",
+		}),
 	}
 
 	p := tea.NewProgram(model, tea.WithAltScreen(), tea.WithMouseCellMotion())

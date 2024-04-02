@@ -9,6 +9,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	api "github.com/ellypaws/inkbunny-app/cmd/cli/requests"
 	"github.com/ellypaws/inkbunny-sd/entities"
+	zone "github.com/lrstanley/bubblezone"
 	"log"
 	"os"
 	"strings"
@@ -41,6 +42,20 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.WindowSizeMsg:
 		m.width = msg.Width
 		m.height = msg.Height
+	case tea.MouseMsg:
+		if msg.Action != tea.MouseActionPress {
+			return m, nil
+		}
+
+		if zone.Get("start").InBounds(msg) {
+			_ = m.config.AddToQueue(&entities.TextToImageRequest{
+				Prompt:      "A cat with rainbow background",
+				Steps:       20,
+				SamplerName: "DDIM",
+			})
+			return m, m.progress.SetPercent(0)
+		}
+		return m, nil
 	case *entities.TextToImageResponse:
 		m.t2i = msg
 		images, err := api.ToImages(msg)
@@ -73,7 +88,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, m.progress.SetPercent(msg.Progress)
 	case tea.KeyMsg:
 		switch msg.String() {
-		case "q":
+		case "q", "esc", "ctrl+c":
 			return m, tea.Quit
 		case "s":
 			_ = m.config.AddToQueue(&entities.TextToImageRequest{
@@ -110,6 +125,13 @@ func IF[T any](condition bool, a, b T) T {
 	return b
 }
 
+func safeDereference(s *string) string {
+	if s == nil {
+		return ""
+	}
+	return *s
+}
+
 func (m model) View() string {
 	var s strings.Builder
 	if m.config.IsProcessing {
@@ -123,23 +145,24 @@ func (m model) View() string {
 	} else {
 		s.WriteString(lipgloss.JoinVertical(
 			lipgloss.Center,
-			"Press 's' to start processing",
-			IF(m.image != nil, *m.image, ""),
+			zone.Mark("start", "Press 's' to start processing"),
+			safeDereference(m.image),
 		))
 	}
 	//if m.activeIndex == 1 {
 	//	s.WriteString(m.submissions.View())
 	//}
-	return lipgloss.PlaceHorizontal(
+	return zone.Scan(lipgloss.PlaceHorizontal(
 		m.width, lipgloss.Center,
 		lipgloss.PlaceVertical(
 			m.height, lipgloss.Center,
 			s.String(),
-		),
+		)),
 	)
 }
 
 func main() {
+
 	config := api.New()
 	model := model{
 		config:   config,
@@ -147,8 +170,10 @@ func main() {
 		progress: progress.New(progress.WithDefaultGradient()),
 	}
 
-	p := tea.NewProgram(model)
+	p := tea.NewProgram(model, tea.WithAltScreen(), tea.WithMouseCellMotion())
 
+	zone.NewGlobal()
+	defer zone.Close()
 	go config.Run(p)
 	if _, err := p.Run(); err != nil {
 		log.Fatalf("Error: %v", err)

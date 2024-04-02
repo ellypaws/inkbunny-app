@@ -8,6 +8,7 @@ require (
 	github.com/charmbracelet/bubbletea v0.25.0
 	github.com/charmbracelet/lipgloss v0.10.0
 	github.com/ellypaws/inkbunny-sd v0.0.0-20240402005810-311aa6f9c892
+	github.com/lrstanley/bubblezone v0.0.0-20240125042004-b7bafc493195
 )
 
 require (

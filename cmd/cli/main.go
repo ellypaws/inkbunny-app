@@ -7,6 +7,7 @@ import (
 	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/ellypaws/inkbunny-app/cmd/cli/components/list"
 	api "github.com/ellypaws/inkbunny-app/cmd/cli/requests"
 	"github.com/ellypaws/inkbunny-sd/entities"
 	zone "github.com/lrstanley/bubblezone"
@@ -24,8 +25,13 @@ type model struct {
 	image       *string
 	progress    progress.Model
 	activeIndex uint8
-	//submissions subModel
+	submissions list.List
 }
+
+const (
+	start       = "start"
+	submissions = "submissions"
+)
 
 func (m model) Init() tea.Cmd {
 	return tea.Batch(m.spinner.Tick)
@@ -47,59 +53,26 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, nil
 		}
 
-		if zone.Get("start").InBounds(msg) {
-			_ = m.config.AddToQueue(&entities.TextToImageRequest{
-				Prompt:      "A cat with rainbow background",
-				Steps:       20,
-				SamplerName: "DDIM",
-			})
-			return m, m.progress.SetPercent(0)
+		if zone.Get(start).InBounds(msg) {
+			return startGeneration(m)
 		}
-		return m, nil
+		if zone.Get(submissions).InBounds(msg) {
+			m.activeIndex = 1
+		}
+		return m.propagate(msg)
 	case *entities.TextToImageResponse:
-		m.t2i = msg
-		images, err := api.ToImages(msg)
-		if err != nil {
-			fmt.Println(err)
-		}
-
-		for _, img := range images {
-			f, _ := os.CreateTemp("", "image_*.png")
-			defer os.Remove(f.Name())
-
-			_, _ = f.Write(img)
-
-			flags := aic_package.DefaultFlags()
-
-			flags.Dimensions = []int{50, 25}
-			flags.Colored = true
-			flags.Braille = true
-
-			// Conversion for an image
-			asciiArt, err := aic_package.Convert(f.Name(), flags)
-			if err != nil {
-				tea.Println(err)
-			}
-			_ = f.Close()
-
-			m.image = &asciiArt
-		}
+		processImage(&m, msg)
 	case *api.ProgressResponse:
 		return m, m.progress.SetPercent(msg.Progress)
 	case tea.KeyMsg:
 		switch msg.String() {
-		case "q", "esc", "ctrl+c":
+		case "q", "ctrl+c":
 			return m, tea.Quit
 		case "s":
-			_ = m.config.AddToQueue(&entities.TextToImageRequest{
-				Prompt:      "A cat with rainbow background",
-				Steps:       20,
-				SamplerName: "DDIM",
-			})
-			return m, m.progress.SetPercent(0)
+			return startGeneration(m)
 		}
+		return m.propagate(msg)
 	}
-	//return m, nil
 	return m.propagate(msg)
 }
 
@@ -111,11 +84,55 @@ func (m model) propagate(msg tea.Msg) (tea.Model, tea.Cmd) {
 		cmds = append(cmds, cmd)
 	}
 	model, cmd := m.progress.Update(msg)
+	m.progress = model.(progress.Model)
 	if cmd != nil {
 		cmds = append(cmds, cmd)
 	}
-	m.progress = model.(progress.Model)
+	model, cmd = m.submissions.Update(msg)
+	m.submissions = model.(list.List)
+	if cmd != nil {
+		cmds = append(cmds, cmd)
+	}
 	return m, tea.Batch(cmds...)
+}
+
+func processImage(m *model, response *entities.TextToImageResponse) {
+	m.t2i = response
+	images, err := api.ToImages(response)
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	for _, img := range images {
+		f, _ := os.CreateTemp("", "image_*.png")
+		defer os.Remove(f.Name())
+
+		_, _ = f.Write(img)
+
+		flags := aic_package.DefaultFlags()
+
+		flags.Dimensions = []int{50, 25}
+		flags.Colored = true
+		flags.Braille = true
+
+		// Conversion for an image
+		asciiArt, err := aic_package.Convert(f.Name(), flags)
+		if err != nil {
+			tea.Println(err)
+		}
+		_ = f.Close()
+
+		m.image = &asciiArt
+	}
+}
+
+func startGeneration(m model) (tea.Model, tea.Cmd) {
+	_ = m.config.AddToQueue(&entities.TextToImageRequest{
+		Prompt:      "A cat with rainbow background",
+		Steps:       20,
+		SamplerName: "DDIM",
+	})
+	return m, m.progress.SetPercent(0)
 }
 
 func IF[T any](condition bool, a, b T) T {
@@ -145,13 +162,14 @@ func (m model) View() string {
 	} else {
 		s.WriteString(lipgloss.JoinVertical(
 			lipgloss.Center,
-			zone.Mark("start", "Press 's' to start processing"),
+			zone.Mark(start, "Press 's' to start processing"),
+			zone.Mark(submissions, "Press '1' to view submissions"),
 			safeDereference(m.image),
 		))
 	}
-	//if m.activeIndex == 1 {
-	//	s.WriteString(m.submissions.View())
-	//}
+	if m.activeIndex == 1 {
+		s.WriteString(m.submissions.View())
+	}
 	return zone.Scan(lipgloss.PlaceHorizontal(
 		m.width, lipgloss.Center,
 		lipgloss.PlaceVertical(
@@ -162,12 +180,12 @@ func (m model) View() string {
 }
 
 func main() {
-
 	config := api.New()
 	model := model{
-		config:   config,
-		spinner:  spinner.New(spinner.WithSpinner(spinner.Moon)),
-		progress: progress.New(progress.WithDefaultGradient()),
+		config:      config,
+		spinner:     spinner.New(spinner.WithSpinner(spinner.Moon)),
+		progress:    progress.New(progress.WithDefaultGradient()),
+		submissions: list.New(),
 	}
 
 	p := tea.NewProgram(model, tea.WithAltScreen(), tea.WithMouseCellMotion())

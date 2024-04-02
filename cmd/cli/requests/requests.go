@@ -12,7 +12,7 @@ import (
 
 type Config struct {
 	Host         *sd.Host
-	SID          string
+	SID          *string
 	Queue        chan IO
 	IsProcessing bool
 }
@@ -31,9 +31,14 @@ func New() *Config {
 		}
 		h = (*sd.Host)(u)
 	}
+	sid := os.Getenv("SD_SID")
+	var session *string
+	if sid != "" {
+		session = &sid
+	}
 	return &Config{
 		Host:  h,
-		SID:   os.Getenv("SID"),
+		SID:   session,
 		Queue: make(chan IO),
 	}
 }

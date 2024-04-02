@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"github.com/TheZoraiz/ascii-image-converter/aic_package"
 	"github.com/charmbracelet/bubbles/progress"
 	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
@@ -19,6 +20,7 @@ type model struct {
 	config      *api.Config
 	spinner     spinner.Model
 	t2i         *entities.TextToImageResponse
+	image       *string
 	progress    progress.Model
 	activeIndex uint8
 	//submissions subModel
@@ -46,8 +48,26 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			fmt.Println(err)
 		}
 
-		for i, img := range images {
-			_ = os.WriteFile(fmt.Sprintf("image_%d.png", i), img, 0644)
+		for _, img := range images {
+			f, _ := os.CreateTemp("", "image_*.png")
+			defer os.Remove(f.Name())
+
+			_, _ = f.Write(img)
+
+			flags := aic_package.DefaultFlags()
+
+			flags.Dimensions = []int{50, 25}
+			flags.Colored = true
+			flags.Braille = true
+
+			// Conversion for an image
+			asciiArt, err := aic_package.Convert(f.Name(), flags)
+			if err != nil {
+				tea.Println(err)
+			}
+			_ = f.Close()
+
+			m.image = &asciiArt
 		}
 	case *api.ProgressResponse:
 		return m, m.progress.SetPercent(msg.Progress)
@@ -57,8 +77,9 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, tea.Quit
 		case "s":
 			_ = m.config.AddToQueue(&entities.TextToImageRequest{
-				Prompt: "A cat",
-				Steps:  50,
+				Prompt:      "A cat with rainbow background",
+				Steps:       20,
+				SamplerName: "DDIM",
 			})
 			return m, m.progress.SetPercent(0)
 		}
@@ -82,6 +103,13 @@ func (m model) propagate(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, tea.Batch(cmds...)
 }
 
+func IF[T any](condition bool, a, b T) T {
+	if condition {
+		return a
+	}
+	return b
+}
+
 func (m model) View() string {
 	var s strings.Builder
 	if m.config.IsProcessing {
@@ -89,18 +117,25 @@ func (m model) View() string {
 			lipgloss.JoinHorizontal(
 				lipgloss.Center,
 				m.spinner.View(),
+				"	",
 				m.progress.View(),
 			))
 	} else {
-		s.WriteString("Press 's' to start processing")
+		s.WriteString(lipgloss.JoinVertical(
+			lipgloss.Center,
+			"Press 's' to start processing",
+			IF(m.image != nil, *m.image, ""),
+		))
 	}
 	//if m.activeIndex == 1 {
 	//	s.WriteString(m.submissions.View())
 	//}
-	return lipgloss.PlaceVertical(
-		m.height,
-		lipgloss.Center,
-		s.String(),
+	return lipgloss.PlaceHorizontal(
+		m.width, lipgloss.Center,
+		lipgloss.PlaceVertical(
+			m.height, lipgloss.Center,
+			s.String(),
+		),
 	)
 }
 
@@ -108,7 +143,7 @@ func main() {
 	config := api.New()
 	model := model{
 		config:   config,
-		spinner:  spinner.New(),
+		spinner:  spinner.New(spinner.WithSpinner(spinner.Moon)),
 		progress: progress.New(progress.WithDefaultGradient()),
 	}
 

@@ -7,6 +7,7 @@ import (
 	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	utils "github.com/ellypaws/inkbunny-app/cmd/cli/components"
 	"github.com/ellypaws/inkbunny-app/cmd/cli/components/list"
 	"github.com/ellypaws/inkbunny-app/cmd/cli/components/tabs"
 	api "github.com/ellypaws/inkbunny-app/cmd/cli/requests"
@@ -93,18 +94,15 @@ func (m model) propagate(msg tea.Msg) (tea.Model, tea.Cmd) {
 	if cmd != nil {
 		cmds = append(cmds, cmd)
 	}
-	model, cmd := m.progress.Update(msg)
-	m.progress = model.(progress.Model)
+	m.progress, cmd = utils.Propagate(m.progress, msg)
 	if cmd != nil {
 		cmds = append(cmds, cmd)
 	}
-	model, cmd = m.submissions.Update(msg)
-	m.submissions = model.(list.List)
+	m.submissions, cmd = utils.Propagate(m.submissions, msg)
 	if cmd != nil {
 		cmds = append(cmds, cmd)
 	}
-	model, cmd = m.tabs.Update(msg)
-	m.tabs = model.(tabs.Tabs)
+	m.tabs, cmd = utils.Propagate(m.tabs, msg)
 	if cmd != nil {
 		cmds = append(cmds, cmd)
 	}

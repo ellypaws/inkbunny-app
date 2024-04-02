@@ -13,6 +13,7 @@ import (
 	zone "github.com/lrstanley/bubblezone"
 	"log"
 	"os"
+	"strconv"
 	"strings"
 )
 
@@ -22,9 +23,10 @@ type model struct {
 	config      *api.Config
 	spinner     spinner.Model
 	t2i         *entities.TextToImageResponse
-	image       *string
+	image       []byte
 	progress    progress.Model
 	activeIndex uint8
+	threshold   uint8
 	submissions list.List
 }
 
@@ -70,6 +72,12 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, tea.Quit
 		case "s":
 			return startGeneration(m)
+		case "1":
+			m.activeIndex = 1
+		case tea.KeyUp.String():
+			m.threshold += 1
+		case tea.KeyDown.String():
+			m.threshold -= 1
 		}
 		return m.propagate(msg)
 	}
@@ -104,25 +112,8 @@ func processImage(m *model, response *entities.TextToImageResponse) {
 	}
 
 	for _, img := range images {
-		f, _ := os.CreateTemp("", "image_*.png")
-		defer os.Remove(f.Name())
-
-		_, _ = f.Write(img)
-
-		flags := aic_package.DefaultFlags()
-
-		flags.Dimensions = []int{50, 25}
-		flags.Colored = true
-		flags.Braille = true
-
-		// Conversion for an image
-		asciiArt, err := aic_package.Convert(f.Name(), flags)
-		if err != nil {
-			tea.Println(err)
-		}
-		_ = f.Close()
-
-		m.image = &asciiArt
+		m.image = img
+		break
 	}
 }
 
@@ -160,11 +151,13 @@ func (m model) View() string {
 				m.progress.View(),
 			))
 	} else {
+		asciiArt := m.processImage()
 		s.WriteString(lipgloss.JoinVertical(
 			lipgloss.Center,
 			zone.Mark(start, "Press 's' to start processing"),
 			zone.Mark(submissions, "Press '1' to view submissions"),
-			safeDereference(m.image),
+			IF(len(asciiArt) == 0, "", strconv.Itoa(int(m.threshold))),
+			asciiArt,
 		))
 	}
 	if m.activeIndex == 1 {
@@ -186,6 +179,7 @@ func main() {
 		spinner:     spinner.New(spinner.WithSpinner(spinner.Moon)),
 		progress:    progress.New(progress.WithDefaultGradient()),
 		submissions: list.New(),
+		threshold:   128 / 2,
 	}
 
 	p := tea.NewProgram(model, tea.WithAltScreen(), tea.WithMouseCellMotion())
@@ -196,4 +190,33 @@ func main() {
 	if _, err := p.Run(); err != nil {
 		log.Fatalf("Error: %v", err)
 	}
+}
+
+func (m model) processImage() string {
+	if m.image == nil {
+		return ""
+	}
+	f, _ := os.CreateTemp("", "image_*.png")
+	defer os.Remove(f.Name())
+
+	_, _ = f.Write(m.image)
+
+	flags := aic_package.DefaultFlags()
+
+	size := api.ImageSize(m.image)
+	scaled := api.Scale([2]int{m.width - 3, m.height - 3}, size)
+	flags.Dimensions = []int{scaled[0] + 45, scaled[1]}
+
+	flags.Colored = true
+	flags.Braille = true
+	flags.Threshold = int(m.threshold)
+	//flags.Dither = true
+
+	// Conversion for an image
+	asciiArt, err := aic_package.Convert(f.Name(), flags)
+	if err != nil {
+		tea.Println(err)
+	}
+	_ = f.Close()
+	return asciiArt
 }

@@ -1,10 +1,12 @@
 package api
 
 import (
+	"bytes"
 	"encoding/json"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/ellypaws/inkbunny-sd/entities"
 	"github.com/ellypaws/inkbunny-sd/stable_diffusion"
+	"image"
 	"net/url"
 	"os"
 	"time"
@@ -96,6 +98,47 @@ func updateProgress(c *Config, program *tea.Program, response chan *entities.Tex
 
 func ToImages(response *entities.TextToImageResponse) ([][]byte, error) {
 	return sd.ToImages(response)
+}
+
+func ImageSize(b []byte) [2]int {
+	if len(b) == 0 {
+		return [2]int{-1, -1}
+	}
+
+	img, _, err := image.Decode(bytes.NewReader(b))
+	if err != nil {
+		return [2]int{-1, -1}
+	}
+
+	boundSize := img.Bounds().Size()
+	return [2]int{boundSize.X, boundSize.Y}
+}
+
+func Scale(max, dimensions [2]int) [2]int {
+	var maxW = max[0]
+	var maxH = max[1]
+
+	originalRatio := float64(dimensions[0]) / float64(dimensions[1])
+	maxRatio := float64(maxW) / float64(maxH)
+
+	if originalRatio > maxRatio {
+		dimensions[0] = maxW
+		dimensions[1] = int(float64(maxW) / originalRatio)
+	} else {
+		dimensions[1] = maxH
+		dimensions[0] = int(float64(maxH) * originalRatio)
+	}
+
+	if dimensions[0] > maxW {
+		dimensions[0] = maxW
+		dimensions[1] = int(float64(maxW) / originalRatio)
+	}
+	if dimensions[1] > maxH {
+		dimensions[1] = maxH
+		dimensions[0] = int(float64(maxH) * originalRatio)
+	}
+
+	return dimensions
 }
 
 type ProgressResponse struct {

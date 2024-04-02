@@ -1,6 +1,7 @@
 package api
 
 import (
+	tea "github.com/charmbracelet/bubbletea"
 	"github.com/ellypaws/inkbunny-sd/entities"
 	"github.com/ellypaws/inkbunny-sd/stable_diffusion"
 	"net/url"
@@ -8,9 +9,10 @@ import (
 )
 
 type Config struct {
-	Host  *sd.Host
-	SID   string
-	Queue chan IO
+	Host         *sd.Host
+	SID          string
+	Queue        chan IO
+	IsProcessing bool
 }
 
 type IO struct {
@@ -35,21 +37,25 @@ func New() *Config {
 }
 
 func (c *Config) AddToQueue(req *entities.TextToImageRequest) <-chan *entities.TextToImageResponse {
-	response := make(chan *entities.TextToImageResponse)
+	response := make(chan *entities.TextToImageResponse, 1)
 	c.Queue <- IO{Request: req, Response: response}
 	return response
 }
 
-func (c *Config) Run() {
+func (c *Config) Run(program *tea.Program) {
 	for {
 		select {
 		case req := <-c.Queue:
-			processRequest(c, req)
+			c.IsProcessing = true
+			processRequest(c, req, program)
+			if len(c.Queue) == 0 {
+				c.IsProcessing = false
+			}
 		}
 	}
 }
 
-func processRequest(c *Config, req IO) {
+func processRequest(c *Config, req IO, program *tea.Program) {
 	if c == nil || req.Request == nil || req.Response == nil {
 		return
 	}
@@ -63,6 +69,7 @@ func processRequest(c *Config, req IO) {
 		return
 	}
 	req.Response <- response
+	program.Send(<-req.Response)
 }
 
 func ToImages(response *entities.TextToImageResponse) ([][]byte, error) {

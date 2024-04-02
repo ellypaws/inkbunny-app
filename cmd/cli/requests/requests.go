@@ -1,11 +1,13 @@
 package api
 
 import (
+	"encoding/json"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/ellypaws/inkbunny-sd/entities"
 	"github.com/ellypaws/inkbunny-sd/stable_diffusion"
 	"net/url"
 	"os"
+	"time"
 )
 
 type Config struct {
@@ -63,15 +65,49 @@ func processRequest(c *Config, req IO, program *tea.Program) {
 		req.Response <- nil
 		return
 	}
+	go updateProgress(c, program, req.Response)
 	response, err := c.Host.TextToImageRequest(req.Request)
 	if err != nil {
 		req.Response <- nil
 		return
 	}
 	req.Response <- response
-	program.Send(<-req.Response)
+}
+
+func updateProgress(c *Config, program *tea.Program, response chan *entities.TextToImageResponse) {
+	for {
+		select {
+		case r := <-response:
+			program.Send(r)
+			return
+		case <-time.After(1 * time.Second):
+			progress, err := GetCurrentProgress(c.Host)
+			if err == nil {
+				program.Send(progress)
+			}
+		}
+	}
 }
 
 func ToImages(response *entities.TextToImageResponse) ([][]byte, error) {
 	return sd.ToImages(response)
+}
+
+type ProgressResponse struct {
+	Progress    float64 `json:"progress"`
+	EtaRelative float64 `json:"eta_relative"`
+}
+
+func GetCurrentProgress(h *sd.Host) (*ProgressResponse, error) {
+	const path = "/sdapi/v1/progress"
+	body, err := h.GET(path)
+	if err != nil {
+		return nil, err
+	}
+	respStruct := &ProgressResponse{}
+	err = json.Unmarshal(body, respStruct)
+	if err != nil {
+		return nil, err
+	}
+	return respStruct, nil
 }

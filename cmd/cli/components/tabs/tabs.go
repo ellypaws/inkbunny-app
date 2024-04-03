@@ -69,8 +69,9 @@ type Tabs struct {
 	height int
 	width  int
 
-	Active string
-	Items  []string
+	Active      string
+	activeIndex uint8
+	Items       []string
 }
 
 func (m Tabs) Init() tea.Cmd {
@@ -86,17 +87,39 @@ func (m Tabs) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, nil
 		}
 
-		for _, item := range m.Items {
+		for i, item := range m.Items {
 			// Check each item to see if it's in bounds.
 			if zone.Get(m.prefix + item).InBounds(msg) {
 				m.Active = item
+				m.activeIndex = uint8(i)
 				break
 			}
 		}
 
 		return m, nil
+	case tea.KeyMsg:
+		switch msg.Type {
+		case tea.KeyTab:
+			return m.Next(), nil
+		case tea.KeyShiftTab:
+			return m.Previous(), nil
+		default:
+			return m, nil
+		}
 	}
 	return m, nil
+}
+
+func (m Tabs) Next() Tabs {
+	m.activeIndex = (m.activeIndex + 1) % uint8(len(m.Items))
+	m.Active = m.Items[m.activeIndex]
+	return m
+}
+
+func (m Tabs) Previous() Tabs {
+	m.activeIndex = (m.activeIndex - 1) % uint8(len(m.Items))
+	m.Active = m.Items[m.activeIndex]
+	return m
 }
 
 func (m Tabs) View() string {

@@ -29,6 +29,8 @@ func init() {
 		log.Println("warning: host is not alive")
 	}
 
+	log.Printf("host: %s\n", host)
+
 	if p := os.Getenv("PORT"); p != "" {
 		port = p
 	}

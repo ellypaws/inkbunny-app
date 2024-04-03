@@ -67,6 +67,12 @@ func (m List) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 
 		return m, nil
+
+	case tea.KeyMsg:
+		switch msg.String() {
+		case "1":
+			m.Active = !m.Active
+		}
 	}
 
 	var cmd tea.Cmd

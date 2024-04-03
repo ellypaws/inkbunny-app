@@ -26,19 +26,22 @@ type model struct {
 	viewport viewport.Model
 }
 
+// Zone names
 const (
 	start       = sd.Start
 	submissions = list.Submissions
+)
 
+const (
 	RESIZE_TICK = 250
+
+	fastTick = RESIZE_TICK * time.Millisecond
+	slowTick = fastTick * 2
 )
 
 func (m model) Init() tea.Cmd {
 	return tea.Batch(resizeTick(fastTick), m.sd.Init())
 }
-
-const fastTick = RESIZE_TICK * time.Millisecond
-const slowTick = fastTick * 2
 
 func resizeTick(duration time.Duration) tea.Cmd {
 	return tea.Tick(duration, func(time.Time) tea.Msg {
@@ -70,8 +73,6 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		switch msg.String() {
 		case "q", "ctrl+c":
 			return m, tea.Quit
-		case "1":
-			m.submissions.Active = !m.submissions.Active
 		}
 		return m.propagate(msg, nil)
 	}
@@ -83,11 +84,16 @@ func (m model) propagate(msg tea.Msg, cmd tea.Cmd) (tea.Model, tea.Cmd) {
 	if cmd != nil {
 		cmds = append(cmds, cmd)
 	}
-	m.sd, cmd = utils.Propagate(m.sd, msg)
-	if cmd != nil {
-		cmds = append(cmds, cmd)
+	switch m.tabs.Index() {
+	case 0:
+		m.submissions, cmd = utils.Propagate(m.submissions, msg)
+	//case 1:
+	//case 2:
+	case 3:
+		m.sd, cmd = utils.Propagate(m.sd, msg)
+	default:
+		cmd = nil
 	}
-	m.submissions, cmd = utils.Propagate(m.submissions, msg)
 	if cmd != nil {
 		cmds = append(cmds, cmd)
 	}

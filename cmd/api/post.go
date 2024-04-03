@@ -358,12 +358,21 @@ func interrogate(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, crashy.ErrorResponse{Error: "image is required"})
 	}
 
-	response, err := host.Interrogate(&request)
+	if sorted := c.QueryParam("sorted"); sorted == "false" {
+		response, err := host.Interrogate(&request)
+		if err != nil {
+			return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
+		}
+
+		return c.JSON(http.StatusOK, response)
+	}
+
+	response, err := host.InterrogateRaw(&request)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
 	}
 
-	return c.JSON(http.StatusOK, response)
+	return c.Blob(http.StatusOK, "application/json", response)
 }
 
 func interrogateImage(c echo.Context) error {
@@ -411,12 +420,21 @@ func interrogateImage(c echo.Context) error {
 		request.SetThreshold(f)
 	}
 
-	response, err := host.Interrogate(&request)
+	if sorted := c.FormValue("sorted"); sorted == "false" {
+		response, err := host.Interrogate(&request)
+		if err != nil {
+			return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
+		}
+
+		return c.JSON(http.StatusOK, response)
+	}
+
+	response, err := host.InterrogateRaw(&request)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
 	}
 
-	return c.JSON(http.StatusOK, response)
+	return c.Blob(http.StatusOK, "application/json", response)
 }
 
 func handlePath(c echo.Context) error {

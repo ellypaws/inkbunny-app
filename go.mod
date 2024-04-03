@@ -3,7 +3,8 @@ module github.com/ellypaws/inkbunny-app
 go 1.22.0
 
 require (
-	github.com/ellypaws/inkbunny-sd v0.0.0-20240402005810-311aa6f9c892
+	github.com/disintegration/imaging v1.6.2
+	github.com/ellypaws/inkbunny-sd v0.0.0-20240403042353-a3ec4cfd1d3a
 	github.com/ellypaws/inkbunny/api v0.0.0-20240320233248-1659f4be4758
 	github.com/go-errors/errors v1.5.1
 	github.com/labstack/echo/v4 v4.11.4
@@ -26,6 +27,7 @@ require (
 	github.com/valyala/bytebufferpool v1.0.0 // indirect
 	github.com/valyala/fasttemplate v1.2.2 // indirect
 	golang.org/x/crypto v0.21.0 // indirect
+	golang.org/x/image v0.13.0 // indirect
 	golang.org/x/net v0.22.0 // indirect
 	golang.org/x/sys v0.18.0 // indirect
 	golang.org/x/text v0.14.0 // indirect

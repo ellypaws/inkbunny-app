@@ -1,6 +1,9 @@
 package main
 
 import (
+	"bytes"
+	"encoding/base64"
+	"github.com/disintegration/imaging"
 	"github.com/ellypaws/inkbunny-app/cmd/crashy"
 	"github.com/ellypaws/inkbunny-app/cmd/db"
 	"github.com/ellypaws/inkbunny-sd/entities"
@@ -9,18 +12,22 @@ import (
 	"github.com/ellypaws/inkbunny/api"
 	"github.com/go-errors/errors"
 	"github.com/labstack/echo/v4"
+	"image"
+	"io"
 	"net/http"
 	"strconv"
 	"time"
 )
 
 var postHandlers = pathHandler{
-	"/login":    login,
-	"/logout":   logout,
-	"/validate": validate,
-	"/llm":      inference,
-	"/llm/json": stable,
-	"/prefill":  prefill,
+	"/login":              login,
+	"/logout":             logout,
+	"/validate":           validate,
+	"/llm":                inference,
+	"/llm/json":           stable,
+	"/prefill":            prefill,
+	"/interrogate":        interrogate,
+	"/interrogate/upload": interrogateImage,
 }
 
 // Deprecated: use registerAs((*echo.Echo).POST, postHandlers) instead
@@ -331,4 +338,107 @@ func prefill(c echo.Context) error {
 		Stream:        false,
 		StreamChannel: nil,
 	})
+}
+
+var defaultThreshold = 0.3
+
+var defaultTaggerRequest = entities.TaggerRequest{
+	Model:     entities.TaggerZ3DE621Convnext,
+	Threshold: &defaultThreshold,
+}
+
+func interrogate(c echo.Context) error {
+	var request = defaultTaggerRequest
+	if err := c.Bind(&request); err != nil {
+		return err
+	}
+
+	if request.Image == nil {
+		return c.JSON(http.StatusBadRequest, crashy.ErrorResponse{Error: "image is required"})
+	}
+
+	response, err := host.Interrogate(&request)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
+	}
+
+	return c.JSON(http.StatusOK, response)
+}
+
+func interrogateImage(c echo.Context) error {
+	file, err := c.FormFile("image")
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, crashy.Wrap(err))
+	}
+
+	src, err := file.Open()
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
+	}
+	defer src.Close()
+
+	data, err := io.ReadAll(src)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
+	}
+
+	img, _, err := image.Decode(bytes.NewReader(data))
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
+	}
+
+	msize := [2]int{512, 512}
+
+	var b64 string
+	if compare(dimensions(img), msize) > 0 {
+		b64 = resizeImage(img, msize)
+		if b64 == "" {
+			return c.JSON(http.StatusInternalServerError, crashy.ErrorResponse{Error: "error resizing image"})
+		}
+	} else {
+		b64 = base64.StdEncoding.EncodeToString(data)
+	}
+
+	request := defaultTaggerRequest
+	request.Image = &b64
+
+	if threshold := c.FormValue("threshold"); threshold != "" {
+		f, err := strconv.ParseFloat(threshold, 64)
+		if err != nil {
+			return c.JSON(http.StatusBadRequest, crashy.Wrap(err))
+		}
+		request.SetThreshold(f)
+	}
+
+	response, err := host.Interrogate(&request)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
+	}
+
+	return c.JSON(http.StatusOK, response)
+}
+
+func compare(a, b [2]int) int {
+	if a[0] == b[0] && a[1] == b[1] {
+		return 0
+	}
+	if a[0] > b[0] || a[1] > b[1] {
+		return 1
+	}
+	return -1
+}
+
+func dimensions(src image.Image) [2]int {
+	bounds := src.Bounds()
+	return [2]int{bounds.Dx(), bounds.Dy()}
+}
+
+func resizeImage(src image.Image, max [2]int) string {
+	i := imaging.Fit(src, max[0], max[1], imaging.Lanczos)
+	writer := new(bytes.Buffer)
+	err := imaging.Encode(writer, i, imaging.PNG)
+	if err != nil {
+		return ""
+	}
+	return base64.StdEncoding.EncodeToString(writer.Bytes())
 }

@@ -25,6 +25,7 @@ func (i item) FilterValue() string { return zone.Mark(i.id, i.title) }
 
 type List struct {
 	list.Model
+	Active bool
 }
 
 func (m List) Init() tea.Cmd {
@@ -68,6 +69,9 @@ func (m List) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m List) View() string {
+	if !m.Active {
+		return ""
+	}
 	return docStyle.Render(m.Model.View())
 }
 
@@ -80,5 +84,5 @@ func New() List {
 	m := list.New(items, list.NewDefaultDelegate(), 0, 0)
 	m.Title = "Select a submission"
 
-	return List{m}
+	return List{Model: m}
 }

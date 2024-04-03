@@ -3,6 +3,7 @@ module github.com/ellypaws/inkbunny-app/cmd/cli
 go 1.22.1
 
 require (
+	github.com/76creates/stickers v1.3.1-0.20230410064447-c0cf398aec57
 	github.com/TheZoraiz/ascii-image-converter v1.13.1
 	github.com/charmbracelet/bubbles v0.18.0
 	github.com/charmbracelet/bubbletea v0.25.0

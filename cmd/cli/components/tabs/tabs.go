@@ -65,12 +65,12 @@ var (
 )
 
 type Tabs struct {
-	id     string
+	prefix string
 	height int
 	width  int
 
-	active string
-	items  []string
+	Active string
+	Items  []string
 }
 
 func (m Tabs) Init() tea.Cmd {
@@ -86,10 +86,10 @@ func (m Tabs) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, nil
 		}
 
-		for _, item := range m.items {
+		for _, item := range m.Items {
 			// Check each item to see if it's in bounds.
-			if zone.Get(m.id + item).InBounds(msg) {
-				m.active = item
+			if zone.Get(m.prefix + item).InBounds(msg) {
+				m.Active = item
 				break
 			}
 		}
@@ -102,12 +102,12 @@ func (m Tabs) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 func (m Tabs) View() string {
 	var out []string
 
-	for _, item := range m.items {
+	for _, item := range m.Items {
 		// Make sure to mark each tab when rendering.
-		if item == m.active {
-			out = append(out, zone.Mark(m.id+item, activeTab.Render(item)))
+		if item == m.Active {
+			out = append(out, zone.Mark(m.prefix+item, activeTab.Render(item)))
 		} else {
-			out = append(out, zone.Mark(m.id+item, tab.Render(item)))
+			out = append(out, zone.Mark(m.prefix+item, tab.Render(item)))
 		}
 	}
 	row := lipgloss.JoinHorizontal(lipgloss.Top, out...)
@@ -118,8 +118,8 @@ func (m Tabs) View() string {
 
 func New(items []string) Tabs {
 	return Tabs{
-		id:     "tab",
-		active: items[0],
-		items:  items,
+		prefix: "tab",
+		Active: items[0],
+		Items:  items,
 	}
 }

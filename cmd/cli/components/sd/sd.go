@@ -8,6 +8,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	utils "github.com/ellypaws/inkbunny-app/cmd/cli/components"
+	"github.com/ellypaws/inkbunny-app/cmd/cli/entle"
 	api "github.com/ellypaws/inkbunny-app/cmd/cli/requests"
 	"github.com/ellypaws/inkbunny-sd/entities"
 	zone "github.com/lrstanley/bubblezone"
@@ -21,9 +22,10 @@ type Model struct {
 	Config    *api.Config
 	spinner   spinner.Model
 	t2i       *entities.TextToImageResponse
-	image     []byte
+	image     string
 	progress  progress.Model
 	threshold uint8
+	cache     *string
 }
 
 func (m Model) Init() tea.Cmd {
@@ -37,8 +39,8 @@ const (
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
-		m.width = msg.Width
-		m.height = msg.Height
+		m.width = entle.Width()
+		m.height = entle.Height()
 	case tea.MouseMsg:
 		if zone.Get(Start).InBounds(msg) {
 			return StartGeneration(m)
@@ -75,6 +77,9 @@ func (m Model) propagate(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m Model) View() string {
+	if m.cache != nil {
+		return *m.cache
+	}
 	var s strings.Builder
 	if m.Config.IsProcessing {
 		s.WriteString(
@@ -85,13 +90,19 @@ func (m Model) View() string {
 				m.progress.View(),
 			))
 	} else {
-		asciiArt := m.imageAscii()
-		s.WriteString(lipgloss.JoinVertical(
-			lipgloss.Center,
-			utils.IF(len(asciiArt) == 0, "", fmt.Sprintf("Threshold: %d", m.threshold)),
-			asciiArt,
-		))
+		s.WriteString(m.Render())
 	}
+	return s.String()
+}
+
+func (m Model) Render() string {
+	var s strings.Builder
+	s.WriteString(lipgloss.JoinVertical(
+		lipgloss.Center,
+		utils.IF(len(m.image) == 0, "", fmt.Sprintf("Threshold: %d", m.threshold)),
+		m.image,
+		utils.IF(len(m.image) == 0, "", fmt.Sprintf("Threshold: %d", m.threshold)),
+	))
 	return s.String()
 }
 
@@ -105,6 +116,7 @@ func New(config *api.Config) Model {
 }
 
 func StartGeneration(m Model) (tea.Model, tea.Cmd) {
+	m.cache = nil
 	_ = m.Config.AddToQueue(&entities.TextToImageRequest{
 		Prompt:      "A cat with rainbow background",
 		Steps:       20,
@@ -121,25 +133,31 @@ func ProcessImage(m *Model, response *entities.TextToImageResponse) {
 	}
 
 	for _, img := range images {
-		m.image = img
+		m.image = m.imageAscii(img)
+		m.cache = nil
+		v := m.View()
+		m.cache = &v
 		break
 	}
 }
 
-func (m Model) imageAscii() string {
-	if m.image == nil {
+func (m Model) imageAscii(image []byte) string {
+	if image == nil {
 		return ""
 	}
-	f, _ := os.CreateTemp("", "image_*.png")
-	defer os.Remove(f.Name())
+	f, err := os.CreateTemp("", "image_*.png")
+	if err != nil {
+		return ""
+	}
+	//defer os.Remove(f.Name())
 
-	_, _ = f.Write(m.image)
+	_, _ = f.Write(image)
 
 	flags := aic_package.DefaultFlags()
 
-	size := api.ImageSize(m.image)
-	scaled := api.Scale([2]int{m.width - 3, m.height - 3}, size)
-	flags.Dimensions = []int{scaled[0] + 45, scaled[1]}
+	size := api.ImageSize(image)
+	scaled := api.Scale([2]int{m.width, m.height}, size)
+	flags.Dimensions = []int{max(5, int(float64(scaled[0])*1.35)), max(5, int(float64(scaled[1])*0.65))}
 
 	flags.Colored = true
 	flags.Braille = true

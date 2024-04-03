@@ -5,10 +5,16 @@
 package list
 
 import (
+	stick "github.com/76creates/stickers/flexbox"
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/ellypaws/inkbunny-app/cmd/cli/entle"
 	zone "github.com/lrstanley/bubblezone"
+)
+
+const (
+	Submissions = "submissions"
 )
 
 var docStyle = lipgloss.NewStyle().Margin(1, 2)
@@ -73,6 +79,18 @@ func (m List) View() string {
 		return ""
 	}
 	return docStyle.Render(m.Model.View())
+}
+
+func (m List) Render(s entle.Screen) func() string {
+	return func() string {
+		submissionList := stick.New(s.Width, s.Height)
+		submissionList.SetRows(
+			[]*stick.Row{submissionList.NewRow().AddCells(
+				stick.NewCell(1, 1).SetContent(zone.Mark(Submissions, "Press '1' to view submissions")),
+				stick.NewCell(3, 1).SetContent(m.View()),
+			)})
+		return submissionList.Render()
+	}
 }
 
 func New() List {

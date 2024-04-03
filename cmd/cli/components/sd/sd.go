@@ -2,6 +2,7 @@ package sd
 
 import (
 	"fmt"
+	stick "github.com/76creates/stickers/flexbox"
 	"github.com/TheZoraiz/ascii-image-converter/aic_package"
 	"github.com/charmbracelet/bubbles/progress"
 	"github.com/charmbracelet/bubbles/spinner"
@@ -90,12 +91,28 @@ func (m Model) View() string {
 				m.progress.View(),
 			))
 	} else {
-		s.WriteString(m.Render())
+		s.WriteString(m.render())
 	}
 	return s.String()
 }
 
-func (m Model) Render() string {
+func (m Model) Render(s entle.Screen) func() string {
+	return func() string {
+		sdContent := stick.New(s.Width, s.Height)
+		sdContent.SetRows(
+			[]*stick.Row{
+				sdContent.NewRow().AddCells(
+					stick.NewCell(1, 1).SetContent(zone.Mark(Start, "Press 's' to start processing")),
+				),
+				sdContent.NewRow().AddCells(
+					stick.NewCell(1, 12).SetContent(m.View()),
+				),
+			})
+		return sdContent.Render()
+	}
+}
+
+func (m Model) render() string {
 	var s strings.Builder
 	s.WriteString(lipgloss.JoinVertical(
 		lipgloss.Center,

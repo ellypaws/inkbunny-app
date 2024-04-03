@@ -17,11 +17,7 @@ import (
 )
 
 type model struct {
-	activeIndex uint8
-	window      struct {
-		width  int
-		height int
-	}
+	window      entle.Screen
 	sd          sd.Model
 	submissions list.List
 	tabs        tabs.Tabs
@@ -32,7 +28,7 @@ type model struct {
 
 const (
 	start       = sd.Start
-	submissions = "submissions"
+	submissions = list.Submissions
 
 	RESIZE_TICK = 250
 )
@@ -61,14 +57,11 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, nil
 		}
 
-		if zone.Get(submissions).InBounds(msg) {
-			m.activeIndex = 1
-		}
 		return m.propagate(msg, nil)
 	case tea.WindowSizeMsg:
-		if m.window.width != msg.Width || m.window.height != msg.Height {
-			m.window.width = msg.Width
-			m.window.height = msg.Height
+		if m.window.Width != msg.Width || m.window.Height != msg.Height {
+			m.window.Width = msg.Width
+			m.window.Height = msg.Height
 			cmd = resizeTick(fastTick)
 			return m.propagate(msg, cmd)
 		}
@@ -113,50 +106,47 @@ func safeDereference(s *string) string {
 }
 
 func (m model) View() string {
-	top := stick.New(m.window.width, 3)
+	top := stick.New(m.window.Width, 3)
 	top.SetRows(
 		[]*stick.Row{top.NewRow().AddCells(
 			stick.NewCell(1, 1).SetContent(m.tabs.View()),
 		)})
 
-	sdContent := stick.New(m.window.width-2, m.window.height-top.GetHeight())
-	sdContent.SetRows(
-		[]*stick.Row{
-			sdContent.NewRow().AddCells(
-				stick.NewCell(1, 1).SetContent(zone.Mark(start, "Press 's' to start processing")),
-			),
-			sdContent.NewRow().AddCells(
-				stick.NewCell(1, 12).SetContent(m.sd.View()),
-			),
-		})
-
-	submissionList := stick.New(m.window.width-2, m.window.height-top.GetHeight())
-	submissionList.SetRows(
-		[]*stick.Row{submissionList.NewRow().AddCells(
-			stick.NewCell(1, 1).SetContent(zone.Mark(submissions, "Press '1' to view submissions")),
-			stick.NewCell(3, 1).SetContent(m.submissions.View()),
-		)})
-
-	content := stick.New(m.window.width-2, m.window.height-top.GetHeight()-2)
-	content.SetRows(
-		[]*stick.Row{content.NewRow().AddCells(
-			stick.NewCell(1, 1).SetContent(submissionList.Render()),
-			stick.NewCell(3, 1).SetContent(sdContent.Render()),
-		)})
-
-	if m.activeIndex == 1 {
-		//s.WriteString(m.submissions.View())
+	s := entle.Screen{
+		Width:  m.window.Width - 2,
+		Height: m.window.Height - top.GetHeight() - 2,
 	}
+
+	var renderers = []Renderer{
+		m.submissions.Render(s),
+		empty,
+		empty,
+		m.sd.Render(s),
+	}
+
 	return zone.Scan(lipgloss.JoinVertical(
 		lipgloss.Left,
 		top.Render(), "",
 		lipgloss.PlaceHorizontal(
-			m.window.width, lipgloss.Center,
+			m.window.Width, lipgloss.Center,
 			lipgloss.PlaceVertical(
-				m.window.height-6, lipgloss.Top,
-				content.Render(),
+				m.window.Height-6, lipgloss.Top,
+				render(m.tabs.Index(), renderers),
 			)),
 	))
+}
+
+type Renderer = func() string
+
+func render(i uint8, renderers []Renderer) string {
+	if i < uint8(len(renderers)) {
+		return renderers[i]()
+	}
+	return "error: renderer out of bounds"
+}
+
+func empty() string {
+	return "empty"
 }
 
 func main() {
@@ -165,15 +155,15 @@ func main() {
 		sd:          sd.New(config),
 		submissions: list.New(),
 		tabs: tabs.New([]string{
-			"Tickets",
 			"Submissions",
+			"Tickets",
 			"Audit",
 			"Generation",
 		}),
 	}
 
-	model.window.width = entle.Width()
-	model.window.height = entle.Height()
+	model.window.Width = entle.Width()
+	model.window.Height = entle.Height()
 
 	p := tea.NewProgram(model, tea.WithAltScreen(), tea.WithMouseCellMotion())
 

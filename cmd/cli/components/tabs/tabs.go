@@ -122,6 +122,10 @@ func (m Tabs) Active() string {
 	return m.Items[m.activeIndex]
 }
 
+func (m Tabs) Index() uint8 {
+	return m.activeIndex
+}
+
 func (m Tabs) View() string {
 	var out []string
 

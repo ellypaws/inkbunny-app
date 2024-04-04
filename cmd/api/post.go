@@ -20,15 +20,15 @@ import (
 )
 
 var postHandlers = pathHandler{
-	"/login":              login,
-	"/logout":             logout,
-	"/validate":           validate,
-	"/llm":                inference,
-	"/llm/json":           stable,
-	"/prefill":            prefill,
-	"/interrogate":        interrogate,
-	"/interrogate/upload": interrogateImage,
-	"/sd/:path":           handlePath,
+	"/login":              handler{login, nil},
+	"/logout":             handler{logout, loggedInMiddleware},
+	"/validate":           handler{validate, nil},
+	"/llm":                handler{inference, nil},
+	"/llm/json":           handler{stable, nil},
+	"/prefill":            handler{prefill, nil},
+	"/interrogate":        handler{interrogate, nil},
+	"/interrogate/upload": handler{interrogateImage, nil},
+	"/sd/:path":           handler{handlePath, nil},
 }
 
 // Deprecated: use registerAs((*echo.Echo).POST, postHandlers) instead

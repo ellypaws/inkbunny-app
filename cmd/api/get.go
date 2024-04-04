@@ -15,13 +15,13 @@ import (
 )
 
 var getHandlers = pathHandler{
-	"/":                         Hello,
-	"/inkbunny/description":     GetInkbunnyDescription,
-	"/inkbunny/submission":      GetInkbunnySubmission,
-	"/inkbunny/submission/:ids": GetInkbunnySubmission,
-	"/inkbunny/search":          GetInkbunnySearch,
-	"/image":                    GetImageHandler,
-	"/tickets/audits":           GetAuditHandler,
+	"/":                         handler{Hello, nil},
+	"/inkbunny/description":     handler{GetInkbunnyDescription, nil},
+	"/inkbunny/submission":      handler{GetInkbunnySubmission, nil},
+	"/inkbunny/submission/:ids": handler{GetInkbunnySubmission, nil},
+	"/inkbunny/search":          handler{GetInkbunnySearch, nil},
+	"/image":                    handler{GetImageHandler, nil},
+	"/tickets/audits":           handler{GetAuditHandler, loggedInMiddleware},
 }
 
 // Deprecated: use registerAs((*echo.Echo).GET, getHandlers) instead

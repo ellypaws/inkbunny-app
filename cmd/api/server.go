@@ -66,10 +66,16 @@ func main() {
 }
 
 type route = func(path string, h echo.HandlerFunc, m ...echo.MiddlewareFunc) *echo.Route
-type pathHandler = map[string]func(c echo.Context) error
+
+type handler struct {
+	handler    func(c echo.Context) error
+	middleware []echo.MiddlewareFunc
+}
+
+type pathHandler = map[string]handler
 
 func registerAs(route route, pathHandler pathHandler) {
 	for path, handler := range pathHandler {
-		route(path, handler)
+		route(path, handler.handler, handler.middleware...)
 	}
 }

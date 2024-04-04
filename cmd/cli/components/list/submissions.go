@@ -5,13 +5,19 @@
 package list
 
 import (
+	"errors"
 	stick "github.com/76creates/stickers/flexbox"
 	"github.com/charmbracelet/bubbles/list"
+	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/ellypaws/inkbunny-app/api/library"
+	"github.com/ellypaws/inkbunny-app/cmd/cli/apis"
 	utils "github.com/ellypaws/inkbunny-app/cmd/cli/components"
 	"github.com/ellypaws/inkbunny-app/cmd/cli/entle"
+	"github.com/ellypaws/inkbunny/api"
 	zone "github.com/lrstanley/bubblezone"
+	"net/http"
 )
 
 const (
@@ -32,11 +38,17 @@ func (i item) FilterValue() string { return zone.Mark(i.id, i.title) }
 
 type List struct {
 	list.Model
+	config *apis.Config
 	Active bool
+
+	searching bool
+	input     textinput.Model
+
+	err error
 }
 
 func (m List) Init() tea.Cmd {
-	return nil
+	return textinput.Blink
 }
 
 func (m List) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -70,7 +82,16 @@ func (m List) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 			if zone.Get(ButtonViewSubmissions).InBounds(msg) {
 				m.Active = !m.Active
+				if m.Active {
+					return m, tea.Batch(m.GetList(), utils.ForceRender())
+				}
 				cmd = utils.ForceRender()
+			}
+
+			if zone.Get("search").InBounds(msg) {
+				m.searching = true
+				m.err = nil
+				return m, m.GetList()
 			}
 		}
 
@@ -80,11 +101,55 @@ func (m List) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "1":
 			m.Active = !m.Active
 			cmd = tea.Batch(cmd, utils.ForceRender())
+		case "enter":
+			if !m.Active {
+				return m, m.GetList()
+			}
 		}
+	case []list.Item:
+		m.Model.SetItems(msg)
+		return m, nil
+	case api.SubmissionSearchResponse:
+		return m, responseToListItems(msg)
+	case finishSearch:
+		m.searching = false
+		return m, nil
+	case error:
+		m.searching = false
+		m.err = msg
+		return m, nil
 	}
 
+	var cmds []tea.Cmd
+	if cmd != nil {
+		cmds = append(cmds, cmd)
+	}
 	m.Model, cmd = m.Model.Update(msg)
-	return m, cmd
+	if cmd != nil {
+		cmds = append(cmds, cmd)
+	}
+	m.input, cmd = m.input.Update(msg)
+	if cmd != nil {
+		cmds = append(cmds, cmd)
+	}
+	if cmds != nil {
+		return m, tea.Batch(cmds...)
+	}
+	return m, nil
+}
+
+func responseToListItems(msg api.SubmissionSearchResponse) tea.Cmd {
+	return func() tea.Msg {
+		var items []list.Item
+		for _, submission := range msg.Submissions {
+			items = append(items, item{
+				id:    submission.SubmissionID,
+				title: submission.Title,
+				desc:  submission.Username,
+			})
+		}
+		return items
+	}
 }
 
 func (m List) View() string {
@@ -94,19 +159,101 @@ func (m List) View() string {
 	return docStyle.Render(m.Model.View())
 }
 
+const (
+	hotPink  = lipgloss.Color("#FF06B7")
+	darkGray = lipgloss.Color("#767676")
+)
+
+var (
+	pinkStyle = lipgloss.NewStyle().Foreground(hotPink)
+	grayStyle = lipgloss.NewStyle().Foreground(darkGray)
+)
+
 func (m List) Render(s entle.Screen) func() string {
 	return func() string {
+		panel := stick.New(s.Width, s.Height)
+		inputRender := lipgloss.JoinVertical(
+			lipgloss.Top,
+			pinkStyle.Render("Search"),
+			m.input.View(),
+			"",
+			utils.If(
+				m.searching,
+				func() string { return "Searching..." },
+				func() string { return zone.Mark("search", grayStyle.Render("Submit")) },
+			),
+			errString(m.err),
+		)
+		panel.SetRows(
+			[]*stick.Row{
+				panel.NewRow().AddCells(
+					stick.NewCell(1, 1).SetContent(zone.Mark(ButtonViewSubmissions, "Press '1' to view submissions")),
+				),
+				panel.NewRow().AddCells(
+					stick.NewCell(1, 4).SetContent(inputRender),
+				),
+			})
 		submissionList := stick.New(s.Width, s.Height)
 		submissionList.SetRows(
 			[]*stick.Row{submissionList.NewRow().AddCells(
-				stick.NewCell(1, 1).SetContent(zone.Mark(ButtonViewSubmissions, "Press '1' to view submissions")),
+				stick.NewCell(1, 1).SetContent(panel.Render()),
 				stick.NewCell(3, 1).SetContent(m.View()),
 			)})
 		return submissionList.Render()
 	}
 }
 
-func New() List {
+func errString(err error) string {
+	if err != nil {
+		return err.Error()
+	}
+	return ""
+}
+
+func empty() string {
+	return ""
+}
+
+func (m List) GetList() tea.Cmd {
+	return func() tea.Msg {
+		if m.config.User() == nil {
+			return errors.New("logged out")
+		}
+		var request = api.SubmissionSearchRequest{
+			SID:                m.config.User().Sid,
+			Text:               "ai_generated",
+			SubmissionsPerPage: 10,
+			Random:             api.Yes,
+			Type:               api.SubmissionTypePicturePinup,
+		}
+		if m.input.Value() != "" {
+			request.Text = m.input.Value()
+		}
+
+		if m.config.API != nil {
+			var response api.SubmissionSearchResponse
+			_, err := (&library.Request{
+				Host:      (*library.Host)(m.config.API).WithPath("/inkbunny/search"),
+				Method:    http.MethodGet,
+				Data:      request,
+				MarshalTo: &response,
+			}).Do()
+			if err != nil {
+				return err
+			}
+			return response
+		}
+
+		return []list.Item{
+			item{id: "14576", title: "Test Logo (Mascot Only) by Inkbunny", desc: "rabbit"},
+			item{id: "1258063", title: "Inktober 2016 roundup - with pictures! by Inkbunny", desc: "inktober"},
+		}
+	}
+}
+
+type finishSearch struct{}
+
+func New(config *apis.Config) List {
 	items := []list.Item{
 		item{id: "14576", title: "Inkbunny Logo (Mascot Only) by Inkbunny", desc: "rabbit"},
 		item{id: "1258063", title: "Inktober 2016 roundup - with pictures! by Inkbunny", desc: "inktober"},
@@ -115,5 +262,13 @@ func New() List {
 	m := list.New(items, list.NewDefaultDelegate(), 0, 0)
 	m.Title = "Select a submission"
 
-	return List{Model: m}
+	input := textinput.New()
+
+	input.Placeholder = "ai_generated"
+	input.Focus()
+	input.CharLimit = 22
+	input.Width = 22
+	input.Prompt = ""
+
+	return List{Model: m, input: input, config: config}
 }

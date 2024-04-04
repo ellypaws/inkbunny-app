@@ -5,12 +5,13 @@ import (
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/ellypaws/inkbunny-app/cmd/cli/apis"
 	"github.com/ellypaws/inkbunny/api"
 	"strings"
 )
 
 type Model struct {
-	user *api.Credentials
+	config *apis.Config
 
 	inputs  []textinput.Model
 	focused int
@@ -18,11 +19,7 @@ type Model struct {
 }
 
 func (m Model) LoggedIn() bool {
-	return m.user != nil && m.user.Sid != ""
-}
-
-func (m Model) User() *api.Credentials {
-	return m.user
+	return m.config.User() != nil && m.config.User().Sid != ""
 }
 
 type (
@@ -55,7 +52,7 @@ func textValidator(s string) error {
 	return nil
 }
 
-func New(u *api.Credentials) Model {
+func New(config *apis.Config) Model {
 	var inputs []textinput.Model = make([]textinput.Model, 2)
 	inputs[username] = textinput.New()
 	inputs[username].Placeholder = "guest"
@@ -74,7 +71,7 @@ func New(u *api.Credentials) Model {
 	inputs[password].EchoCharacter = '•'
 
 	return Model{
-		user:   u,
+		config: config,
 		inputs: inputs,
 	}
 }
@@ -88,7 +85,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	switch msg := msg.(type) {
 	case *api.Credentials:
-		m.user = msg
+		m.config.SetUser(msg)
 		return m, nil
 	case tea.KeyMsg:
 		switch msg.Type {
@@ -157,7 +154,7 @@ func (m *Model) prevInput() {
 
 func (m Model) login() tea.Cmd {
 	return func() tea.Msg {
-		m.user = &api.Credentials{
+		u := &api.Credentials{
 			Username: m.inputs[username].Value(),
 			Password: m.inputs[password].Value(),
 		}
@@ -167,15 +164,15 @@ func (m Model) login() tea.Cmd {
 		}
 
 		var err error
-		m.user, err = m.user.Login()
+		u, err = u.Login()
 		if err != nil {
 			return errMsg(err)
 		}
 
-		if m.user.Sid == "" {
+		if u.Sid == "" {
 			return errMsg(fmt.Errorf("login failed, sid still empty"))
 		}
 
-		return m.user
+		return u
 	}
 }

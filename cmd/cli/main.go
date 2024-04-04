@@ -14,6 +14,7 @@ import (
 	"github.com/ellypaws/inkbunny-app/cmd/cli/components/tabs"
 	"github.com/ellypaws/inkbunny-app/cmd/cli/components/tickets"
 	"github.com/ellypaws/inkbunny-app/cmd/cli/entle"
+	"github.com/ellypaws/inkbunny/api"
 	zone "github.com/lrstanley/bubblezone"
 	"log"
 	"time"
@@ -26,7 +27,6 @@ type model struct {
 	submissions list.List
 	settings    settings.Model
 	tabs        tabs.Tabs
-	flexbox     *stick.FlexBox
 
 	config *apis.Config
 
@@ -89,6 +89,9 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, utils.ForceRender()
 		}
 		return m.propagate(msg, nil)
+	case *api.Credentials:
+		m.config.SetUser(msg)
+		return m, nil
 	}
 	return m.propagate(msg, cmd)
 }
@@ -192,8 +195,14 @@ func main() {
 	config := apis.New()
 	stable := sd.New(config.SD)
 	m := model{
+		window: entle.Screen{
+			Width:  entle.Width(),
+			Height: entle.Height(),
+		},
 		sd:          stable,
-		submissions: list.New(),
+		tickets:     tickets.New(config),
+		submissions: list.New(config),
+		settings:    settings.New(config),
 		tabs: tabs.New([]string{
 			"Submissions",
 			"Tickets",
@@ -201,8 +210,9 @@ func main() {
 			"Generation",
 			"Settings",
 		}),
-		tickets:  tickets.New(config.User()),
-		settings: settings.New(config),
+		config:   config,
+		viewport: viewport.Model{},
+		render:   nil,
 	}
 
 	m.window.Width = entle.Width()

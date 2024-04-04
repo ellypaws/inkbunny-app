@@ -2,9 +2,9 @@ package tickets
 
 import (
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/ellypaws/inkbunny-app/cmd/cli/apis"
 	utils "github.com/ellypaws/inkbunny-app/cmd/cli/components"
 	"github.com/ellypaws/inkbunny-app/cmd/cli/components/tickets/login"
-	"github.com/ellypaws/inkbunny/api"
 )
 
 type Model struct {
@@ -32,8 +32,8 @@ func (m Model) View() string {
 	return "Logged in"
 }
 
-func New(u *api.Credentials) Model {
+func New(config *apis.Config) Model {
 	return Model{
-		login: login.New(u),
+		login: login.New(config),
 	}
 }

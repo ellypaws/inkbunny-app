@@ -2,13 +2,16 @@ module github.com/ellypaws/inkbunny-app/api
 
 go 1.22.1
 
+replace github.com/ellypaws/inkbunny-app/cmd => ../
+
 require (
 	github.com/disintegration/imaging v1.6.2
-	github.com/ellypaws/inkbunny-app v0.0.0-20240404053548-3347c21279d3
+	github.com/ellypaws/inkbunny-app/cmd v0.0.0
 	github.com/ellypaws/inkbunny-sd v0.0.0-20240403082634-4997250121d0
 	github.com/ellypaws/inkbunny/api v0.0.0-20240320233248-1659f4be4758
 	github.com/go-errors/errors v1.5.1
 	github.com/labstack/echo/v4 v4.11.4
+	github.com/labstack/gommon v0.4.2
 	github.com/stretchr/testify v1.9.0
 )
 
@@ -18,7 +21,6 @@ require (
 	github.com/golang-jwt/jwt v3.2.2+incompatible // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/hashicorp/golang-lru/v2 v2.0.7 // indirect
-	github.com/labstack/gommon v0.4.2 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/ncruces/go-strftime v0.1.9 // indirect

@@ -437,51 +437,6 @@ func interrogateImage(c echo.Context) error {
 	return c.Blob(http.StatusOK, "application/json", response)
 }
 
-func handlePath(c echo.Context) error {
-	path := c.Param("path")
-	return ProxyHandler(path)(c)
-}
-
-func ProxyHandler(path string) echo.HandlerFunc {
-	return func(c echo.Context) error {
-		req, err := http.NewRequest(http.MethodPost, host.WithPath(path).String(), c.Request().Body)
-		if err != nil {
-			return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
-		}
-
-		// Forward any headers if necessary
-		for name, values := range c.Request().Header {
-			for _, value := range values {
-				req.Header.Add(name, value)
-			}
-		}
-
-		// Execute the request
-		client := &http.Client{}
-		resp, err := client.Do(req)
-		if err != nil {
-			return echo.NewHTTPError(http.StatusBadGateway, err.Error())
-		}
-		defer resp.Body.Close()
-
-		// Copy the response headers and status code to the Echo context response
-		for name, values := range resp.Header {
-			for _, value := range values {
-				c.Response().Header().Add(name, value)
-			}
-		}
-		c.Response().WriteHeader(resp.StatusCode)
-
-		// Stream the response body directly to the client without modification
-		_, err = io.Copy(c.Response().Writer, resp.Body)
-		if err != nil {
-			return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
-		}
-
-		return nil
-	}
-}
-
 func compare(a, b [2]int) int {
 	if a[0] == b[0] && a[1] == b[1] {
 		return 0

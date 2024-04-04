@@ -5,6 +5,7 @@ import (
 	"github.com/ellypaws/inkbunny-app/cmd/app"
 	"github.com/ellypaws/inkbunny-app/cmd/crashy"
 	"github.com/ellypaws/inkbunny-app/cmd/db"
+
 	"github.com/ellypaws/inkbunny/api"
 	"github.com/labstack/echo/v4"
 	"log"
@@ -19,7 +20,7 @@ var getHandlers = pathHandler{
 	"/inkbunny/submission":      GetInkbunnySubmission,
 	"/inkbunny/submission/:ids": GetInkbunnySubmission,
 	"/inkbunny/search":          GetInkbunnySearch,
-	"/image":                    app.GetImageHandler,
+	"/image":                    GetImageHandler,
 	"/tickets/audits":           GetAuditHandler,
 }
 

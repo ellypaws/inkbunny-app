@@ -1,6 +1,6 @@
-// Package api provides a set of functions to interact with the API.
+// Package library provides a set of functions to interact with the API.
 // It assumes that the API is running separately and can be accessed via HTTP.
-package api
+package library
 
 import (
 	"bytes"

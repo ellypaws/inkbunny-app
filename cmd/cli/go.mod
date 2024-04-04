@@ -2,6 +2,8 @@ module github.com/ellypaws/inkbunny-app/cmd/cli
 
 go 1.22.1
 
+replace github.com/ellypaws/inkbunny-app/api => ../api
+
 require (
 	github.com/76creates/stickers v1.3.1-0.20230410064447-c0cf398aec57
 	github.com/TheZoraiz/ascii-image-converter v1.13.1
@@ -20,6 +22,7 @@ require (
 	github.com/charmbracelet/harmonica v0.2.0 // indirect
 	github.com/containerd/console v1.0.4 // indirect
 	github.com/disintegration/imaging v1.6.2 // indirect
+	github.com/ellypaws/inkbunny-app/api v0.0.0 // indirect
 	github.com/fogleman/gg v1.3.0 // indirect
 	github.com/golang/freetype v0.0.0-20170609003504-e2365dfdc4a0 // indirect
 	github.com/gookit/color v1.5.4 // indirect

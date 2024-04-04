@@ -13,3 +13,19 @@ func Propagate[T tea.Model](m T, msg tea.Msg) (T, tea.Cmd) {
 	model, cmd := m.Update(msg)
 	return model.(T), cmd
 }
+
+type RerenderMsg struct{}
+
+func ForceRender() tea.Cmd {
+	return func() tea.Msg {
+		return RerenderMsg{}
+	}
+}
+
+type AlwaysRenderMsg bool
+
+func AlwaysRender(render bool) tea.Cmd {
+	return func() tea.Msg {
+		return AlwaysRenderMsg(render)
+	}
+}

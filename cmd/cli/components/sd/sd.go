@@ -34,7 +34,7 @@ func (m Model) Init() tea.Cmd {
 }
 
 const (
-	Start = "start"
+	ButtonStartGeneration = "start"
 )
 
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -43,22 +43,33 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.width = entle.Width()
 		m.height = entle.Height()
 	case tea.MouseMsg:
-		if zone.Get(Start).InBounds(msg) {
+		if zone.Get(ButtonStartGeneration).InBounds(msg) {
 			return StartGeneration(m)
 		}
 	case *entities.TextToImageResponse:
 		ProcessImage(&m, msg)
+		return m, utils.ForceRender()
 	case *api.ProgressResponse:
-		return m, m.progress.SetPercent(msg.Progress)
+		return m, tea.Batch(m.progress.SetPercent(msg.Progress), utils.ForceRender())
 	case tea.KeyMsg:
+		var cmd tea.Cmd
 		switch msg.String() {
 		case "s":
 			return StartGeneration(m)
 		case tea.KeyUp.String():
 			m.threshold += 1
+			if m.t2i != nil {
+				ProcessImage(&m, m.t2i)
+				cmd = utils.ForceRender()
+			}
 		case tea.KeyDown.String():
 			m.threshold -= 1
+			if m.t2i != nil {
+				ProcessImage(&m, m.t2i)
+				cmd = utils.ForceRender()
+			}
 		}
+		return m, cmd
 	}
 
 	return m.propagate(msg)
@@ -69,8 +80,10 @@ func (m Model) propagate(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg.(type) {
 	case spinner.TickMsg:
 		m.spinner, cmd = m.spinner.Update(msg)
+		cmd = tea.Batch(cmd, utils.ForceRender())
 	case progress.FrameMsg:
 		m.progress, cmd = utils.Propagate(m.progress, msg)
+		cmd = tea.Batch(cmd, utils.ForceRender())
 	default:
 		return m, nil
 	}
@@ -102,7 +115,7 @@ func (m Model) Render(s entle.Screen) func() string {
 		sdContent.SetRows(
 			[]*stick.Row{
 				sdContent.NewRow().AddCells(
-					stick.NewCell(1, 1).SetContent(zone.Mark(Start, "Press 's' to start processing")),
+					stick.NewCell(1, 1).SetContent(zone.Mark(ButtonStartGeneration, "Press 's' to start processing")),
 				),
 				sdContent.NewRow().AddCells(
 					stick.NewCell(1, 12).SetContent(m.View()),
@@ -139,7 +152,7 @@ func StartGeneration(m Model) (tea.Model, tea.Cmd) {
 		Steps:       20,
 		SamplerName: "DDIM",
 	})
-	return m, m.progress.SetPercent(0)
+	return m, tea.Batch(m.progress.SetPercent(0), utils.ForceRender())
 }
 
 func ProcessImage(m *Model, response *entities.TextToImageResponse) {

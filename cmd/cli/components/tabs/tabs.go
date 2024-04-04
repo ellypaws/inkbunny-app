@@ -12,6 +12,7 @@ package tabs
 import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	utils "github.com/ellypaws/inkbunny-app/cmd/cli/components"
 	zone "github.com/lrstanley/bubblezone"
 	"strings"
 )
@@ -94,13 +95,13 @@ func (m Tabs) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 		}
 
-		return m, nil
+		return m, utils.ForceRender()
 	case tea.KeyMsg:
 		switch msg.Type {
 		case tea.KeyTab:
-			return m.Next(), nil
+			return m.Next(), utils.ForceRender()
 		case tea.KeyShiftTab:
-			return m.Previous(), nil
+			return m.Previous(), utils.ForceRender()
 		default:
 			return m, nil
 		}

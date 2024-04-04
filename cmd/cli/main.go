@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	stick "github.com/76creates/stickers/flexbox"
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
@@ -24,19 +25,22 @@ type model struct {
 	flexbox     *stick.FlexBox
 
 	viewport viewport.Model
+
+	alwaysRender bool
+	render       *string
 }
 
 // Zone names
 const (
-	start       = sd.Start
-	submissions = list.Submissions
+	buttonStart = sd.ButtonStartGeneration
+	buttonView  = list.ButtonViewSubmissions
 )
 
 const (
 	RESIZE_TICK = 250
 
 	fastTick = RESIZE_TICK * time.Millisecond
-	slowTick = fastTick * 2
+	slowTick = fastTick * 4
 )
 
 func (m model) Init() tea.Cmd {
@@ -55,6 +59,13 @@ func resizeTick(duration time.Duration) tea.Cmd {
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmd tea.Cmd
 	switch msg := msg.(type) {
+	case utils.RerenderMsg:
+		m.render = nil
+	case utils.AlwaysRenderMsg:
+		m.alwaysRender = bool(msg)
+		if m.alwaysRender {
+			m.render = nil
+		}
 	case tea.MouseMsg:
 		if msg.Action != tea.MouseActionPress {
 			return m, nil
@@ -66,6 +77,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.window.Width = msg.Width
 			m.window.Height = msg.Height
 			cmd = resizeTick(fastTick)
+			m.render = nil
 			return m.propagate(msg, cmd)
 		}
 		cmd = resizeTick(slowTick)
@@ -73,6 +85,9 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		switch msg.String() {
 		case "q", "ctrl+c":
 			return m, tea.Quit
+		case "a":
+			m.alwaysRender = !m.alwaysRender
+			return m, utils.ForceRender()
 		}
 		return m.propagate(msg, nil)
 	}
@@ -101,6 +116,11 @@ func (m model) propagate(msg tea.Msg, cmd tea.Cmd) (tea.Model, tea.Cmd) {
 	if cmd != nil {
 		cmds = append(cmds, cmd)
 	}
+	if cmds == nil {
+		r := m.Render()
+		m.render = &r
+		return m, nil
+	}
 	return m, tea.Batch(cmds...)
 }
 
@@ -112,6 +132,16 @@ func safeDereference(s *string) string {
 }
 
 func (m model) View() string {
+	if !m.alwaysRender && m.render != nil {
+		return *m.render
+	}
+	return m.Render()
+}
+
+func (m model) Render() string {
+	if !m.alwaysRender && m.render != nil {
+		return *m.render
+	}
 	top := stick.New(m.window.Width, 3)
 	top.SetRows(
 		[]*stick.Row{top.NewRow().AddCells(
@@ -131,8 +161,8 @@ func (m model) View() string {
 	}
 
 	return zone.Scan(lipgloss.JoinVertical(
-		lipgloss.Left,
-		top.Render(), "",
+		lipgloss.Center,
+		top.Render(), fmt.Sprintf("Always re-render: %v", m.alwaysRender),
 		lipgloss.PlaceHorizontal(
 			m.window.Width, lipgloss.Center,
 			lipgloss.PlaceVertical(
@@ -166,6 +196,7 @@ func main() {
 			"Audit",
 			"Generation",
 		}),
+		alwaysRender: true,
 	}
 
 	model.window.Width = entle.Width()

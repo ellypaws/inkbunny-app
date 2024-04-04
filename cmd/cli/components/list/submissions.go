@@ -9,12 +9,13 @@ import (
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	utils "github.com/ellypaws/inkbunny-app/cmd/cli/components"
 	"github.com/ellypaws/inkbunny-app/cmd/cli/entle"
 	zone "github.com/lrstanley/bubblezone"
 )
 
 const (
-	Submissions = "submissions"
+	ButtonViewSubmissions = "submissions"
 )
 
 var docStyle = lipgloss.NewStyle().Margin(1, 2)
@@ -39,6 +40,7 @@ func (m List) Init() tea.Cmd {
 }
 
 func (m List) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	var cmd tea.Cmd
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		h, v := docStyle.GetFrameSize()
@@ -46,12 +48,12 @@ func (m List) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.MouseMsg:
 		if msg.Button == tea.MouseButtonWheelUp {
 			m.CursorUp()
-			return m, nil
+			return m, utils.ForceRender()
 		}
 
 		if msg.Button == tea.MouseButtonWheelDown {
 			m.CursorDown()
-			return m, nil
+			return m, utils.ForceRender()
 		}
 
 		if msg.Action == tea.MouseActionPress {
@@ -61,21 +63,26 @@ func (m List) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				if zone.Get(item.id).InBounds(msg) {
 					// If so, select it in the list.
 					m.Select(i)
+					cmd = utils.ForceRender()
 					break
 				}
 			}
+
+			if zone.Get(ButtonViewSubmissions).InBounds(msg) {
+				m.Active = !m.Active
+				cmd = utils.ForceRender()
+			}
 		}
 
-		return m, nil
-
+		return m, cmd
 	case tea.KeyMsg:
 		switch msg.String() {
 		case "1":
 			m.Active = !m.Active
+			cmd = tea.Batch(cmd, utils.ForceRender())
 		}
 	}
 
-	var cmd tea.Cmd
 	m.Model, cmd = m.Model.Update(msg)
 	return m, cmd
 }
@@ -92,7 +99,7 @@ func (m List) Render(s entle.Screen) func() string {
 		submissionList := stick.New(s.Width, s.Height)
 		submissionList.SetRows(
 			[]*stick.Row{submissionList.NewRow().AddCells(
-				stick.NewCell(1, 1).SetContent(zone.Mark(Submissions, "Press '1' to view submissions")),
+				stick.NewCell(1, 1).SetContent(zone.Mark(ButtonViewSubmissions, "Press '1' to view submissions")),
 				stick.NewCell(3, 1).SetContent(m.View()),
 			)})
 		return submissionList.Render()

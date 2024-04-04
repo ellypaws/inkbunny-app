@@ -9,6 +9,10 @@ func IF[T any](condition bool, a, b T) T {
 	return b
 }
 
+func If[T any](condition bool, a, b func() T) T {
+	return IF(condition, a, b)()
+}
+
 func Propagate[T tea.Model](m T, msg tea.Msg) (T, tea.Cmd) {
 	model, cmd := m.Update(msg)
 	return model.(T), cmd
@@ -16,16 +20,19 @@ func Propagate[T tea.Model](m T, msg tea.Msg) (T, tea.Cmd) {
 
 type RerenderMsg struct{}
 
+var AlwaysRender bool = true
+
 func ForceRender() tea.Cmd {
-	return func() tea.Msg {
-		return RerenderMsg{}
+	if AlwaysRender {
+		return func() tea.Msg {
+			return RerenderMsg{}
+		}
 	}
+	return nil
 }
 
-type AlwaysRenderMsg bool
-
-func AlwaysRender(render bool) tea.Cmd {
+func AsCmd(msg tea.Msg) tea.Cmd {
 	return func() tea.Msg {
-		return AlwaysRenderMsg(render)
+		return msg
 	}
 }

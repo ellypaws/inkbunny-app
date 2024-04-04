@@ -25,9 +25,7 @@ type model struct {
 	flexbox     *stick.FlexBox
 
 	viewport viewport.Model
-
-	alwaysRender bool
-	render       *string
+	render   *string
 }
 
 // Zone names
@@ -61,11 +59,6 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case utils.RerenderMsg:
 		m.render = nil
-	case utils.AlwaysRenderMsg:
-		m.alwaysRender = bool(msg)
-		if m.alwaysRender {
-			m.render = nil
-		}
 	case tea.MouseMsg:
 		if msg.Action != tea.MouseActionPress {
 			return m, nil
@@ -85,8 +78,8 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		switch msg.String() {
 		case "q", "ctrl+c":
 			return m, tea.Quit
-		case "a":
-			m.alwaysRender = !m.alwaysRender
+		case tea.KeyCtrlA.String():
+			utils.AlwaysRender = !utils.AlwaysRender
 			return m, utils.ForceRender()
 		}
 		return m.propagate(msg, nil)
@@ -116,7 +109,7 @@ func (m model) propagate(msg tea.Msg, cmd tea.Cmd) (tea.Model, tea.Cmd) {
 	if cmd != nil {
 		cmds = append(cmds, cmd)
 	}
-	if cmds == nil {
+	if !utils.AlwaysRender && cmds == nil {
 		r := m.Render()
 		m.render = &r
 		return m, nil
@@ -132,16 +125,13 @@ func safeDereference(s *string) string {
 }
 
 func (m model) View() string {
-	if !m.alwaysRender && m.render != nil {
+	if !utils.AlwaysRender && m.render != nil {
 		return *m.render
 	}
 	return m.Render()
 }
 
 func (m model) Render() string {
-	if !m.alwaysRender && m.render != nil {
-		return *m.render
-	}
 	top := stick.New(m.window.Width, 3)
 	top.SetRows(
 		[]*stick.Row{top.NewRow().AddCells(
@@ -162,7 +152,7 @@ func (m model) Render() string {
 
 	return zone.Scan(lipgloss.JoinVertical(
 		lipgloss.Center,
-		top.Render(), fmt.Sprintf("Always re-render: %v", m.alwaysRender),
+		top.Render(), fmt.Sprintf("Always re-render: %v", utils.AlwaysRender),
 		lipgloss.PlaceHorizontal(
 			m.window.Width, lipgloss.Center,
 			lipgloss.PlaceVertical(

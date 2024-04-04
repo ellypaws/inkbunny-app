@@ -97,11 +97,11 @@ func (m Tabs) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		return m, utils.ForceRender()
 	case tea.KeyMsg:
-		switch msg.Type {
-		case tea.KeyTab:
-			return m.Next(), utils.ForceRender()
-		case tea.KeyShiftTab:
+		switch msg.String() {
+		case "ctrl+shift+tab":
 			return m.Previous(), utils.ForceRender()
+		case "ctrl+tab":
+			return m.Next(), utils.ForceRender()
 		default:
 			return m, nil
 		}

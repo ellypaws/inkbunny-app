@@ -8,8 +8,10 @@ require (
 	github.com/charmbracelet/bubbles v0.18.0
 	github.com/charmbracelet/bubbletea v0.25.0
 	github.com/charmbracelet/lipgloss v0.10.0
-	github.com/ellypaws/inkbunny-sd v0.0.0-20240402005810-311aa6f9c892
+	github.com/ellypaws/inkbunny-sd v0.0.0-20240403082634-4997250121d0
+	github.com/ellypaws/inkbunny/api v0.0.0-20240320233248-1659f4be4758
 	github.com/lrstanley/bubblezone v0.0.0-20240125042004-b7bafc493195
+	golang.org/x/sys v0.18.0
 )
 
 require (
@@ -36,7 +38,6 @@ require (
 	github.com/xo/terminfo v0.0.0-20220910002029-abceb7e1c41e // indirect
 	golang.org/x/image v0.15.0 // indirect
 	golang.org/x/sync v0.6.0 // indirect
-	golang.org/x/sys v0.18.0 // indirect
 	golang.org/x/term v0.18.0 // indirect
 	golang.org/x/text v0.14.0 // indirect
 )

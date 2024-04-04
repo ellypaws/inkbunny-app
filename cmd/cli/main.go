@@ -10,6 +10,7 @@ import (
 	"github.com/ellypaws/inkbunny-app/cmd/cli/components/list"
 	"github.com/ellypaws/inkbunny-app/cmd/cli/components/sd"
 	"github.com/ellypaws/inkbunny-app/cmd/cli/components/tabs"
+	"github.com/ellypaws/inkbunny-app/cmd/cli/components/tickets"
 	"github.com/ellypaws/inkbunny-app/cmd/cli/entle"
 	api "github.com/ellypaws/inkbunny-app/cmd/cli/requests"
 	zone "github.com/lrstanley/bubblezone"
@@ -20,6 +21,7 @@ import (
 type model struct {
 	window      entle.Screen
 	sd          sd.Model
+	tickets     tickets.Model
 	submissions list.List
 	tabs        tabs.Tabs
 	flexbox     *stick.FlexBox
@@ -95,7 +97,8 @@ func (m model) propagate(msg tea.Msg, cmd tea.Cmd) (tea.Model, tea.Cmd) {
 	switch m.tabs.Index() {
 	case 0:
 		m.submissions, cmd = utils.Propagate(m.submissions, msg)
-	//case 1:
+	case 1:
+		m.tickets, cmd = utils.Propagate(m.tickets, msg)
 	//case 2:
 	case 3:
 		m.sd, cmd = utils.Propagate(m.sd, msg)
@@ -145,7 +148,7 @@ func (m model) Render() string {
 
 	var renderers = []Renderer{
 		m.submissions.Render(s),
-		empty,
+		m.tickets.View,
 		empty,
 		m.sd.Render(s),
 	}
@@ -186,7 +189,7 @@ func main() {
 			"Audit",
 			"Generation",
 		}),
-		alwaysRender: true,
+		tickets: tickets.New(),
 	}
 
 	model.window.Width = entle.Width()

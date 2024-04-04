@@ -11,7 +11,7 @@ import (
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/ellypaws/inkbunny-app/api/library"
+	lib "github.com/ellypaws/inkbunny-app/api/library"
 	"github.com/ellypaws/inkbunny-app/cmd/cli/apis"
 	utils "github.com/ellypaws/inkbunny-app/cmd/cli/components"
 	"github.com/ellypaws/inkbunny-app/cmd/cli/entle"
@@ -232,8 +232,8 @@ func (m List) GetList() tea.Cmd {
 
 		if m.config.API != nil {
 			var response api.SubmissionSearchResponse
-			_, err := (&library.Request{
-				Host:      (*library.Host)(m.config.API).WithPath("/inkbunny/search"),
+			_, err := (&lib.Request{
+				Host:      (*lib.Host)(m.config.API).WithPath("/inkbunny/search"),
 				Method:    http.MethodGet,
 				Data:      request,
 				MarshalTo: &response,

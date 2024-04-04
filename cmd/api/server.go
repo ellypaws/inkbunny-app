@@ -59,6 +59,7 @@ func main() {
 	// Routes
 	registerAs(e.GET, getHandlers)
 	registerAs(e.POST, postHandlers)
+	registerAs(e.HEAD, headHandlers)
 
 	// Start server
 	e.Logger.Fatal(e.Start(":" + port))

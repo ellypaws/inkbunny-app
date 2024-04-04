@@ -1,6 +1,8 @@
 package sd
 
 import (
+	utils "cli/components"
+	"cli/entle"
 	"encoding/json"
 	"fmt"
 	stick "github.com/76creates/stickers/flexbox"
@@ -9,8 +11,6 @@ import (
 	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	utils "github.com/ellypaws/inkbunny-app/cmd/cli/components"
-	"github.com/ellypaws/inkbunny-app/cmd/cli/entle"
 	"github.com/ellypaws/inkbunny-sd/entities"
 	sd "github.com/ellypaws/inkbunny-sd/stable_diffusion"
 	zone "github.com/lrstanley/bubblezone"

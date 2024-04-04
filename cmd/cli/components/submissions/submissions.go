@@ -5,6 +5,10 @@
 package submissions
 
 import (
+	"cli/apis"
+	utils "cli/components"
+	"cli/components/submissions/description"
+	"cli/entle"
 	"errors"
 	stick "github.com/76creates/stickers/flexbox"
 	"github.com/charmbracelet/bubbles/list"
@@ -13,10 +17,6 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	lib "github.com/ellypaws/inkbunny-app/api/library"
-	"github.com/ellypaws/inkbunny-app/cmd/cli/apis"
-	utils "github.com/ellypaws/inkbunny-app/cmd/cli/components"
-	"github.com/ellypaws/inkbunny-app/cmd/cli/components/submissions/description"
-	"github.com/ellypaws/inkbunny-app/cmd/cli/entle"
 	"github.com/ellypaws/inkbunny/api"
 	zone "github.com/lrstanley/bubblezone"
 	"net/http"

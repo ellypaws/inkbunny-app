@@ -44,7 +44,7 @@ const (
 )
 
 const (
-	RESIZE_TICK = 250
+	RESIZE_TICK = 150
 
 	fastTick = RESIZE_TICK * time.Millisecond
 	slowTick = fastTick * 4

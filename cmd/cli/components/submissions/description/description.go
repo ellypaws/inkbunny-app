@@ -1,6 +1,9 @@
 package description
 
 import (
+	"cli/entle"
+	"fmt"
+	stick "github.com/76creates/stickers/flexbox"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/ellypaws/inkbunny/api"
@@ -13,17 +16,17 @@ const (
 )
 
 var (
-	inputStyle    = lipgloss.NewStyle().Foreground(hotPink)
-	successStyle  = lipgloss.NewStyle().Foreground(pastelGreen)
-	continueStyle = lipgloss.NewStyle().Foreground(darkGray)
+	pink  = lipgloss.NewStyle().Foreground(hotPink)
+	green = lipgloss.NewStyle().Foreground(pastelGreen)
+	gray  = lipgloss.NewStyle().Foreground(darkGray)
 
 	normalStyle = lipgloss.NewStyle()
 
-	titleStyle = inputStyle.Bold(true)
+	titleStyle = pink.Bold(true)
 
 	bodyStyle = normalStyle
 
-	buttonStyle = successStyle.Border(lipgloss.RoundedBorder()).Padding(0, 1)
+	buttonStyle = green.Border(lipgloss.RoundedBorder()).Padding(0, 1)
 )
 
 type Model struct {
@@ -39,35 +42,54 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m Model) View() string {
-	//m.Title
-	//m.Description
-	//m.Username
-	//m.UpdateDateUser
-	//"https://inkbunny.net/s/" + m.SubmissionID
-	title := titleStyle.Render("Meeting Tomorrow")
-	username := normalStyle.Render("John Doe")
-	body := bodyStyle.Render(`Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec blandit nunc at hendrerit ullamcorper. Vestibulum et tristique justo, sed iaculis dolor. Nullam ante diam, ultrices vitae faucibus vel, volutpat at sem. Sed congue nibh in lectus rutrum, egestas venenatis risus egestas. Nulla placerat ornare leo, nec vestibulum erat imperdiet vitae. Quisque dapibus felis eu ligula tempus mollis. In hac habitasse platea dictumst. Vestibulum venenatis quam urna, vitae vestibulum augue pulvinar ac. Sed sed nisl feugiat, efficitur enim vel, blandit elit.
+	return m.Render(entle.Screen{
+		Width: entle.Width(), Height: entle.Height(),
+	})
+}
 
-Vestibulum et lacus mi. Duis sollicitudin, diam eget condimentum bibendum, lorem eros ullamcorper dui, in viverra nulla sapien ut arcu. Curabitur maximus sollicitudin ipsum, ac commodo dolor sollicitudin quis. Duis eu dolor quis turpis tempor dictum. Ut tempus tellus vitae iaculis hendrerit. Donec in elementum sem. Curabitur eleifend fringilla libero a feugiat. Mauris ac lacinia lacus. Nullam feugiat volutpat ipsum vehicula imperdiet. Proin eu fringilla nibh. Quisque vel dui lacus. Vivamus ipsum orci, fringilla vel semper a, scelerisque at quam. Ut in massa vitae dui molestie hendrerit. Sed a velit lobortis, gravida urna bibendum, porttitor erat. Donec sollicitudin nisl eu libero blandit faucibus. Proin quam diam, aliquet tristique sagittis sit amet, convallis at lectus.`)
+func (m Model) Render(s entle.Screen) string {
+	title := fmt.Sprintf("%s by %s", titleStyle.Render(m.Title), m.Username)
+	url := gray.Render(fmt.Sprintf("https://inkbunny.net/s/%s", m.SubmissionID))
 
-	buttons := lipgloss.JoinHorizontal(lipgloss.Top,
-		buttonStyle.Render("Reply..."),
-		lipgloss.NewStyle().Width(4).Render(""), // Spacer
-		buttonStyle.Render("Mute this thread"),
-	)
+	body := bodyStyle.Render(m.Description)
 
-	// Assemble the pieces
-	return lipgloss.JoinVertical(
+	top := stick.NewCell(1, 1).SetContent(lipgloss.JoinVertical(
 		lipgloss.Left,
 		title,
-		username,
-		"",
-		body,
-		"",
-		buttons,
-	)
+		m.UpdateDateUser,
+		url))
+
+	content := stick.New(s.Width-100, s.Height)
+	content.SetRows(
+		[]*stick.Row{
+			content.NewRow().AddCells(
+				top,
+			),
+			content.NewRow().AddCells(
+				stick.NewCell(1, 6).SetContent("image"),
+			),
+			content.NewRow().AddCells(
+				stick.NewCell(1, 3).SetContent(body),
+			),
+			content.NewRow().AddCells(
+				stick.NewCell(1, 1).SetContent(buttonStyle.Render("Reply...")),
+				stick.NewCell(1, 1).SetContent(buttonStyle.Render("Mute this thread")),
+			),
+		})
+
+	return content.Render()
 }
 
 func New() Model {
-	return Model{}
+	return Model{
+		Submission: api.Submission{
+			SubmissionBasic: api.SubmissionBasic{
+				Title:          "Title",
+				Username:       "Username",
+				SubmissionID:   "123456",
+				UpdateDateUser: "2021-01-01 12:00:00",
+			},
+			Description: "Description",
+		},
+	}
 }

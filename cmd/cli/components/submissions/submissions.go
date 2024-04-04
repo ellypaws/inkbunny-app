@@ -210,7 +210,7 @@ func (m List) Render(s entle.Screen) func() string {
 		if m.Active {
 			submissionContent.AddCells(
 				stick.NewCell(3, 1).SetContent(m.View()),
-				stick.NewCell(3, 1).SetContent(m.description.View()),
+				stick.NewCell(3, 1).SetContent(m.description.Render(s)),
 			)
 		}
 		submissionList.SetRows([]*stick.Row{submissionContent})

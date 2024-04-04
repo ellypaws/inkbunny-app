@@ -15,6 +15,7 @@ import (
 	lib "github.com/ellypaws/inkbunny-app/api/library"
 	"github.com/ellypaws/inkbunny-app/cmd/cli/apis"
 	utils "github.com/ellypaws/inkbunny-app/cmd/cli/components"
+	"github.com/ellypaws/inkbunny-app/cmd/cli/components/submissions/description"
 	"github.com/ellypaws/inkbunny-app/cmd/cli/entle"
 	"github.com/ellypaws/inkbunny/api"
 	zone "github.com/lrstanley/bubblezone"
@@ -44,6 +45,8 @@ type List struct {
 
 	searching bool
 	input     textinput.Model
+
+	description description.Model
 
 	err error
 }
@@ -84,7 +87,7 @@ func (m List) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if zone.Get(ButtonViewSubmissions).InBounds(msg) {
 				m.Active = !m.Active
 				if m.Active {
-					return m, tea.Batch(m.GetList(), utils.ForceRender())
+					return m, utils.ForceRender()
 				}
 				cmd = utils.ForceRender()
 			}
@@ -201,11 +204,16 @@ func (m List) Render(s entle.Screen) func() string {
 				),
 			})
 		submissionList := stick.New(s.Width, s.Height)
-		submissionList.SetRows(
-			[]*stick.Row{submissionList.NewRow().AddCells(
-				stick.NewCell(1, 1).SetContent(panel.Render()),
+		submissionContent := submissionList.NewRow().AddCells(
+			stick.NewCell(1, 1).SetContent(panel.Render()),
+		)
+		if m.Active {
+			submissionContent.AddCells(
 				stick.NewCell(3, 1).SetContent(m.View()),
-			)})
+				stick.NewCell(3, 1).SetContent(m.description.View()),
+			)
+		}
+		submissionList.SetRows([]*stick.Row{submissionContent})
 		return submissionList.Render()
 	}
 }
@@ -278,5 +286,5 @@ func New(config *apis.Config) List {
 	input.Width = 22
 	input.Prompt = ""
 
-	return List{Model: m, input: input, config: config}
+	return List{Model: m, input: input, config: config, description: description.New()}
 }

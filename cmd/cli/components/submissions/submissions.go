@@ -2,12 +2,13 @@
 // of this source code is governed by the MIT license that can be found in
 // the LICENSE file.
 
-package list
+package submissions
 
 import (
 	"errors"
 	stick "github.com/76creates/stickers/flexbox"
 	"github.com/charmbracelet/bubbles/list"
+	"github.com/charmbracelet/bubbles/spinner"
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -73,7 +74,7 @@ func (m List) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				item := listItem.(item)
 				// Check each item to see if it's in bounds.
 				if zone.Get(item.id).InBounds(msg) {
-					// If so, select it in the list.
+					// If so, select it in the submissions.
 					m.Select(i)
 					cmd = utils.ForceRender()
 					break
@@ -91,7 +92,7 @@ func (m List) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if zone.Get("search").InBounds(msg) {
 				m.searching = true
 				m.err = nil
-				return m, m.GetList()
+				return m, tea.Batch(m.GetList(), m.Model.StartSpinner())
 			}
 		}
 
@@ -110,6 +111,7 @@ func (m List) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.searching = false
 		m.err = nil
 		m.Active = true
+		m.StopSpinner()
 		m.Model.SetItems(msg)
 		return m, nil
 	case api.SubmissionSearchResponse:
@@ -121,6 +123,7 @@ func (m List) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case error:
 		m.searching = false
 		m.err = msg
+		m.StopSpinner()
 		return m, nil
 	}
 
@@ -265,6 +268,7 @@ func New(config *apis.Config) List {
 
 	m := list.New(items, list.NewDefaultDelegate(), 0, 0)
 	m.Title = "Select a submission"
+	m.SetSpinner(spinner.Moon)
 
 	input := textinput.New()
 

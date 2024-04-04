@@ -205,7 +205,7 @@ func NewTable(width, height int, columnHeaders []string) *Table {
 // also each value have to be greater than 0, if either fails we panic
 func (r *Table) SetRatio(values []int) *Table {
 	if len(values) != len(r.columnHeaders) {
-		log.Fatalf("ratio list[%d] not of proper length[%d]\n", len(values), len(r.columnHeaders))
+		log.Fatalf("ratio submissions[%d] not of proper length[%d]\n", len(values), len(r.columnHeaders))
 	}
 	for _, val := range values {
 		if val < 1 {
@@ -243,7 +243,7 @@ func (r *Table) SetTypes(columnTypes ...any) (*Table, error) {
 // if it's not matching len it will trigger fatal error
 func (r *Table) SetMinWidth(values []int) *Table {
 	if len(values) != len(r.columnHeaders) {
-		log.Fatalf("min width list[%d] not of proper length[%d]\n", len(values), len(r.columnHeaders))
+		log.Fatalf("min width submissions[%d] not of proper length[%d]\n", len(values), len(r.columnHeaders))
 	}
 	r.columnMinWidth = values
 	r.setHeadersUpdate()
@@ -412,7 +412,7 @@ func (r *Table) OrderByColumn(index int) *Table {
 
 		// sorted rows
 		var sorted [][]any
-		// list of column values used for ordering
+		// submissions of column values used for ordering
 		var orderingCol []any
 		for _, rw := range r.rows {
 			orderingCol = append(orderingCol, rw[index])
@@ -681,7 +681,7 @@ func (r *Table) setTopRow() {
 		r.cursorIndexY = 0
 	} else if r.cursorIndexY > len(r.filteredRows) {
 		// when filtering if cursor is higher than row length
-		// set it to the bottom of the list
+		// set it to the bottom of the submissions
 		r.cursorIndexY = len(r.filteredRows) - 1
 	}
 

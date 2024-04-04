@@ -361,7 +361,7 @@ func (db Sqlite) GetTicketByID(ticketID int64) (Ticket, error) {
 	return ticket, nil
 }
 
-// GetTicketsByAuditor returns a list of tickets by auditor id
+// GetTicketsByAuditor returns a submissions of tickets by auditor id
 func (db Sqlite) GetTicketsByAuditor(auditorID int64) ([]Ticket, error) {
 	return db.ticketsByQuery(selectTicketsByAuditor, auditorID)
 }
@@ -553,7 +553,7 @@ func (db Sqlite) GetRole(auditorID int64) (Role, error) {
 	return RoleLevel(role), err
 }
 
-// GetKnownModels returns a map of model hashes to a list of known model names
+// GetKnownModels returns a map of model hashes to a submissions of known model names
 func (db Sqlite) GetKnownModels() (ModelHashes, error) {
 	var modelHashes ModelHashes
 	var hashes []byte

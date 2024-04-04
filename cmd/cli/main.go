@@ -3,14 +3,15 @@ package main
 import (
 	"fmt"
 	stick "github.com/76creates/stickers/flexbox"
+	"github.com/charmbracelet/bubbles/spinner"
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/ellypaws/inkbunny-app/cmd/cli/apis"
 	utils "github.com/ellypaws/inkbunny-app/cmd/cli/components"
-	"github.com/ellypaws/inkbunny-app/cmd/cli/components/list"
 	"github.com/ellypaws/inkbunny-app/cmd/cli/components/sd"
 	"github.com/ellypaws/inkbunny-app/cmd/cli/components/settings"
+	"github.com/ellypaws/inkbunny-app/cmd/cli/components/submissions"
 	"github.com/ellypaws/inkbunny-app/cmd/cli/components/tabs"
 	"github.com/ellypaws/inkbunny-app/cmd/cli/components/tickets"
 	"github.com/ellypaws/inkbunny-app/cmd/cli/entle"
@@ -24,11 +25,13 @@ type model struct {
 	window      entle.Screen
 	sd          sd.Model
 	tickets     tickets.Model
-	submissions list.List
+	submissions submissions.List
 	settings    settings.Model
 	tabs        tabs.Tabs
 
 	config *apis.Config
+
+	spinner *spinner.Model
 
 	viewport viewport.Model
 	render   *string
@@ -37,7 +40,7 @@ type model struct {
 // Zone names
 const (
 	buttonStart = sd.ButtonStartGeneration
-	buttonView  = list.ButtonViewSubmissions
+	buttonView  = submissions.ButtonViewSubmissions
 )
 
 const (
@@ -193,7 +196,8 @@ const (
 
 func main() {
 	config := apis.New()
-	stable := sd.New(config.SD)
+	spinner := spinner.New(spinner.WithSpinner(spinner.Moon))
+	stable := sd.New(config.SD, &spinner)
 	m := model{
 		window: entle.Screen{
 			Width:  entle.Width(),
@@ -201,7 +205,7 @@ func main() {
 		},
 		sd:          stable,
 		tickets:     tickets.New(config),
-		submissions: list.New(config),
+		submissions: submissions.New(config),
 		settings:    settings.New(config),
 		tabs: tabs.New([]string{
 			"Submissions",
@@ -211,6 +215,7 @@ func main() {
 			"Settings",
 		}),
 		config:   config,
+		spinner:  &spinner,
 		viewport: viewport.Model{},
 		render:   nil,
 	}

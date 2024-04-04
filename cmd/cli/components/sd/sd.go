@@ -22,7 +22,7 @@ import (
 type Model struct {
 	width     int
 	height    int
-	spinner   spinner.Model
+	spinner   *spinner.Model
 	t2i       *entities.TextToImageResponse
 	image     string
 	progress  progress.Model
@@ -65,7 +65,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, utils.ForceRender()
 	case *ProgressResponse:
 		var cmd tea.Cmd
-		m.spinner, cmd = m.spinner.Update(m.spinner.Tick())
+		*m.spinner, cmd = m.spinner.Update(m.spinner.Tick())
 		return m, tea.Batch(m.progress.SetPercent(msg.Progress), utils.ForceRender(), cmd)
 	case tea.KeyMsg:
 		var cmd tea.Cmd
@@ -95,7 +95,7 @@ func (m Model) propagate(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmd tea.Cmd
 	switch msg.(type) {
 	case spinner.TickMsg:
-		m.spinner, cmd = m.spinner.Update(msg)
+		*m.spinner, cmd = m.spinner.Update(msg)
 		cmd = tea.Batch(cmd, utils.ForceRender())
 	case progress.FrameMsg:
 		m.progress, cmd = utils.Propagate(m.progress, msg)
@@ -152,9 +152,9 @@ func (m Model) render() string {
 	return s.String()
 }
 
-func New(host *sd.Host) Model {
+func New(host *sd.Host, spinner *spinner.Model) Model {
 	return Model{
-		spinner:   spinner.New(spinner.WithSpinner(spinner.Moon)),
+		spinner:   spinner,
 		progress:  progress.New(progress.WithDefaultGradient()),
 		threshold: 128 / 2,
 

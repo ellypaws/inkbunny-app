@@ -205,7 +205,7 @@ type Role int
 
 // Role is the type of role that an Auditor can have
 // Admin is the highest role, and has the ability to perform all actions
-// The list of Inkbunny staff can be found at https://inkbunny.net/adminsmods_process.php
+// The submissions of Inkbunny staff can be found at https://inkbunny.net/adminsmods_process.php
 const (
 	RoleAdmin Role = iota
 	RoleCommunityMod

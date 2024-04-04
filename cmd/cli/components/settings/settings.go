@@ -5,75 +5,88 @@ import (
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/ellypaws/inkbunny/api"
+	"github.com/ellypaws/inkbunny-app/cmd/cli/apis"
+	"net/url"
 	"strings"
 )
 
 type Model struct {
-	user *api.Credentials
+	config *apis.Config
 
 	inputs  []textinput.Model
 	focused int
 	err     error
 }
 
-func (m Model) LoggedIn() bool {
-	return m.user != nil && m.user.Sid != ""
-}
-
-func (m Model) User() *api.Credentials {
-	return m.user
-}
-
 type (
 	errMsg error
 )
 
+const inputs = 3
+
 const (
-	username = iota
-	password
+	sdUrl = iota
+	llmUrl
+	apiUrl
 )
 
 const (
-	hotPink  = lipgloss.Color("#FF06B7")
-	darkGray = lipgloss.Color("#767676")
+	hotPink     = lipgloss.Color("#FF06B7")
+	pastelGreen = lipgloss.Color("#6A994E")
+	darkGray    = lipgloss.Color("#767676")
 )
 
 var (
 	inputStyle    = lipgloss.NewStyle().Foreground(hotPink)
+	successStyle  = lipgloss.NewStyle().Foreground(pastelGreen)
 	continueStyle = lipgloss.NewStyle().Foreground(darkGray)
+
+	normalStyle = lipgloss.NewStyle()
 )
 
-// Validator functions to ensure valid input
-func textValidator(s string) error {
-	if len(s) == 0 {
-		return nil
-	}
-	if strings.ContainsAny(s, " \t\n") {
-		return fmt.Errorf("no spaces allowed")
-	}
-	return nil
-}
+func New(c *apis.Config) Model {
+	var inputs []textinput.Model = make([]textinput.Model, inputs)
 
-func New() Model {
-	var inputs []textinput.Model = make([]textinput.Model, 2)
-	inputs[username] = textinput.New()
-	inputs[username].Placeholder = "guest"
-	inputs[username].Focus()
-	inputs[username].CharLimit = 22
-	inputs[username].Width = 32
-	inputs[username].Prompt = ""
-	inputs[username].Validate = textValidator
+	for i := 0; i < len(inputs); i++ {
+		switch i {
+		case sdUrl:
+			inputs[sdUrl] = textinput.New()
+			inputs[sdUrl].Placeholder = "http://localhost:7860"
+			inputs[sdUrl].CharLimit = 64
+			inputs[sdUrl].Width = 64
+			inputs[sdUrl].Prompt = ""
+			inputs[sdUrl].Validate = urlValidator
 
-	inputs[password] = textinput.New()
-	inputs[password].Placeholder = "password"
-	inputs[password].CharLimit = 32
-	inputs[password].Width = 32
-	inputs[password].Prompt = ""
-	inputs[password].EchoMode = textinput.EchoPassword
-	inputs[password].EchoCharacter = '•'
+			if c.SD != nil {
+				inputs[sdUrl].SetValue(c.SD.String())
+			}
+		case llmUrl:
+			inputs[llmUrl] = textinput.New()
+			inputs[llmUrl].Placeholder = "http://localhost:7869"
+			inputs[llmUrl].CharLimit = 64
+			inputs[llmUrl].Width = 64
+			inputs[llmUrl].Prompt = ""
+			inputs[llmUrl].Validate = urlValidator
+
+			if c.LLM != nil {
+				inputs[llmUrl].SetValue(c.SD.String())
+			}
+		case apiUrl:
+			inputs[apiUrl] = textinput.New()
+			inputs[apiUrl].Placeholder = "http://localhost:1323"
+			inputs[apiUrl].CharLimit = 64
+			inputs[apiUrl].Width = 64
+			inputs[apiUrl].Prompt = ""
+			inputs[apiUrl].Validate = urlValidator
+
+			if c.API != nil {
+				inputs[apiUrl].SetValue(c.API.String())
+			}
+		}
+	}
 
 	return Model{
+		config:  c,
 		inputs:  inputs,
 		focused: 0,
 		err:     nil,
@@ -88,18 +101,13 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmds []tea.Cmd = make([]tea.Cmd, len(m.inputs))
 
 	switch msg := msg.(type) {
-	case *api.Credentials:
-		m.user = msg
-		return m, nil
 	case tea.KeyMsg:
 		switch msg.Type {
 		case tea.KeyEnter:
 			if m.focused == len(m.inputs)-1 {
-				return m, m.login()
+				return m, m.save()
 			}
 			m.nextInput()
-		case tea.KeyCtrlC, tea.KeyEsc:
-			return m, tea.Quit
 		case tea.KeyShiftTab, tea.KeyCtrlP:
 			m.prevInput()
 		case tea.KeyTab, tea.KeyCtrlN:
@@ -123,8 +131,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m Model) View() string {
-	return fmt.Sprintf(
-		` Login
+	return fmt.Sprintf(` Settings
 
  %s
  %s
@@ -133,13 +140,77 @@ func (m Model) View() string {
  %s
 
  %s
-`,
-		inputStyle.Width(32).Render("Username"),
-		m.inputs[username].View(),
-		inputStyle.Width(32).Render("Password"),
-		m.inputs[password].View(),
+ %s
+
+ %s`,
+		inputStyle.Width(64).Render("Stable Diffusion"),
+		m.render(sdUrl),
+		inputStyle.Width(64).Render("LLM"),
+		m.render(llmUrl),
+		inputStyle.Width(64).Render("API"),
+		m.render(apiUrl),
 		continueStyle.Render("Continue ->"),
 	) + "\n"
+}
+
+func (m Model) render(i int) string {
+	if success([]*url.URL{
+		(*url.URL)(m.config.SD),
+		m.config.LLM,
+		m.config.API,
+	}[i], m.inputs[i]) {
+		m.inputs[i].TextStyle = successStyle
+	} else {
+		m.inputs[i].TextStyle = normalStyle
+	}
+	return m.inputs[i].View()
+}
+
+// Validator functions to ensure valid input
+func urlValidator(s string) error {
+	if len(s) < 7 {
+		return nil
+	}
+	if strings.HasSuffix(s, ":") {
+		return nil
+
+	}
+	if strings.HasSuffix(s, "/") {
+		return nil
+	}
+
+	_, err := url.Parse(s)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func success(u *url.URL, t textinput.Model) bool {
+	if u == nil {
+		return false
+	}
+	return u.String() == t.Value()
+}
+
+func (m Model) save() tea.Cmd {
+	return func() tea.Msg {
+		var err error
+		for i, input := range m.inputs {
+			if input.Value() == "" {
+				continue
+			}
+			switch i {
+			case sdUrl:
+				return m.config.SetSD(input.Value())
+			case llmUrl:
+				return m.config.SetLLM(input.Value())
+			case apiUrl:
+				return m.config.SetAPI(input.Value())
+			}
+		}
+		return err
+	}
 }
 
 // nextInput focuses the next input field
@@ -153,30 +224,5 @@ func (m *Model) prevInput() {
 	// Wrap around
 	if m.focused < 0 {
 		m.focused = len(m.inputs) - 1
-	}
-}
-
-func (m Model) login() tea.Cmd {
-	return func() tea.Msg {
-		m.user = &api.Credentials{
-			Username: m.inputs[username].Value(),
-			Password: m.inputs[password].Value(),
-		}
-
-		for i := range m.inputs {
-			m.inputs[i].SetValue("")
-		}
-
-		var err error
-		m.user, err = m.user.Login()
-		if err != nil {
-			return errMsg(err)
-		}
-
-		if m.user.Sid == "" {
-			return errMsg(fmt.Errorf("login failed, sid still empty"))
-		}
-
-		return m.user
 	}
 }

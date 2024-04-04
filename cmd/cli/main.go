@@ -106,6 +106,8 @@ func (m model) propagate(msg tea.Msg, cmd tea.Cmd) (tea.Model, tea.Cmd) {
 	//case 2:
 	case 3:
 		m.sd, cmd = utils.Propagate(m.sd, msg)
+	case 4:
+		m.settings, cmd = utils.Propagate(m.settings, msg)
 	default:
 		cmd = nil
 	}
@@ -194,7 +196,7 @@ func main() {
 			"Settings",
 		}),
 		tickets:  tickets.New(config.User()),
-		settings: settings.New(),
+		settings: settings.New(config),
 	}
 
 	m.window.Width = entle.Width()

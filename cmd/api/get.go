@@ -166,7 +166,7 @@ func GetInkbunnySearch(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, crashy.Wrap(err))
 	}
 
-	if temp := c.QueryParam("temp"); temp != "no" {
+	if temp := c.QueryParam("temp"); temp == "true" {
 		return c.JSONBlob(http.StatusOK, app.Temp())
 	}
 

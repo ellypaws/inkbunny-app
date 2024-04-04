@@ -43,9 +43,12 @@ func New() *Config {
 	var user *api.Credentials
 	if sid := os.Getenv("SID"); sid != "" {
 		user = &api.Credentials{Sid: sid}
-		if username := os.Getenv("USERNAME"); username != "" {
-			user.Username = username
+	}
+	if username := os.Getenv("USERNAME"); username != "" {
+		if user == nil {
+			user = &api.Credentials{Username: username}
 		}
+		user.Username = username
 	}
 	return &Config{
 		SD:   sdURL,

@@ -22,6 +22,10 @@ func (m Model) LoggedIn() bool {
 	return m.config.User() != nil && m.config.User().Sid != ""
 }
 
+func (m Model) User() *api.Credentials {
+	return m.config.User()
+}
+
 type (
 	errMsg error
 )

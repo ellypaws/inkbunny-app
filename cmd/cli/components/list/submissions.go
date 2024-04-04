@@ -107,9 +107,13 @@ func (m List) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 		}
 	case []list.Item:
+		m.searching = false
+		m.err = nil
+		m.Active = true
 		m.Model.SetItems(msg)
 		return m, nil
 	case api.SubmissionSearchResponse:
+		m.searching = false
 		return m, responseToListItems(msg)
 	case finishSearch:
 		m.searching = false

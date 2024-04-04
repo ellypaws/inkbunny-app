@@ -99,17 +99,15 @@ func (m model) propagate(msg tea.Msg, cmd tea.Cmd) (tea.Model, tea.Cmd) {
 		cmds = append(cmds, cmd)
 	}
 	switch m.tabs.Index() {
-	case 0:
+	case Submissions:
 		m.submissions, cmd = utils.Propagate(m.submissions, msg)
-	case 1:
+	case Tickets:
 		m.tickets, cmd = utils.Propagate(m.tickets, msg)
-	//case 2:
-	case 3:
+	case Audit:
+	case Generation:
 		m.sd, cmd = utils.Propagate(m.sd, msg)
-	case 4:
+	case Settings:
 		m.settings, cmd = utils.Propagate(m.settings, msg)
-	default:
-		cmd = nil
 	}
 	if cmd != nil {
 		cmds = append(cmds, cmd)
@@ -181,6 +179,14 @@ func render(i uint8, renderers []Renderer) string {
 func empty() string {
 	return "empty"
 }
+
+const (
+	Submissions = iota
+	Tickets
+	Audit
+	Generation
+	Settings
+)
 
 func main() {
 	config := apis.New()

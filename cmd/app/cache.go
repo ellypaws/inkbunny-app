@@ -21,7 +21,7 @@ var imageCache = &ImageCache{
 	mu:          sync.Mutex{},
 }
 
-// GetImageHandler handles image requests, caching them as needed.
+// GetImageHandler handles image apis, caching them as needed.
 func GetImageHandler(c echo.Context) error {
 	imageURL := c.QueryParam("url")
 	if imageURL == "" {

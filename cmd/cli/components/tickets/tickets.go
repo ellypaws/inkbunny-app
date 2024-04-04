@@ -4,6 +4,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	utils "github.com/ellypaws/inkbunny-app/cmd/cli/components"
 	"github.com/ellypaws/inkbunny-app/cmd/cli/components/tickets/login"
+	"github.com/ellypaws/inkbunny/api"
 )
 
 type Model struct {
@@ -31,8 +32,8 @@ func (m Model) View() string {
 	return "Logged in"
 }
 
-func New() Model {
+func New(u *api.Credentials) Model {
 	return Model{
-		login: login.New(),
+		login: login.New(u),
 	}
 }

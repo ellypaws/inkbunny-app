@@ -1,6 +1,7 @@
 package sd
 
 import (
+	"encoding/json"
 	"fmt"
 	stick "github.com/76creates/stickers/flexbox"
 	"github.com/TheZoraiz/ascii-image-converter/aic_package"
@@ -10,23 +11,36 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	utils "github.com/ellypaws/inkbunny-app/cmd/cli/components"
 	"github.com/ellypaws/inkbunny-app/cmd/cli/entle"
-	api "github.com/ellypaws/inkbunny-app/cmd/cli/requests"
 	"github.com/ellypaws/inkbunny-sd/entities"
+	sd "github.com/ellypaws/inkbunny-sd/stable_diffusion"
 	zone "github.com/lrstanley/bubblezone"
 	"os"
 	"strings"
+	"time"
 )
 
 type Model struct {
 	width     int
 	height    int
-	Config    *api.Config
 	spinner   spinner.Model
 	t2i       *entities.TextToImageResponse
 	image     string
 	progress  progress.Model
 	threshold uint8
 	cache     *string
+
+	Config *Config
+}
+
+type Config struct {
+	host         *sd.Host
+	Queue        chan IO
+	IsProcessing bool
+}
+
+type IO struct {
+	Request  *entities.TextToImageRequest
+	Response chan *entities.TextToImageResponse
 }
 
 func (m Model) Init() tea.Cmd {
@@ -49,8 +63,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case *entities.TextToImageResponse:
 		ProcessImage(&m, msg)
 		return m, utils.ForceRender()
-	case *api.ProgressResponse:
-		return m, tea.Batch(m.progress.SetPercent(msg.Progress), utils.ForceRender())
+	case *ProgressResponse:
+		var cmd tea.Cmd
+		m.spinner, cmd = m.spinner.Update(m.spinner.Tick())
+		return m, tea.Batch(m.progress.SetPercent(msg.Progress), utils.ForceRender(), cmd)
 	case tea.KeyMsg:
 		var cmd tea.Cmd
 		switch msg.String() {
@@ -136,12 +152,16 @@ func (m Model) render() string {
 	return s.String()
 }
 
-func New(config *api.Config) Model {
+func New(host *sd.Host) Model {
 	return Model{
-		Config:    config,
 		spinner:   spinner.New(spinner.WithSpinner(spinner.Moon)),
 		progress:  progress.New(progress.WithDefaultGradient()),
 		threshold: 128 / 2,
+
+		Config: &Config{
+			host:  host,
+			Queue: make(chan IO),
+		},
 	}
 }
 
@@ -157,7 +177,7 @@ func StartGeneration(m Model) (tea.Model, tea.Cmd) {
 
 func ProcessImage(m *Model, response *entities.TextToImageResponse) {
 	m.t2i = response
-	images, err := api.ToImages(response)
+	images, err := utils.ToImages(response)
 	if err != nil {
 		fmt.Println(err)
 	}
@@ -185,8 +205,8 @@ func (m Model) imageAscii(image []byte) string {
 
 	flags := aic_package.DefaultFlags()
 
-	size := api.ImageSize(image)
-	scaled := api.Scale([2]int{m.width, m.height}, size)
+	size := utils.ImageSize(image)
+	scaled := utils.Scale([2]int{m.width, m.height}, size)
 	flags.Dimensions = []int{max(5, int(float64(scaled[0])*1.35)), max(5, int(float64(scaled[1])*0.65))}
 
 	flags.Colored = true
@@ -201,4 +221,74 @@ func (m Model) imageAscii(image []byte) string {
 	}
 	_ = f.Close()
 	return asciiArt
+}
+
+func (c *Config) AddToQueue(req *entities.TextToImageRequest) <-chan *entities.TextToImageResponse {
+	response := make(chan *entities.TextToImageResponse, 1)
+	c.Queue <- IO{Request: req, Response: response}
+	return response
+}
+
+func (c *Config) Run(program *tea.Program) {
+	for {
+		select {
+		case req := <-c.Queue:
+			c.IsProcessing = true
+			processRequest(c, req, program)
+			if len(c.Queue) == 0 {
+				c.IsProcessing = false
+			}
+		}
+	}
+}
+
+func processRequest(c *Config, req IO, program *tea.Program) {
+	if c == nil || req.Request == nil || req.Response == nil {
+		return
+	}
+	if c.host == nil {
+		req.Response <- nil
+		return
+	}
+	go updateProgress(c, program, req.Response)
+	response, err := c.host.TextToImageRequest(req.Request)
+	if err != nil {
+		req.Response <- nil
+		return
+	}
+	req.Response <- response
+}
+
+func updateProgress(c *Config, program *tea.Program, response chan *entities.TextToImageResponse) {
+	for {
+		select {
+		case r := <-response:
+			program.Send(r)
+			return
+		case <-time.After(1 * time.Second):
+			p, err := GetCurrentProgress(c.host)
+			if err == nil {
+				program.Send(p)
+			}
+		}
+	}
+}
+
+type ProgressResponse struct {
+	Progress    float64 `json:"progress"`
+	EtaRelative float64 `json:"eta_relative"`
+}
+
+func GetCurrentProgress(h *sd.Host) (*ProgressResponse, error) {
+	const path = "/sdapi/v1/progress"
+	body, err := h.GET(path)
+	if err != nil {
+		return nil, err
+	}
+	respStruct := &ProgressResponse{}
+	err = json.Unmarshal(body, respStruct)
+	if err != nil {
+		return nil, err
+	}
+	return respStruct, nil
 }

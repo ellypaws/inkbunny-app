@@ -6,13 +6,14 @@ import (
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/ellypaws/inkbunny-app/cmd/cli/apis"
 	utils "github.com/ellypaws/inkbunny-app/cmd/cli/components"
 	"github.com/ellypaws/inkbunny-app/cmd/cli/components/list"
 	"github.com/ellypaws/inkbunny-app/cmd/cli/components/sd"
+	"github.com/ellypaws/inkbunny-app/cmd/cli/components/settings"
 	"github.com/ellypaws/inkbunny-app/cmd/cli/components/tabs"
 	"github.com/ellypaws/inkbunny-app/cmd/cli/components/tickets"
 	"github.com/ellypaws/inkbunny-app/cmd/cli/entle"
-	api "github.com/ellypaws/inkbunny-app/cmd/cli/requests"
 	zone "github.com/lrstanley/bubblezone"
 	"log"
 	"time"
@@ -23,8 +24,11 @@ type model struct {
 	sd          sd.Model
 	tickets     tickets.Model
 	submissions list.List
+	settings    settings.Model
 	tabs        tabs.Tabs
 	flexbox     *stick.FlexBox
+
+	config *apis.Config
 
 	viewport viewport.Model
 	render   *string
@@ -151,6 +155,7 @@ func (m model) Render() string {
 		m.tickets.View,
 		empty,
 		m.sd.Render(s),
+		m.settings.View,
 	}
 
 	return zone.Scan(lipgloss.JoinVertical(
@@ -160,7 +165,7 @@ func (m model) Render() string {
 			m.window.Width, lipgloss.Center,
 			lipgloss.PlaceVertical(
 				m.window.Height-6, lipgloss.Top,
-				render(m.tabs.Index(), renderers),
+				renderers[m.tabs.Index()](),
 			)),
 	))
 }
@@ -168,10 +173,7 @@ func (m model) Render() string {
 type Renderer = func() string
 
 func render(i uint8, renderers []Renderer) string {
-	if i < uint8(len(renderers)) {
-		return renderers[i]()
-	}
-	return "error: renderer out of bounds"
+	return renderers[i]()
 }
 
 func empty() string {
@@ -179,27 +181,30 @@ func empty() string {
 }
 
 func main() {
-	config := api.New()
-	model := model{
-		sd:          sd.New(config),
+	config := apis.New()
+	stable := sd.New(config.SD)
+	m := model{
+		sd:          stable,
 		submissions: list.New(),
 		tabs: tabs.New([]string{
 			"Submissions",
 			"Tickets",
 			"Audit",
 			"Generation",
+			"Settings",
 		}),
-		tickets: tickets.New(),
+		tickets:  tickets.New(config.User()),
+		settings: settings.New(),
 	}
 
-	model.window.Width = entle.Width()
-	model.window.Height = entle.Height()
+	m.window.Width = entle.Width()
+	m.window.Height = entle.Height()
 
-	p := tea.NewProgram(model, tea.WithAltScreen(), tea.WithMouseCellMotion())
+	p := tea.NewProgram(m, tea.WithAltScreen(), tea.WithMouseCellMotion())
 
 	zone.NewGlobal()
 	defer zone.Close()
-	go config.Run(p)
+	go stable.Config.Run(p)
 	if _, err := p.Run(); err != nil {
 		log.Fatalf("Error: %v", err)
 	}

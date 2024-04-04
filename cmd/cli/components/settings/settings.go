@@ -1,4 +1,4 @@
-package login
+package settings
 
 import (
 	"fmt"
@@ -55,7 +55,7 @@ func textValidator(s string) error {
 	return nil
 }
 
-func New(u *api.Credentials) Model {
+func New() Model {
 	var inputs []textinput.Model = make([]textinput.Model, 2)
 	inputs[username] = textinput.New()
 	inputs[username].Placeholder = "guest"
@@ -74,8 +74,9 @@ func New(u *api.Credentials) Model {
 	inputs[password].EchoCharacter = '•'
 
 	return Model{
-		user:   u,
-		inputs: inputs,
+		inputs:  inputs,
+		focused: 0,
+		err:     nil,
 	}
 }
 

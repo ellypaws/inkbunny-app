@@ -63,14 +63,12 @@ func (m List) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.MouseMsg:
 		if msg.Button == tea.MouseButtonWheelUp {
 			m.CursorUp()
-			m.description.Active = m.SelectedItem().(item).id
-			return m, utils.ForceRender()
+			return m, tea.Batch(utils.ForceRender(), m.description.SetActive(m.SelectedItem().(item).id))
 		}
 
 		if msg.Button == tea.MouseButtonWheelDown {
 			m.CursorDown()
-			m.description.Active = m.SelectedItem().(item).id
-			return m, utils.ForceRender()
+			return m, tea.Batch(utils.ForceRender(), m.description.SetActive(m.SelectedItem().(item).id))
 		}
 
 		if msg.Action == tea.MouseActionPress {
@@ -80,8 +78,7 @@ func (m List) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				if zone.Get(item.id).InBounds(msg) {
 					// If so, select it in the submissions.
 					m.Select(i)
-					m.description.Active = item.id
-					cmd = utils.ForceRender()
+					cmd = tea.Batch(utils.ForceRender(), m.description.SetActive(item.id))
 					break
 				}
 			}
@@ -311,5 +308,5 @@ func New(config *apis.Config) List {
 	input.Width = 22
 	input.Prompt = ""
 
-	return List{Model: m, input: input, config: config, description: description.New()}
+	return List{Model: m, input: input, config: config, description: description.New(config)}
 }

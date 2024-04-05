@@ -4,8 +4,9 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	. "github.com/ellypaws/inkbunny-app/api/entities"
 	"github.com/ellypaws/inkbunny-app/cmd/db"
-	"github.com/ellypaws/inkbunny-sd/entities"
+	sd "github.com/ellypaws/inkbunny-sd/entities"
 	"github.com/ellypaws/inkbunny-sd/llm"
 	"github.com/ellypaws/inkbunny-sd/utils"
 	"github.com/ellypaws/inkbunny/api"
@@ -156,7 +157,7 @@ func TestInferenceComplete(t *testing.T) {
 
 	result := utils.ExtractAll(details.Submissions[0].Description, utils.Patterns)
 
-	var request entities.TextToImageRequest
+	var request sd.TextToImageRequest
 
 	fieldsToSet := map[string]any{
 		"steps":     &request.Steps,

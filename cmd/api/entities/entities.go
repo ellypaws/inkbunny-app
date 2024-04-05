@@ -1,4 +1,4 @@
-package main
+package entities
 
 import (
 	"github.com/ellypaws/inkbunny-sd/llm"

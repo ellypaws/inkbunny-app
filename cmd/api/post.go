@@ -4,9 +4,10 @@ import (
 	"bytes"
 	"encoding/base64"
 	"github.com/disintegration/imaging"
+	. "github.com/ellypaws/inkbunny-app/api/entities"
 	"github.com/ellypaws/inkbunny-app/cmd/crashy"
 	"github.com/ellypaws/inkbunny-app/cmd/db"
-	"github.com/ellypaws/inkbunny-sd/entities"
+	sd "github.com/ellypaws/inkbunny-sd/entities"
 	"github.com/ellypaws/inkbunny-sd/llm"
 	"github.com/ellypaws/inkbunny-sd/utils"
 	"github.com/ellypaws/inkbunny/api"
@@ -188,7 +189,7 @@ func inference(c echo.Context) error {
 
 	if output := c.QueryParams().Get("output"); output == "json" {
 		message := utils.ExtractJson([]byte(response.Choices[0].Message.Content))
-		textToImage, err := entities.UnmarshalTextToImageRequest(message)
+		textToImage, err := sd.UnmarshalTextToImageRequest(message)
 		if err != nil {
 			return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
 		}
@@ -281,7 +282,7 @@ func stable(c echo.Context) error {
 	}
 
 	message := utils.ExtractJson([]byte(response.Choices[0].Message.Content))
-	textToImage, err := entities.UnmarshalTextToImageRequest(message)
+	textToImage, err := sd.UnmarshalTextToImageRequest(message)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
 	}
@@ -343,8 +344,8 @@ func prefill(c echo.Context) error {
 
 var defaultThreshold = 0.3
 
-var defaultTaggerRequest = entities.TaggerRequest{
-	Model:     entities.TaggerZ3DE621Convnext,
+var defaultTaggerRequest = sd.TaggerRequest{
+	Model:     sd.TaggerZ3DE621Convnext,
 	Threshold: &defaultThreshold,
 }
 

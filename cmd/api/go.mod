@@ -8,7 +8,7 @@ require (
 	github.com/disintegration/imaging v1.6.2
 	github.com/ellypaws/inkbunny-app/cmd v0.0.0
 	github.com/ellypaws/inkbunny-sd v0.0.0-20240403082634-4997250121d0
-	github.com/ellypaws/inkbunny/api v0.0.0-20240320233248-1659f4be4758
+	github.com/ellypaws/inkbunny/api v0.0.0-20240405073124-c7ced75cc1c7
 	github.com/go-errors/errors v1.5.1
 	github.com/labstack/echo/v4 v4.11.4
 	github.com/labstack/gommon v0.4.2

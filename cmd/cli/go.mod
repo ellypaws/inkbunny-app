@@ -17,7 +17,7 @@ require (
 	github.com/charmbracelet/lipgloss v0.10.0
 	github.com/ellypaws/inkbunny-app/api/library v0.0.0
 	github.com/ellypaws/inkbunny-sd v0.0.0-20240403082634-4997250121d0
-	github.com/ellypaws/inkbunny/api v0.0.0-20240320233248-1659f4be4758
+	github.com/ellypaws/inkbunny/api v0.0.0-20240405073124-c7ced75cc1c7
 	github.com/lrstanley/bubblezone v0.0.0-20240125042004-b7bafc493195
 	golang.org/x/sys v0.19.0
 )

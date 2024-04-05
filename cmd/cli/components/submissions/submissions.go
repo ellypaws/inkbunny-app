@@ -19,7 +19,6 @@ import (
 	lib "github.com/ellypaws/inkbunny-app/api/library"
 	"github.com/ellypaws/inkbunny/api"
 	zone "github.com/lrstanley/bubblezone"
-	"net/http"
 )
 
 const (
@@ -64,11 +63,13 @@ func (m List) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.MouseMsg:
 		if msg.Button == tea.MouseButtonWheelUp {
 			m.CursorUp()
+			m.description.Active = m.SelectedItem().(item).id
 			return m, utils.ForceRender()
 		}
 
 		if msg.Button == tea.MouseButtonWheelDown {
 			m.CursorDown()
+			m.description.Active = m.SelectedItem().(item).id
 			return m, utils.ForceRender()
 		}
 
@@ -79,6 +80,7 @@ func (m List) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				if zone.Get(item.id).InBounds(msg) {
 					// If so, select it in the submissions.
 					m.Select(i)
+					m.description.Active = item.id
 					cmd = utils.ForceRender()
 					break
 				}
@@ -119,7 +121,7 @@ func (m List) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 	case api.SubmissionSearchResponse:
 		m.searching = false
-		return m, responseToListItems(msg)
+		return m, m.responseToListItems(msg)
 	case finishSearch:
 		m.searching = false
 		return m, nil
@@ -130,6 +132,10 @@ func (m List) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 	}
 
+	return m.propagate(msg, cmd)
+}
+
+func (m List) propagate(msg tea.Msg, cmd tea.Cmd) (tea.Model, tea.Cmd) {
 	var cmds []tea.Cmd
 	if cmd != nil {
 		cmds = append(cmds, cmd)
@@ -142,23 +148,48 @@ func (m List) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	if cmd != nil {
 		cmds = append(cmds, cmd)
 	}
+	m.description, cmd = utils.Propagate(m.description, msg)
+	if cmd != nil {
+		cmds = append(cmds, cmd)
+	}
 	if cmds != nil {
 		return m, tea.Batch(cmds...)
 	}
 	return m, nil
 }
 
-func responseToListItems(msg api.SubmissionSearchResponse) tea.Cmd {
+func (m List) responseToListItems(msg api.SubmissionSearchResponse) tea.Cmd {
+	var items []list.Item
+	var ids []string
+	for _, submission := range msg.Submissions {
+		items = append(items, item{
+			id:    submission.SubmissionID,
+			title: submission.Title,
+			desc:  submission.Username,
+		})
+		ids = append(ids, submission.SubmissionID)
+	}
+	return tea.Batch(
+		func() tea.Msg { return items },
+		m.getDescriptions(ids),
+	)
+}
+
+func (m List) getDescriptions(s []string) tea.Cmd {
 	return func() tea.Msg {
-		var items []list.Item
-		for _, submission := range msg.Submissions {
-			items = append(items, item{
-				id:    submission.SubmissionID,
-				title: submission.Title,
-				desc:  submission.Username,
+		response, err := (*lib.Host)(m.config.API).
+			GetSubmission(m.config.User(), api.SubmissionDetailsRequest{
+				SID:               m.config.User().Sid,
+				SubmissionIDSlice: s,
+				ShowDescription:   api.Yes,
 			})
+		if err != nil {
+			return err
 		}
-		return items
+		if len(response.Submissions) > 0 {
+			return response.Submissions
+		}
+		return errors.New("no submissions found")
 	}
 }
 
@@ -203,7 +234,7 @@ func (m List) Render(s entle.Screen) func() string {
 					stick.NewCell(1, 4).SetContent(inputRender),
 				),
 			})
-		submissionList := stick.New(s.Width, s.Height)
+		submissionList := stick.New(s.Width-25, s.Height)
 		submissionContent := submissionList.NewRow().AddCells(
 			stick.NewCell(1, 1).SetContent(panel.Render()),
 		)
@@ -246,15 +277,9 @@ func (m List) GetList() tea.Cmd {
 		}
 
 		if m.config.API != nil {
-			var response api.SubmissionSearchResponse
-			_, err := (&lib.Request{
-				Host:      (*lib.Host)(m.config.API).WithPath("/inkbunny/search"),
-				Method:    http.MethodGet,
-				Data:      request,
-				MarshalTo: &response,
-			}).Do()
+			response, err := (*lib.Host)(m.config.API).GetSearch(m.config.User(), request)
 			if err != nil {
-				return err
+				return nil
 			}
 			return response
 		}

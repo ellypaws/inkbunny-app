@@ -4,6 +4,8 @@ go 1.22.1
 
 replace github.com/ellypaws/inkbunny-app/api => ../api
 
+replace github.com/ellypaws/inkbunny-app/api/library => ../api/library
+
 replace cli => .
 
 require (
@@ -13,11 +15,11 @@ require (
 	github.com/charmbracelet/bubbles v0.18.0
 	github.com/charmbracelet/bubbletea v0.25.0
 	github.com/charmbracelet/lipgloss v0.10.0
-	github.com/ellypaws/inkbunny-app/api v0.0.0
+	github.com/ellypaws/inkbunny-app/api/library v0.0.0
 	github.com/ellypaws/inkbunny-sd v0.0.0-20240403082634-4997250121d0
 	github.com/ellypaws/inkbunny/api v0.0.0-20240320233248-1659f4be4758
 	github.com/lrstanley/bubblezone v0.0.0-20240125042004-b7bafc493195
-	golang.org/x/sys v0.18.0
+	golang.org/x/sys v0.19.0
 )
 
 require (
@@ -26,6 +28,7 @@ require (
 	github.com/charmbracelet/harmonica v0.2.0 // indirect
 	github.com/containerd/console v1.0.4 // indirect
 	github.com/disintegration/imaging v1.6.2 // indirect
+	github.com/ellypaws/inkbunny-app/api v0.0.0 // indirect
 	github.com/fogleman/gg v1.3.0 // indirect
 	github.com/golang/freetype v0.0.0-20170609003504-e2365dfdc4a0 // indirect
 	github.com/gookit/color v1.5.4 // indirect
@@ -43,7 +46,8 @@ require (
 	github.com/sahilm/fuzzy v0.1.1 // indirect
 	github.com/xo/terminfo v0.0.0-20220910002029-abceb7e1c41e // indirect
 	golang.org/x/image v0.15.0 // indirect
+	golang.org/x/net v0.24.0 // indirect
 	golang.org/x/sync v0.6.0 // indirect
-	golang.org/x/term v0.18.0 // indirect
+	golang.org/x/term v0.19.0 // indirect
 	golang.org/x/text v0.14.0 // indirect
 )

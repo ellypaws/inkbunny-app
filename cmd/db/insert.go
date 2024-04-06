@@ -415,19 +415,19 @@ var ErrTicketIsSet = errors.New("error: ticket id is set but InsertTicket was ca
 // The ID is expected to be non-zero as it's a new ticket.
 // This ensures that InsertTicket is only for new tickets.
 // Set force to true to unset the ticket ID and always insert a new ticket.
-func (db Sqlite) InsertTicket(ticket Ticket, force ...bool) error {
+func (db Sqlite) InsertTicket(ticket Ticket, force ...bool) (int64, error) {
 	if len(force) > 0 && force[0] {
 		ticket.ID = 0
 	}
 	if ticket.ID != 0 {
-		return ErrTicketIsSet
+		return 0, ErrTicketIsSet
 	}
 	return db.UpsertTicket(ticket)
 }
 
 // UpsertTicket inserts or updates a ticket in the database.
 // If the ticket ID is unset, it will insert a new ticket.
-func (db Sqlite) UpsertTicket(ticket Ticket) error {
+func (db Sqlite) UpsertTicket(ticket Ticket) (int64, error) {
 	args, err := assertArgs(
 		ticket.ID, ticket.Subject,
 		ticket.DateOpened, ticket.DateClosed,
@@ -447,14 +447,15 @@ func (db Sqlite) UpsertTicket(ticket Ticket) error {
 		if isInsert {
 			process = "in"
 		}
-		return fmt.Errorf("error: %vserting ticket: %w", process, err)
+		return 0, fmt.Errorf("error: %vserting ticket: %w", process, err)
 	}
 
-	if id, err := res.LastInsertId(); err != nil && id != ticket.ID {
-		return fmt.Errorf("error: last insert id does not match ticket id: %w", err)
+	id, err := res.LastInsertId()
+	if err != nil && id != ticket.ID {
+		return 0, fmt.Errorf("error: last insert id does not match ticket id: %w", err)
 	}
 
-	return nil
+	return id, err
 }
 
 func (db Sqlite) DeleteTicket(id int64) error {

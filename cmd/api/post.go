@@ -44,11 +44,12 @@ func newTicket(c echo.Context) error {
 		return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
 	}
 
-	err := database.InsertTicket(ticket)
+	id, err := database.InsertTicket(ticket)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
 	}
 
+	ticket.ID = id
 	return c.JSON(http.StatusOK, ticket)
 }
 
@@ -62,11 +63,14 @@ func updateTicket(c echo.Context) error {
 		return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
 	}
 
-	err := database.UpsertTicket(ticket)
+	id, err := database.UpsertTicket(ticket)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
 	}
 
+	if ticket.ID != id {
+		return c.JSON(http.StatusInternalServerError, crashy.ErrorResponse{ErrorString: "got the wrong ticket back from the database", Debug: ticket})
+	}
 	return c.JSON(http.StatusOK, ticket)
 }
 

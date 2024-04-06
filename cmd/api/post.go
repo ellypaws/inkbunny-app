@@ -30,8 +30,8 @@ var postHandlers = pathHandler{
 	"/interrogate":        handler{interrogate, nil},
 	"/interrogate/upload": handler{interrogateImage, nil},
 	"/sd/:path":           handler{handlePath, nil},
-	"/ticket/new":         handler{newTicket, staffMiddleware},
-	"/ticket/upsert":      handler{updateTicket, staffMiddleware},
+	"/tickets/new":        handler{newTicket, staffMiddleware},
+	"/tickets/upsert":     handler{updateTicket, staffMiddleware},
 }
 
 func newTicket(c echo.Context) error {

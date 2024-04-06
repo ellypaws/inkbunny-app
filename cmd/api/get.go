@@ -23,7 +23,7 @@ var getHandlers = pathHandler{
 	"/inkbunny/search":          handler{GetInkbunnySearch, nil},
 	"/image":                    handler{GetImageHandler, nil},
 	"/tickets/audits":           handler{GetAuditHandler, loggedInMiddleware},
-	"/tickets":                  handler{GetTicketsHandler, staffMiddleware},
+	"/tickets/get":              handler{GetTicketsHandler, staffMiddleware},
 }
 
 // Deprecated: use registerAs((*echo.Echo).GET, getHandlers) instead

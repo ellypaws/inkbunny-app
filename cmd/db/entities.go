@@ -313,6 +313,7 @@ type Ticket struct {
 	ID            int64         `json:"id"`
 	Subject       string        `json:"subject"`
 	DateOpened    time.Time     `json:"date_opened"`
+	DateClosed    *time.Time    `json:"date_closed,omitempty"`
 	Status        string        `json:"status,omitempty"`
 	Labels        []TicketLabel `json:"labels,omitempty"`
 	Priority      string        `json:"priority"`

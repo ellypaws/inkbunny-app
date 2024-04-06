@@ -832,10 +832,13 @@ func TestSqlite_Tickets(t *testing.T) {
 		t.Fatalf("could not insert ticket: %v", err)
 	}
 
+	now := time.Now().UTC()
+
 	ticket = Ticket{
 		ID:         2,
 		Subject:    ticket.Subject,
-		DateOpened: time.Now().UTC(),
+		DateOpened: now,
+		DateClosed: &now,
 		Status:     "Closed",
 		Labels:     []TicketLabel{LabelAIGenerated, LabelAIAssisted},
 		Priority:   "high",

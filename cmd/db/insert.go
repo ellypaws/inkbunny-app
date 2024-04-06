@@ -92,12 +92,13 @@ const (
 
 	// upsertTicket statement for Ticket
 	upsertTicket = `
-	INSERT INTO tickets (ticket_id, subject, date_opened, status, labels, priority, flags, closed, responses, submissions_ids, auditor_id, involved)
-	VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+	INSERT INTO tickets (ticket_id, subject, date_opened, date_closed, status, labels, priority, flags, closed, responses, submissions_ids, auditor_id, involved)
+	VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 	ON CONFLICT(ticket_id)
 		DO UPDATE SET
 					  subject=excluded.subject,
 					  date_opened=excluded.date_opened,
+					  date_closed=excluded.date_closed,
 					  status=excluded.status,
 					  labels=excluded.labels,
 					  priority=excluded.priority,
@@ -111,9 +112,12 @@ const (
 
 	// newTicket statement for Ticket
 	newTicket = `
-	INSERT INTO tickets (subject, date_opened, status, labels, priority, flags, closed, responses, submissions_ids, auditor_id, involved)
-	VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+	INSERT INTO tickets (subject, date_opened, date_closed, status, labels, priority, flags, closed, responses, submissions_ids, auditor_id, involved)
+	VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
 	`
+
+	// deleteTicket statement for Ticket
+	deleteTicket = `DELETE FROM tickets WHERE ticket_id = ?;`
 
 	// insertSIDHash statement for SIDHash
 	insertSIDHash = `
@@ -425,7 +429,8 @@ func (db Sqlite) InsertTicket(ticket Ticket, force ...bool) error {
 // If the ticket ID is unset, it will insert a new ticket.
 func (db Sqlite) UpsertTicket(ticket Ticket) error {
 	args, err := assertArgs(
-		ticket.ID, ticket.Subject, ticket.DateOpened.UTC().Format(time.RFC3339Nano),
+		ticket.ID, ticket.Subject,
+		ticket.DateOpened, ticket.DateClosed,
 		ticket.Status, ticket.Labels, ticket.Priority, ticket.Flags, ticket.Closed,
 		ticket.Responses, ticket.SubmissionIDs, ticket.AssignedID, ticket.UsersInvolved,
 	)
@@ -452,6 +457,24 @@ func (db Sqlite) UpsertTicket(ticket Ticket) error {
 	return nil
 }
 
+func (db Sqlite) DeleteTicket(id int64) error {
+	result, err := db.ExecContext(db.context, deleteTicket, id)
+	if err != nil {
+		return fmt.Errorf("error: deleting ticket: %w", err)
+	}
+
+	rows, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("error: getting rows affected: %w", err)
+	}
+
+	if rows == 0 {
+		return fmt.Errorf("error: ticket %d doesn't exist in the database", id)
+	}
+
+	return nil
+}
+
 // assertArgs asserts that the arguments are valid sqlite types and marshals them if necessary.
 // TODO: Include creation query to check what type is expected.
 func assertArgs(args ...any) ([]any, error) {
@@ -462,16 +485,24 @@ func assertArgs(args ...any) ([]any, error) {
 		var length = -1
 		switch a := args[i].(type) {
 		case *string, *int, *int64, *float32, *float64, *bool:
-
+			if a == nil {
+				args[i] = nil
+			}
 		case string, int, int64, float32, float64, bool:
 
 		case *[]byte, []byte:
-
+			if a == nil {
+				args[i] = nil
+			}
 		case nil:
 			args[i] = nil
 		case time.Time:
 			args[i] = parseTime(a)
 		case *time.Time:
+			if a == nil {
+				args[i] = nil
+				continue
+			}
 			args[i] = parseTime(a)
 		default:
 			// use reflect to check if it's a slice

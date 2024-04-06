@@ -95,6 +95,7 @@ const (
 				ticket_id INTEGER PRIMARY KEY AUTOINCREMENT,
 				subject TEXT NOT NULL,
 				date_opened TEXT NOT NULL,
+				date_closed TEXT,
 				status TEXT NOT NULL DEFAULT 'Open',
 				labels BLOB,
 				priority TEXT NOT NULL DEFAULT 'Low',

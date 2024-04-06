@@ -97,6 +97,7 @@ const (
 		ticket_id,
 		subject,
 		date_opened,
+		date_closed,
 		status,
 		labels,
 		priority,
@@ -350,6 +351,7 @@ func (db Sqlite) GetSubmissionByID(submissionID int64) (Submission, error) {
 func (db Sqlite) GetTicketByID(ticketID int64) (Ticket, error) {
 	var ticket Ticket
 	var dateOpened string
+	var dateClosed *string
 	var labels []byte
 	var flags []byte
 	var responses []byte
@@ -357,7 +359,7 @@ func (db Sqlite) GetTicketByID(ticketID int64) (Ticket, error) {
 	var involved []byte
 
 	err := db.QueryRowContext(db.context, selectTicketByID, ticketID).Scan(
-		&ticket.ID, &ticket.Subject, &dateOpened,
+		&ticket.ID, &ticket.Subject, &dateOpened, &dateClosed,
 		&ticket.Status, &labels, &ticket.Priority, &flags, &ticket.Closed,
 		&responses, &submissionIDs, &ticket.AssignedID, &involved,
 	)
@@ -367,6 +369,7 @@ func (db Sqlite) GetTicketByID(ticketID int64) (Ticket, error) {
 
 	err = Scan(map[any]any{
 		&ticket.DateOpened:    dateOpened,
+		&ticket.DateClosed:    dateClosed,
 		&ticket.Labels:        labels,
 		&ticket.Flags:         flags,
 		&ticket.Responses:     responses,
@@ -411,6 +414,7 @@ func (db Sqlite) ticketsByQuery(query string, args ...any) ([]Ticket, error) {
 	for rows.Next() {
 		var ticket Ticket
 		var dateOpened string
+		var dateClosed *string
 		var labels []byte
 		var flags []byte
 		var responses []byte
@@ -418,7 +422,7 @@ func (db Sqlite) ticketsByQuery(query string, args ...any) ([]Ticket, error) {
 		var involved []byte
 
 		err := rows.Scan(
-			&ticket.ID, &ticket.Subject, &dateOpened,
+			&ticket.ID, &ticket.Subject, &dateOpened, &dateClosed,
 			&ticket.Status, &labels, &ticket.Priority, &flags, &ticket.Closed,
 			&responses, &submissionIDs, &ticket.AssignedID, &involved,
 		)
@@ -428,6 +432,7 @@ func (db Sqlite) ticketsByQuery(query string, args ...any) ([]Ticket, error) {
 
 		err = Scan(map[any]any{
 			&ticket.DateOpened:    dateOpened,
+			&ticket.DateClosed:    dateClosed,
 			&ticket.Labels:        labels,
 			&ticket.Flags:         flags,
 			&ticket.Responses:     responses,
@@ -500,6 +505,11 @@ func Scan(scan map[any]any) error {
 			newVal := reflect.New(v.Type())
 			newVal.Elem().Set(v)
 			v = newVal
+		}
+
+		if !v.IsValid() {
+			p.Set(reflect.Zero(p.Type()))
+			continue
 		}
 
 		// Direct assignment if types are compatible

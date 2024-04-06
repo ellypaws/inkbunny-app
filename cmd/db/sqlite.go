@@ -46,9 +46,9 @@ const (
 	createAuditors = `
 	CREATE TABLE IF NOT EXISTS auditors (
 		auditor_id INTEGER PRIMARY KEY,
-		username TEXT NOT NULL,
-		role TEXT NOT NULL,
-		audit_count INTEGER NOT NULL
+		username TEXT NOT NULL UNIQUE,
+		role TEXT NOT NULL DEFAULT 'user',
+		audit_count INTEGER NOT NULL DEFAULT 0
 	)
 	`
 
@@ -111,9 +111,8 @@ const (
 	// createSIDs statement for SIDHash
 	createSIDs = `
 	CREATE TABLE IF NOT EXISTS sids (
-				user_id INTEGER PRIMARY KEY,
-				username TEXT NOT NULL,
-				sid_hash TEXT NOT NULL
+	    		sid_hash TEXT PRIMARY KEY,
+				auditor_id INTEGER NOT NULL
 	)
 	`
 

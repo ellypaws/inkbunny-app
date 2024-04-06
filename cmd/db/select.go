@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"github.com/ellypaws/inkbunny/api"
 	"github.com/go-errors/errors"
 	"log"
 	"reflect"
@@ -48,6 +49,16 @@ const (
 		role,
 		audit_count
 	FROM auditors WHERE auditor_id = ?;
+	`
+
+	// selectAuditorByUsername statement for Auditor
+	selectAuditorByUsername = `
+	SELECT
+		auditor_id,
+		username,
+		role,
+		audit_count
+	FROM auditors WHERE username = ?;
 	`
 
 	// selectAuditsByAuditor statement for Audit
@@ -114,11 +125,16 @@ const (
 	// selectAudits statement for Audit
 	selectAudits = `SELECT audit_id, submission_id FROM audits`
 
-	// selectSIDsFromUserID statement for SIDHash
-	selectSIDsFromUserID = `SELECT user_id, username, sid_hash FROM sids WHERE user_id = ?;`
-
-	// selectUsernameFromSID statement for SIDHash
-	selectUsernameFromSID = `SELECT username FROM sids WHERE sid_hash = ?;`
+	// selectUsernameFromAuditorID statement to get username from Auditor table
+	selectUsernameFromAuditorID = `SELECT username FROM auditors WHERE auditor_id = ?;`
+	// selectAuditorIDFromUsername statement to get auditor id from Auditor table
+	selectAuditorIDFromUsername = `SELECT auditor_id FROM auditors WHERE username = ?;`
+	// selectSIDsFromAuditorID statement for SIDHash
+	selectSIDsFromAuditorID = `SELECT sid_hash, auditor_id FROM sids WHERE auditor_id = ?;`
+	// selectSIDsFromHash statement for SIDHash
+	selectSIDsFromHash = `SELECT sid_hash, auditor_id FROM sids WHERE sid_hash = ?;`
+	// SelectAuditorIDFromHash statement for SIDHash
+	SelectAuditorIDFromHash = `SELECT auditor_id FROM sids WHERE sid_hash = ?;`
 
 	// isAnAuditor statement for Auditor
 	isAnAuditor = `SELECT EXISTS(SELECT 1 FROM auditors WHERE auditor_id = ?);`
@@ -511,26 +527,59 @@ func Scan(scan map[any]any) error {
 	return nil
 }
 
-func (db Sqlite) GetSIDsFromUserID(userID int64) (SIDHash, error) {
-	var hashes []byte
-	var sid SIDHash
-
-	err := db.QueryRowContext(db.context, selectSIDsFromUserID, userID).Scan(
-		&sid.UserID, &sid.Username, &hashes,
-	)
+func (db Sqlite) GetAuditorFromHash(hash string) (Auditor, error) {
+	var id int64
+	err := db.QueryRowContext(db.context, SelectAuditorIDFromHash, hash).Scan(&id)
 	if err != nil {
-		return sid, err
+		return Auditor{}, err
 	}
 
-	err = json.Unmarshal(hashes, &sid.hashes)
-
-	return sid, nil
+	return db.GetAuditorByID(id)
 }
 
-func (db Sqlite) GetUsernameFromSID(sid string) (string, error) {
-	var username string
-	err := db.QueryRowContext(db.context, selectUsernameFromSID, sid).Scan(&username)
-	return username, err
+func (db Sqlite) GetUserIDFromSID(sid string) (string, error) {
+	var id string
+	hash(sid)
+	err := db.QueryRowContext(db.context, SelectAuditorIDFromHash, sid).Scan(&id)
+	return id, err
+}
+
+func (db Sqlite) GetHashesFromID(userID int64) (HashID, error) {
+	var hashes HashID
+
+	rows, err := db.QueryContext(db.context, selectSIDsFromAuditorID, userID)
+	if err != nil {
+		return hashes, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var sid SIDHash
+		if err := rows.Scan(&sid.Hash, &sid.AuditorID); err != nil {
+			return hashes, err
+		}
+		if hashes == nil {
+			hashes = make(HashID)
+		}
+		hashes[sid.Hash] = sid.AuditorID
+	}
+
+	return hashes, nil
+}
+
+func (db Sqlite) ValidSID(user api.Credentials) bool {
+	// warning: query row for some reason bugs out, either SQLITE_BUSY or sids table does not exist
+	//row := db.QueryRow(selectSIDsFromHash, hash(user.Sid))
+	//return row.Err() == nil
+	// use Query instead
+
+	rows, err := db.QueryContext(db.context, selectSIDsFromHash, hash(user.Sid))
+	if err != nil {
+		return false
+	}
+	defer rows.Close()
+
+	return rows.Next()
 }
 
 func (db Sqlite) IsInAuditor(auditorID int64) (bool, error) {

@@ -11,7 +11,13 @@ import (
 	"time"
 )
 
-var db, _ = tempDB(context.Background())
+var db = func() *Sqlite {
+	db, err := tempDB(context.Background())
+	if err != nil {
+		panic(err)
+	}
+	return db
+}()
 var useVirtualDB = true
 var slow = os.Getenv("SLOW") == "true"
 
@@ -728,9 +734,9 @@ func TestSqlite_ValidSID(t *testing.T) {
 		t.Fatalf("InsertSIDHash() failed: %v", err)
 	}
 
-	stored, err := db.GetSIDsFromUserID(196417)
+	stored, err := db.GetHashesFromID(196417)
 	if err != nil {
-		t.Fatalf("GetSIDsFromUserID() failed: %v", err)
+		t.Fatalf("GetHashesFromID() failed: %v", err)
 	}
 	t.Logf("stored: %v", stored)
 
@@ -743,17 +749,14 @@ func TestSqlite_ValidSID(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Login() failed: %v", err)
 		}
-	} else {
-		user.Sid = "sid"
-	}
+		err = db.InsertSIDHash(HashCredentials(*user))
+		if err != nil {
+			t.Fatalf("InsertSIDHash() failed: %v", err)
+		}
 
-	err = db.InsertSIDHash(HashCredentials(*user))
-	if err != nil {
-		t.Fatalf("InsertSIDHash() failed: %v", err)
-	}
-
-	if !db.ValidSID(*user) {
-		t.Fatalf("ValidSID() failed: expected true, got false")
+		if !db.ValidSID(*user) {
+			t.Fatalf("ValidSID() failed: expected true, got false")
+		}
 	}
 }
 

@@ -117,8 +117,13 @@ const (
 
 	// insertSIDHash statement for SIDHash
 	insertSIDHash = `
-	INSERT INTO sids (user_id, username, sid_hash) VALUES (?, ?, ?)
-	ON CONFLICT(user_id) DO UPDATE SET username=excluded.username, sid_hash=excluded.sid_hash;
+	INSERT INTO sids (sid_hash, auditor_id) VALUES (?, ?)
+	ON CONFLICT(sid_hash) DO UPDATE SET sid_hash=excluded.sid_hash, auditor_id=excluded.auditor_id;
+	`
+
+	// deleteSIDHash statement for SIDHash
+	deleteSIDHash = `
+	DELETE FROM sids WHERE sid_hash = ?;
 	`
 
 	// upsertModel statement for ModelHashes
@@ -548,86 +553,29 @@ func marshal(value any, length int) ([]byte, error) {
 }
 
 func (db Sqlite) InsertSIDHash(sid SIDHash) error {
-	stored, err := db.GetSIDsFromUserID(sid.UserID)
-	if err != nil && !errors.Is(err, sql.ErrNoRows) {
-		return err
-	}
-
-	var hashes hashmap = make(hashmap)
-	if len(stored.hashes) > 0 {
-		for hash := range stored.hashes {
-			hashes[hash] = struct{}{}
-		}
-	}
-
-	for hash := range sid.hashes {
-		hashes[hash] = struct{}{}
-	}
-
-	var marshal []byte
-	if len(hashes) > 0 {
-		marshal, err = json.Marshal(hashes)
-		if err != nil {
-			return fmt.Errorf("error: marshalling hashes: %w", err)
-		}
-	}
-
-	_, err = db.ExecContext(db.context, insertSIDHash, sid.UserID, sid.Username, marshal)
+	_, err := db.ExecContext(db.context, insertSIDHash, sid.Hash, sid.AuditorID)
 	return err
 }
 
 func (db Sqlite) RemoveSIDHash(sid SIDHash) error {
-	stored, err := db.GetSIDsFromUserID(sid.UserID)
-	switch {
-	case errors.Is(err, sql.ErrNoRows):
-		return nil
-	case err != nil:
-		return fmt.Errorf("error: could not get hashes: %w", err)
-	}
-
-	for hashToRemove := range sid.hashes {
-		delete(stored.hashes, hashToRemove)
-	}
-
-	return db.InsertSIDHash(stored)
+	_, err := db.ExecContext(db.context, deleteSIDHash, sid.AuditorID)
+	return err
 }
 
 func HashCredentials(user api.Credentials) SIDHash {
-	checksum := hash(user.Sid)
 	return SIDHash{
-		UserID:   int64(user.UserID.Int()),
-		Username: user.Username,
-		hashes:   checksum,
+		Hash:      hash(user.Sid),
+		AuditorID: int64(user.UserID.Int()),
 	}
 }
 
-func (sidHash SIDHash) SetHash(sid string) SIDHash {
-	checksum := hash(sid)
-	sidHash.hashes = checksum
-	return sidHash
-}
-
-func hash(s any) hashmap {
+func hash(s any) hashedSID {
 	h := sha256.New()
 	h.Write([]byte(fmt.Sprintf("%v", s)))
-	return hashmap{fmt.Sprintf("%x", h.Sum(nil)): struct{}{}}
+	return hashedSID(fmt.Sprintf("%x", h.Sum(nil)))
 }
 
-func (db Sqlite) ValidSID(user api.Credentials) bool {
-	stored, err := db.GetSIDsFromUserID(int64(user.UserID.Int()))
-	if err != nil {
-		return false
-	}
-
-	checksum := hash(user.Sid)
-	for hash := range checksum {
-		if _, ok := stored.hashes[hash]; ok {
-			return true
-		}
-	}
-
-	return false
-}
+type hashedSID = string
 
 func (db Sqlite) InsertModel(models ModelHashes) error {
 	if models == nil {

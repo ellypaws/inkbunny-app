@@ -301,12 +301,11 @@ type File struct {
 }
 
 type SIDHash struct {
-	UserID   int64  `json:"user_id"`
-	Username string `json:"username"`
-	hashes   hashmap
+	Hash      string `json:"sid_hash"`
+	AuditorID int64  `json:"auditor_id"`
 }
 
-type hashmap map[string]struct{}
+type HashID map[string]int64
 
 type ModelHashes map[string][]string
 

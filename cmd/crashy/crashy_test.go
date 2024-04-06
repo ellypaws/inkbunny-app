@@ -36,8 +36,8 @@ func TestErrorStack(t *testing.T) {
 
 func TestDebugString(t *testing.T) {
 	err := &ErrorResponse{
-		Error: "oh no",
-		Debug: Crash(),
+		ErrorString: "oh no",
+		Debug:       Crash(),
 	}
 	t.Log(err.DebugString())
 
@@ -50,8 +50,8 @@ func TestRealError(t *testing.T) {
 	_, err := credentials.Login()
 	if assert.Error(t, err) {
 		err := &ErrorResponse{
-			Error: "oh no",
-			Debug: err,
+			ErrorString: "oh no",
+			Debug:       err,
 		}
 		t.Logf("%+v", err.DebugString())
 	}

@@ -7,20 +7,24 @@ import (
 )
 
 type ErrorResponse struct {
-	Error string `json:"error"`
-	Debug any    `json:"debug,omitempty"`
+	ErrorString string `json:"error"`
+	Debug       any    `json:"debug,omitempty"`
 }
 
 func Wrap(err error) ErrorResponse {
 	var debug *errors.Error
 	if errors.As(err, &debug) {
-		return ErrorResponse{Error: err.Error(), Debug: debug.ErrorStack()}
+		return ErrorResponse{ErrorString: err.Error(), Debug: debug.ErrorStack()}
 	}
-	return ErrorResponse{Error: err.Error(), Debug: err}
+	return ErrorResponse{ErrorString: err.Error(), Debug: err}
+}
+
+func (e ErrorResponse) Error() string {
+	return e.ErrorString
 }
 
 func (e ErrorResponse) String() string {
-	return e.Error
+	return e.ErrorString
 }
 
 func (e ErrorResponse) DebugString() string {
@@ -36,7 +40,7 @@ func (e ErrorResponse) MarshalJSON() ([]byte, error) {
 		Error string         `json:"error"`
 		Debug map[string]any `json:"debug,omitempty"`
 	}{
-		Error: e.Error,
+		Error: e.ErrorString,
 		Debug: e.Map(),
 	})
 }

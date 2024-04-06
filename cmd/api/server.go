@@ -60,6 +60,7 @@ func main() {
 	registerAs(e.GET, getHandlers)
 	registerAs(e.POST, postHandlers)
 	registerAs(e.HEAD, headHandlers)
+	registerAs(e.DELETE, deleteHandlers)
 
 	// Start server
 	e.Logger.Fatal(e.Start(":" + port))

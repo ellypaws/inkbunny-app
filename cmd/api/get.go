@@ -23,6 +23,7 @@ var getHandlers = pathHandler{
 	"/inkbunny/search":          handler{GetInkbunnySearch, nil},
 	"/image":                    handler{GetImageHandler, nil},
 	"/tickets/audits":           handler{GetAuditHandler, loggedInMiddleware},
+	"/tickets":                  handler{GetTicketsHandler, staffMiddleware},
 }
 
 // Deprecated: use registerAs((*echo.Echo).GET, getHandlers) instead
@@ -48,7 +49,7 @@ func GetInkbunnyDescription(c echo.Context) error {
 	_ = c.Bind(&request)
 
 	if request.SID == "" {
-		return c.JSON(http.StatusBadRequest, crashy.ErrorResponse{Error: "missing SID"})
+		return c.JSON(http.StatusBadRequest, crashy.ErrorResponse{ErrorString: "missing SID"})
 	}
 
 	if submissionIDs := c.QueryParam("submission_ids"); submissionIDs != "" {
@@ -59,7 +60,7 @@ func GetInkbunnyDescription(c echo.Context) error {
 	}
 
 	if request.SubmissionIDs == "" {
-		return c.JSON(http.StatusBadRequest, crashy.ErrorResponse{Error: "missing submission ID"})
+		return c.JSON(http.StatusBadRequest, crashy.ErrorResponse{ErrorString: "missing submission ID"})
 	}
 
 	if cookie, err := c.Cookie("sid"); request.SID == "" && err == nil {
@@ -83,7 +84,7 @@ func GetInkbunnyDescription(c echo.Context) error {
 		return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
 	}
 	if len(details.Submissions) == 0 {
-		return c.JSON(http.StatusNotFound, crashy.ErrorResponse{Error: "no submissions found"})
+		return c.JSON(http.StatusNotFound, crashy.ErrorResponse{ErrorString: "no submissions found"})
 	}
 
 	var descriptions []DescriptionResponse
@@ -140,7 +141,7 @@ func GetInkbunnySubmission(c echo.Context) error {
 		return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
 	}
 	if len(details.Submissions) == 0 {
-		return c.JSON(http.StatusNotFound, crashy.ErrorResponse{Error: "no submissions found"})
+		return c.JSON(http.StatusNotFound, crashy.ErrorResponse{ErrorString: "no submissions found"})
 	}
 
 	return c.JSON(http.StatusOK, details)
@@ -200,7 +201,7 @@ func GetInkbunnySearch(c echo.Context) error {
 		return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
 	}
 	if len(searchResponse.Submissions) == 0 {
-		return c.JSON(http.StatusNotFound, crashy.ErrorResponse{Error: "no submissions found"})
+		return c.JSON(http.StatusNotFound, crashy.ErrorResponse{ErrorString: "no submissions found"})
 	}
 
 	if output := c.QueryParam("output"); output != "" {
@@ -212,7 +213,7 @@ func GetInkbunnySearch(c echo.Context) error {
 		case "mail":
 			return mail(c, user, searchResponse)
 		default:
-			return c.JSON(http.StatusBadRequest, crashy.ErrorResponse{Error: "invalid output format"})
+			return c.JSON(http.StatusBadRequest, crashy.ErrorResponse{ErrorString: "invalid output format"})
 		}
 	}
 
@@ -235,7 +236,7 @@ func logoutGuest(c echo.Context, user *api.Credentials) {
 
 func mail(c echo.Context, user *api.Credentials, response api.SubmissionSearchResponse) error {
 	if user == nil {
-		return c.JSON(http.StatusBadRequest, crashy.ErrorResponse{Error: "missing user"})
+		return c.JSON(http.StatusBadRequest, crashy.ErrorResponse{ErrorString: "missing user"})
 	}
 
 	submissionIDs := make([]string, len(response.Submissions))
@@ -322,17 +323,17 @@ func GetAuditHandler(c echo.Context) error {
 	}
 
 	if !database.ValidSID(*user) {
-		return c.JSON(http.StatusUnauthorized, crashy.ErrorResponse{Error: "invalid SID"})
+		return c.JSON(http.StatusUnauthorized, crashy.ErrorResponse{ErrorString: "invalid SID"})
 	}
 	if user.Username == "" {
-		user.Username, err = database.GetUsernameFromSID(user.Sid)
+		user.Username, err = database.GetUserIDFromSID(user.Sid)
 		if err != nil {
 			return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
 		}
 	}
 
 	if !validAuditor(*user) {
-		return c.JSON(http.StatusUnauthorized, crashy.ErrorResponse{Error: "invalid auditor"})
+		return c.JSON(http.StatusUnauthorized, crashy.ErrorResponse{ErrorString: "invalid auditor"})
 	}
 
 	audits, err := database.GetAuditsByAuditor(int64(user.UserID.Int()))
@@ -341,6 +342,46 @@ func GetAuditHandler(c echo.Context) error {
 	}
 
 	return c.JSON(http.StatusOK, audits)
+}
+
+func GetTicketsHandler(c echo.Context) error {
+	var user *api.Credentials
+	err := c.Bind(&user)
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, crashy.Wrap(err))
+	}
+
+	if cookie, err := c.Cookie("sid"); err == nil {
+		if user == nil {
+			user = &api.Credentials{Sid: cookie.Value}
+		}
+		user.Sid = cookie.Value
+	}
+
+	if err := db.Error(database); err != nil {
+		return c.JSON(http.StatusInternalServerError, crashy.ErrorResponse{ErrorString: "database error", Debug: err})
+	}
+
+	if !database.ValidSID(*user) {
+		return c.JSON(http.StatusUnauthorized, crashy.ErrorResponse{ErrorString: "invalid SID"})
+	}
+	if user.Username == "" {
+		user.Username, err = database.GetUserIDFromSID(user.Sid)
+		if err != nil {
+			return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
+		}
+	}
+
+	if !validAuditor(*user) {
+		return c.JSON(http.StatusUnauthorized, crashy.ErrorResponse{ErrorString: "invalid auditor"})
+	}
+
+	tickets, err := database.GetTicketsByAuditor(int64(user.UserID.Int()))
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
+	}
+
+	return c.JSON(http.StatusOK, tickets)
 }
 
 func validAuditor(user api.Credentials) bool {

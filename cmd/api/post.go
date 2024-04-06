@@ -30,6 +30,44 @@ var postHandlers = pathHandler{
 	"/interrogate":        handler{interrogate, nil},
 	"/interrogate/upload": handler{interrogateImage, nil},
 	"/sd/:path":           handler{handlePath, nil},
+	"/ticket/new":         handler{newTicket, staffMiddleware},
+	"/ticket/upsert":      handler{updateTicket, staffMiddleware},
+}
+
+func newTicket(c echo.Context) error {
+	var ticket db.Ticket
+	if err := c.Bind(&ticket); err != nil {
+		return err
+	}
+
+	if err := db.Error(database); err != nil {
+		return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
+	}
+
+	err := database.InsertTicket(ticket)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
+	}
+
+	return c.JSON(http.StatusOK, ticket)
+}
+
+func updateTicket(c echo.Context) error {
+	var ticket db.Ticket
+	if err := c.Bind(&ticket); err != nil {
+		return err
+	}
+
+	if err := db.Error(database); err != nil {
+		return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
+	}
+
+	err := database.UpsertTicket(ticket)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
+	}
+
+	return c.JSON(http.StatusOK, ticket)
 }
 
 // Deprecated: use registerAs((*echo.Echo).POST, postHandlers) instead
@@ -104,7 +142,7 @@ func logout(c echo.Context) error {
 	}
 
 	if user.Sid == "" {
-		return c.JSON(http.StatusBadRequest, crashy.ErrorResponse{Error: "SID is required"})
+		return c.JSON(http.StatusBadRequest, crashy.ErrorResponse{ErrorString: "SID is required"})
 	}
 
 	err := user.Logout()
@@ -135,7 +173,7 @@ func validate(c echo.Context) error {
 	}
 
 	if user.Sid == "" {
-		return c.JSON(http.StatusBadRequest, crashy.ErrorResponse{Error: "SID is required"})
+		return c.JSON(http.StatusBadRequest, crashy.ErrorResponse{ErrorString: "SID is required"})
 	}
 
 	if err := db.Error(database); err != nil {
@@ -143,7 +181,7 @@ func validate(c echo.Context) error {
 	}
 
 	if !database.ValidSID(user) {
-		return c.JSON(http.StatusUnauthorized, crashy.ErrorResponse{Error: "invalid SID"})
+		return c.JSON(http.StatusUnauthorized, crashy.ErrorResponse{ErrorString: "invalid SID"})
 	}
 
 	return c.String(http.StatusOK, strconv.Itoa(http.StatusOK))
@@ -173,7 +211,7 @@ func inference(c echo.Context) error {
 	}
 
 	if config.Endpoint.String() == "" {
-		return c.JSON(http.StatusBadRequest, crashy.ErrorResponse{Error: "config is required"})
+		return c.JSON(http.StatusBadRequest, crashy.ErrorResponse{ErrorString: "config is required"})
 	}
 
 	err := hostOnline(config)
@@ -194,7 +232,7 @@ func inference(c echo.Context) error {
 			return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
 		}
 		if textToImage.Prompt == "" {
-			return c.JSON(http.StatusNotFound, crashy.ErrorResponse{Error: "prompt is empty"})
+			return c.JSON(http.StatusNotFound, crashy.ErrorResponse{ErrorString: "prompt is empty"})
 		}
 		if desc, ok := textToImage.Comments["description"]; ok && desc == "<|description|>" {
 			textToImage.Comments["description"] = request.Messages[1].Content
@@ -217,7 +255,7 @@ func stable(c echo.Context) error {
 	}
 
 	if config.Endpoint.String() == "" {
-		return c.JSON(http.StatusBadRequest, crashy.ErrorResponse{Error: "config is required"})
+		return c.JSON(http.StatusBadRequest, crashy.ErrorResponse{ErrorString: "config is required"})
 	}
 
 	err := hostOnline(config)
@@ -250,10 +288,10 @@ func stable(c echo.Context) error {
 		return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
 	}
 	if len(details.Submissions) == 0 {
-		return c.JSON(http.StatusNotFound, crashy.ErrorResponse{Error: "no submissions found"})
+		return c.JSON(http.StatusNotFound, crashy.ErrorResponse{ErrorString: "no submissions found"})
 	}
 	if details.Submissions[0].Description == "" {
-		return c.JSON(http.StatusNotFound, crashy.ErrorResponse{Error: "no description found"})
+		return c.JSON(http.StatusNotFound, crashy.ErrorResponse{ErrorString: "no description found"})
 	}
 
 	request, err := utils.DescriptionHeuristics(details.Submissions[0].Description)
@@ -287,7 +325,7 @@ func stable(c echo.Context) error {
 		return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
 	}
 	if textToImage.Prompt == "" {
-		return c.JSON(http.StatusNotFound, crashy.ErrorResponse{Error: "prompt is empty"})
+		return c.JSON(http.StatusNotFound, crashy.ErrorResponse{ErrorString: "prompt is empty"})
 	}
 
 	return c.JSON(http.StatusOK, textToImage)
@@ -300,7 +338,7 @@ func prefill(c echo.Context) error {
 	}
 
 	if prefillRequest.Description == "" {
-		return c.JSON(http.StatusBadRequest, crashy.ErrorResponse{Error: "description is required"})
+		return c.JSON(http.StatusBadRequest, crashy.ErrorResponse{ErrorString: "description is required"})
 	}
 
 	request, err := utils.DescriptionHeuristics(prefillRequest.Description)
@@ -325,7 +363,7 @@ func prefill(c echo.Context) error {
 	if system.Content != "" {
 		messages = append(messages, system)
 	} else {
-		return c.JSON(http.StatusNotFound, crashy.ErrorResponse{Error: "system message is empty"})
+		return c.JSON(http.StatusNotFound, crashy.ErrorResponse{ErrorString: "system message is empty"})
 	}
 
 	if prefillRequest.Description != "" {
@@ -356,7 +394,7 @@ func interrogate(c echo.Context) error {
 	}
 
 	if request.Image == nil {
-		return c.JSON(http.StatusBadRequest, crashy.ErrorResponse{Error: "image is required"})
+		return c.JSON(http.StatusBadRequest, crashy.ErrorResponse{ErrorString: "image is required"})
 	}
 
 	if sorted := c.QueryParam("sorted"); sorted == "false" {
@@ -404,7 +442,7 @@ func interrogateImage(c echo.Context) error {
 	if compare(dimensions(img), msize) > 0 {
 		b64 = resizeImage(img, msize)
 		if b64 == "" {
-			return c.JSON(http.StatusInternalServerError, crashy.ErrorResponse{Error: "error resizing image"})
+			return c.JSON(http.StatusInternalServerError, crashy.ErrorResponse{ErrorString: "error resizing image"})
 		}
 	} else {
 		b64 = base64.StdEncoding.EncodeToString(data)

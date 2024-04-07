@@ -284,14 +284,21 @@ type Submission struct {
 }
 
 type Metadata struct {
-	Generated       bool `json:"generated,omitempty"`
-	Assisted        bool `json:"assisted,omitempty"`
-	Img2Img         bool `json:"img2img,omitempty"` // includes inpaint
-	HasJSON         bool `json:"has_json,omitempty"`
-	HasTxt          bool `json:"has_txt,omitempty"`
-	StableDiffusion bool `json:"stable_diffusion,omitempty"`
-	ComfyUI         bool `json:"comfy_ui,omitempty"`
-	MultipleFiles   bool `json:"multiple_files,omitempty"`
+	Generated            bool     `json:"generated,omitempty"`
+	Assisted             bool     `json:"assisted,omitempty"`
+	Img2Img              bool     `json:"img2img,omitempty"` // includes inpaint
+	HasJSON              bool     `json:"has_json,omitempty"`
+	HasTxt               bool     `json:"has_txt,omitempty"`
+	StableDiffusion      bool     `json:"stable_diffusion,omitempty"`
+	ComfyUI              bool     `json:"comfy_ui,omitempty"`
+	MultipleFiles        bool     `json:"multiple_files,omitempty"`
+	TaggedHuman          bool     `json:"tagged_human,omitempty"`
+	HumanPercentage      float64  `json:"human_percentage,omitempty"`
+	AITitle              bool     `json:"ai_title,omitempty"`
+	AIDescription        bool     `json:"ai_description,omitempty"`
+	AIKeywords           []string `json:"ai_keywords,omitempty"`
+	AIAccount            bool     `json:"ai_account,omitempty"`
+	HasGenerationDetails bool     `json:"has_generation_details,omitempty"` // when the txt or json file parses as utils.Parameters
 }
 
 func (s *Submission) Audit() *Audit {

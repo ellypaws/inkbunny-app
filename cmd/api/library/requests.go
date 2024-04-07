@@ -199,6 +199,14 @@ func WithClient(c *http.Client) func(*Request) {
 	}
 }
 
+func WithAuthorizationBearer(token string) func(*Request) {
+	return func(r *Request) {
+		r.opts = append(r.opts, func(h http.Header) {
+			h.Set("Authorization", fmt.Sprintf("Bearer %s", token))
+		})
+	}
+}
+
 func WithStruct(s any) func(*Request) {
 	if s == nil {
 		return func(r *Request) {}

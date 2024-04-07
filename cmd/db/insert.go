@@ -290,7 +290,7 @@ func InkbunnySubmissionToDBSubmission(submission api.Submission) Submission {
 		Keywords:    submission.Keywords,
 	}
 
-	SetMetadata(&dbSubmission)
+	SetSubmissionMeta(&dbSubmission)
 
 	for _, f := range submission.Files {
 		dbSubmission.Files = append(dbSubmission.Files, File{
@@ -315,7 +315,7 @@ const (
 	AIArt             = "672082"
 )
 
-func SetMetadata(submission *Submission) {
+func SetSubmissionMeta(submission *Submission) {
 	if submission == nil {
 		return
 	}
@@ -323,14 +323,21 @@ func SetMetadata(submission *Submission) {
 		switch keyword.KeywordName {
 		case "ai generated", "ai art":
 			submission.Metadata.Generated = true
+			submission.Metadata.AIKeywords = append(submission.Metadata.AIKeywords, keyword.KeywordName)
 		case "ai assisted":
 			submission.Metadata.Assisted = true
+			submission.Metadata.AIKeywords = append(submission.Metadata.AIKeywords, keyword.KeywordName)
 		case "img2img":
 			submission.Metadata.Img2Img = true
+			submission.Metadata.AIKeywords = append(submission.Metadata.AIKeywords, keyword.KeywordName)
 		case "stable diffusion":
 			submission.Metadata.StableDiffusion = true
+			submission.Metadata.AIKeywords = append(submission.Metadata.AIKeywords, keyword.KeywordName)
 		case "comfyui", "comfy ui":
 			submission.Metadata.ComfyUI = true
+			submission.Metadata.AIKeywords = append(submission.Metadata.AIKeywords, keyword.KeywordName)
+		case "human":
+			submission.Metadata.TaggedHuman = true
 		}
 		switch keyword.KeywordID {
 		case AIGeneratedID, AIArt:
@@ -356,10 +363,20 @@ func SetMetadata(submission *Submission) {
 		if file.File.MimeType == "application/json" {
 			submission.Metadata.HasJSON = true
 		}
-
 	}
 	if images > 1 {
 		submission.Metadata.MultipleFiles = true
+	}
+	if strings.Contains(submission.Title, "AI") {
+		submission.Metadata.AITitle = true
+	}
+	if strings.Contains(submission.Description, "stable diffusion") {
+		submission.Metadata.StableDiffusion = true
+		submission.Metadata.AIDescription = true
+	}
+	if strings.Contains(submission.Description, "comfyui") {
+		submission.Metadata.ComfyUI = true
+		submission.Metadata.AIDescription = true
 	}
 }
 

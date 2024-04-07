@@ -29,6 +29,7 @@ var postHandlers = pathHandler{
 	"/prefill":            handler{prefill, nil},
 	"/interrogate":        handler{interrogate, nil},
 	"/interrogate/upload": handler{interrogateImage, nil},
+	"/review/:id":         handler{GetReviewHandler, staffMiddleware},
 	"/sd/:path":           handler{handlePath, nil},
 	"/tickets/new":        handler{newTicket, staffMiddleware},
 	"/tickets/upsert":     handler{updateTicket, staffMiddleware},
@@ -36,7 +37,7 @@ var postHandlers = pathHandler{
 
 func newTicket(c echo.Context) error {
 	var ticket db.Ticket = db.Ticket{
-		DateOpened: time.Now(),
+		DateOpened: time.Now().UTC(),
 		Priority:   "low",
 		Closed:     false,
 	}
@@ -111,7 +112,7 @@ func login(c echo.Context) error {
 	c.SetCookie(&http.Cookie{
 		Name:     "sid",
 		Value:    user.Sid,
-		Expires:  time.Now().Add(24 * time.Hour),
+		Expires:  time.Now().UTC().Add(24 * time.Hour),
 		Secure:   true,
 		SameSite: http.SameSiteStrictMode,
 		MaxAge:   twoYears,
@@ -120,7 +121,7 @@ func login(c echo.Context) error {
 	c.SetCookie(&http.Cookie{
 		Name:     "username",
 		Value:    user.Username,
-		Expires:  time.Now().Add(24 * time.Hour),
+		Expires:  time.Now().UTC().Add(24 * time.Hour),
 		Secure:   true,
 		SameSite: http.SameSiteDefaultMode,
 		MaxAge:   twoYears,

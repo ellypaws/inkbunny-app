@@ -1,31 +1,36 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
 	. "github.com/ellypaws/inkbunny-app/api/entities"
 	"github.com/ellypaws/inkbunny-app/cmd/app"
 	"github.com/ellypaws/inkbunny-app/cmd/crashy"
 	"github.com/ellypaws/inkbunny-app/cmd/db"
-	"strconv"
-
+	"github.com/ellypaws/inkbunny-sd/utils"
 	"github.com/ellypaws/inkbunny/api"
 	"github.com/labstack/echo/v4"
+	"io"
 	"log"
 	"net/http"
 	"slices"
+	"strconv"
 	"strings"
+	"sync"
+	"time"
 )
 
 var getHandlers = pathHandler{
-	"/":                         handler{Hello, nil},
-	"/inkbunny/description":     handler{GetInkbunnyDescription, nil},
-	"/inkbunny/submission":      handler{GetInkbunnySubmission, nil},
-	"/inkbunny/submission/:ids": handler{GetInkbunnySubmission, nil},
-	"/inkbunny/search":          handler{GetInkbunnySearch, nil},
-	"/image":                    handler{GetImageHandler, nil},
+	"/":                         handler{Hello, withCache},
+	"/inkbunny/description":     handler{GetInkbunnyDescription, withCache},
+	"/inkbunny/submission":      handler{GetInkbunnySubmission, withCache},
+	"/inkbunny/submission/:ids": handler{GetInkbunnySubmission, withCache},
+	"/inkbunny/search":          handler{GetInkbunnySearch, withCache},
+	"/image":                    handler{GetImageHandler, withCache},
+	"/review/:id":               handler{GetReviewHandler, append(staffMiddleware, CacheMiddleware)},
 	"/tickets/audits":           handler{GetAuditHandler, staffMiddleware},
 	"/tickets/get":              handler{GetTicketsHandler, staffMiddleware},
-	"/auditors":                 handler{GetAuditors, staffMiddleware},
+	"/auditors":                 handler{GetAllAuditorsJHandler, staffMiddleware},
 }
 
 // Deprecated: use registerAs((*echo.Echo).GET, getHandlers) instead
@@ -307,7 +312,7 @@ func mail(c echo.Context, user *api.Credentials, response api.SubmissionSearchRe
 }
 
 func GetAuditHandler(c echo.Context) error {
-	auditor, err := GetAuditor(c)
+	auditor, err := GetCurrentAuditor(c)
 	if err != nil {
 		return c.JSON(http.StatusUnauthorized, crashy.Wrap(err))
 	}
@@ -353,10 +358,181 @@ func validAuditor(user api.Credentials) bool {
 	return database.IsAuditorRole(int64(user.UserID.Int()))
 }
 
-func GetAuditors(c echo.Context) error {
+func GetAllAuditorsJHandler(c echo.Context) error {
 	auditors := database.AllAuditors()
 	if auditors == nil {
 		return c.JSON(http.StatusInternalServerError, crashy.ErrorResponse{ErrorString: "no auditors found"})
 	}
 	return c.JSON(http.StatusOK, auditors)
+}
+
+func GetReviewHandler(c echo.Context) error {
+	sid, _, err := GetSIDandID(c)
+	if err != nil {
+		return c.JSON(http.StatusUnauthorized, crashy.Wrap(err))
+	}
+
+	auditor, err := GetCurrentAuditor(c)
+	if err != nil {
+		return c.JSON(http.StatusUnauthorized, crashy.Wrap(err))
+	}
+
+	submissionID := c.Param("id")
+	if submissionID == "" {
+		return c.JSON(http.StatusBadRequest, crashy.ErrorResponse{ErrorString: "missing submission ID"})
+	}
+
+	req := api.SubmissionDetailsRequest{
+		SID:                         sid,
+		SubmissionIDs:               submissionID,
+		OutputMode:                  "json",
+		ShowDescription:             true,
+		ShowDescriptionBbcodeParsed: true,
+	}
+
+	submissionDetails, err := api.Credentials{Sid: sid}.SubmissionDetails(req)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
+	}
+
+	if len(submissionDetails.Submissions) == 0 {
+		return c.JSON(http.StatusNotFound, crashy.ErrorResponse{ErrorString: "no submissions found"})
+	}
+
+	var submissions = make(map[string]db.Submission)
+	var userIDs []api.UsernameID
+	var ticketLabels []db.TicketLabel
+	var submissionIDsString []string
+	var submissionIDsInt64 []int64
+	var params = make(map[string]utils.Params)
+	var wg sync.WaitGroup
+	for i := range submissionDetails.Submissions {
+		if len(submissionDetails.Submissions[i].Files) > 0 {
+			wg.Add(1)
+			go ParseFile(&params, &wg, submissionDetails.Submissions[i].Files)
+		}
+		submission := db.InkbunnySubmissionToDBSubmission(submissionDetails.Submissions[i])
+		err := database.InsertSubmission(submission)
+		if err != nil {
+			return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
+		}
+		submissions[submissionDetails.Submissions[i].SubmissionID] = submission
+		userIDs = append(userIDs, api.UsernameID{UserID: submissionDetails.Submissions[i].UserID, Username: submissionDetails.Submissions[i].Username})
+		ticketLabels = append(ticketLabels, db.SubmissionLabels(submission)...)
+		submissionIDsString = append(submissionIDsString, submission.URL)
+		submissionIDsInt64 = append(submissionIDsInt64, submission.ID)
+	}
+	wg.Wait()
+
+	if len(params) > 0 {
+		for id, p := range params {
+			for _, pngChunk := range p {
+				if _, ok := pngChunk[utils.Parameters]; ok {
+					s := submissions[id]
+					s.Metadata.HasGenerationDetails = true
+					submissions[id] = s
+					err := database.InsertSubmission(s)
+					if err != nil {
+						return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
+					}
+				}
+			}
+		}
+	}
+
+	auditorAsUser := auditorAsUsernameID(auditor)
+
+	ticket := db.Ticket{
+		ID:         1,
+		Subject:    "subject",
+		DateOpened: time.Now().UTC(),
+		Status:     "triage",
+		Labels:     ticketLabels,
+		Priority:   "low",
+		Closed:     false,
+		Responses: []db.Response{
+			{
+				SupportTeam: false,
+				User:        auditorAsUser,
+				Date:        time.Now().UTC(),
+				Message: fmt.Sprintf("The following submission doesn't include the prompts: \n%v",
+					strings.Join(submissionIDsString, "\n")),
+			},
+		},
+		SubmissionIDs: submissionIDsInt64,
+		AssignedID:    &auditor.UserID,
+		UsersInvolved: db.Involved{
+			Reporter:    auditorAsUser,
+			ReportedIDs: userIDs,
+		},
+	}
+
+	return c.JSON(http.StatusOK, ticket)
+}
+
+func ParseFile(allParams *map[string]utils.Params, wg *sync.WaitGroup, files []api.File) {
+	defer wg.Done()
+	var mutex sync.Mutex
+	for _, f := range files {
+		wg.Add(1)
+		go processFile(&mutex, wg, allParams, &f)
+	}
+}
+
+func processFile(mutex *sync.Mutex, wg *sync.WaitGroup, allParams *map[string]utils.Params, f *api.File) {
+	defer wg.Done()
+	if !strings.HasPrefix(f.MimeType, "text") && !strings.HasSuffix(f.MimeType, "json") {
+		return
+	}
+	r, err := http.Get(f.FileURLFull)
+	if err != nil {
+		return
+	}
+	defer r.Body.Close()
+	if r.StatusCode != http.StatusOK {
+		return
+	}
+	b, err := io.ReadAll(r.Body)
+	if err != nil {
+		return
+	}
+	// Because some artists already have standardized txt files, opt to split each file separately
+	var params utils.Params
+	switch {
+	case strings.Contains(f.FileName, "_AutoSnep_"):
+		params, err = utils.AutoSnep(utils.WithBytes(b))
+	case strings.Contains(f.FileName, "_druge_"):
+		params, err = utils.Common(utils.WithBytes(b), utils.UseDruge())
+	case strings.Contains(f.FileName, "_AIBean_"):
+		params, err = utils.Common(utils.WithBytes(b), utils.UseAIBean())
+	case strings.Contains(f.FileName, "_artiedragon_"):
+		params, err = utils.Common(utils.WithBytes(b), utils.UseArtie())
+	case strings.Contains(f.FileName, "_picker52578_"):
+		params, err = utils.Common(
+			utils.WithBytes(b),
+			utils.WithFilename("picker52578_"),
+			utils.WithKeyCondition(func(line string) bool { return strings.HasPrefix(line, "File Name") }))
+	case strings.Contains(f.FileName, "_fairygarden_"):
+		params, err = utils.Common(
+			// prepend "photo 1" to the input in case it's missing
+			utils.WithBytes(bytes.Join([][]byte{[]byte("photo 1"), b}, []byte("\n"))),
+			utils.UseFairyGarden())
+	default:
+		params, err = utils.Common(
+			// prepend "photo 1" to the input in case it's missing
+			utils.WithBytes(bytes.Join([][]byte{[]byte(f.FileName), b}, []byte("\n"))),
+			utils.WithKeyCondition(func(line string) bool { return strings.HasPrefix(line, f.FileName) }))
+	}
+	if err != nil {
+		return
+	}
+	if params != nil {
+		mutex.Lock()
+		(*allParams)[f.SubmissionID] = params
+		mutex.Unlock()
+	}
+}
+
+func auditorAsUsernameID(auditor *db.Auditor) api.UsernameID {
+	return api.UsernameID{UserID: strconv.FormatInt(auditor.UserID, 10), Username: auditor.Username}
 }

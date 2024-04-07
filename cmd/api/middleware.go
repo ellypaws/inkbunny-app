@@ -1,10 +1,13 @@
 package main
 
 import (
+	"github.com/coocood/freecache"
 	"github.com/ellypaws/inkbunny-app/cmd/crashy"
 	"github.com/ellypaws/inkbunny-app/cmd/db"
 	"github.com/ellypaws/inkbunny/api"
+	cache "github.com/gitsight/go-echo-cache"
 	"github.com/labstack/echo/v4"
+	"github.com/labstack/gommon/bytes"
 	"net/http"
 )
 
@@ -82,7 +85,7 @@ func GetSIDandID(c echo.Context) (string, int64, error) {
 	return sid, id, nil
 }
 
-func GetAuditor(c echo.Context) (auditor *db.Auditor, err error) {
+func GetCurrentAuditor(c echo.Context) (auditor *db.Auditor, err error) {
 	auditor, ok := c.Get("auditor").(*db.Auditor)
 	if !ok || auditor == nil {
 		return nil, crashy.ErrorResponse{ErrorString: "empty auditor"}
@@ -92,3 +95,19 @@ func GetAuditor(c echo.Context) (auditor *db.Auditor, err error) {
 }
 
 var staffMiddleware = []echo.MiddlewareFunc{LoggedInMiddleware, RequireAuditor}
+
+var globalCache = func() echo.MiddlewareFunc {
+	c := freecache.NewCache(256 * bytes.MiB)
+	return cache.New(&cache.Config{
+		Methods: []string{echo.GET, echo.HEAD},
+		Refresh: func(r *http.Request) bool {
+			return r.Header.Get("Cache-Control") == "no-cache"
+		},
+	}, c)
+}()
+
+func CacheMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
+	return globalCache(next)
+}
+
+var withCache = []echo.MiddlewareFunc{CacheMiddleware}

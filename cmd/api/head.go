@@ -6,7 +6,7 @@ import (
 )
 
 var headHandlers = pathHandler{
-	"/": handler{head, nil},
+	"/": handler{head, withCache},
 }
 
 func head(c echo.Context) error {

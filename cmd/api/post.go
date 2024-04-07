@@ -142,10 +142,23 @@ func logout(c echo.Context) error {
 		return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
 	}
 
-	err = database.RemoveSIDHash(db.HashCredentials(*user))
+	sidHash := db.HashCredentials(api.Credentials{Sid: sid, UserID: api.IntString(id)})
+	err = database.RemoveSIDHash(sidHash)
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
+		return c.JSON(http.StatusInternalServerError, crashy.ErrorResponse{ErrorString: err.Error(), Debug: db.HashCredentials(*user)})
 	}
+
+	c.SetCookie(&http.Cookie{
+		Name:   "sid",
+		Value:  "",
+		MaxAge: -1,
+	})
+
+	c.SetCookie(&http.Cookie{
+		Name:   "username",
+		Value:  "",
+		MaxAge: -1,
+	})
 
 	return c.String(http.StatusOK, "logged out")
 }

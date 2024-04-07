@@ -125,6 +125,8 @@ const (
 	selectOpenTickets = `SELECT * FROM tickets WHERE closed = false;`
 	// selectClosedTickets statement for Ticket
 	selectClosedTickets = `SELECT * FROM tickets WHERE closed = true;`
+	// selectALlTickets statement for Ticket
+	selectAllTickets = `SELECT * FROM tickets;`
 
 	// selectAudits statement for Audit
 	selectAudits = `SELECT audit_id, submission_id FROM audits`
@@ -404,6 +406,9 @@ func (db Sqlite) GetOpenTickets() ([]Ticket, error) {
 }
 func (db Sqlite) GetClosedTickets() ([]Ticket, error) {
 	return db.ticketsByQuery(selectClosedTickets)
+}
+func (db Sqlite) GetAllTickets() ([]Ticket, error) {
+	return db.ticketsByQuery(selectAllTickets)
 }
 
 func (db Sqlite) ticketsByQuery(query string, args ...any) ([]Ticket, error) {

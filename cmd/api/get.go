@@ -6,6 +6,7 @@ import (
 	"github.com/ellypaws/inkbunny-app/cmd/app"
 	"github.com/ellypaws/inkbunny-app/cmd/crashy"
 	"github.com/ellypaws/inkbunny-app/cmd/db"
+	"strconv"
 
 	"github.com/ellypaws/inkbunny/api"
 	"github.com/labstack/echo/v4"
@@ -320,12 +321,23 @@ func GetAuditHandler(c echo.Context) error {
 }
 
 func GetTicketsHandler(c echo.Context) error {
-	auditor, err := GetAuditor(c)
-	if err != nil {
-		return c.JSON(http.StatusUnauthorized, crashy.Wrap(err))
+	assignedID := c.QueryParam("assigned_id")
+
+	if assignedID != "" {
+		p, err := strconv.ParseInt(assignedID, 10, 64)
+		if err != nil {
+			return c.JSON(http.StatusBadRequest, crashy.Wrap(err))
+		}
+
+		tickets, err := database.GetTicketsByAuditor(p)
+		if err != nil {
+			return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
+		}
+
+		return c.JSON(http.StatusOK, tickets)
 	}
 
-	tickets, err := database.GetTicketsByAuditor(auditor.UserID)
+	tickets, err := database.GetAllTickets()
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
 	}

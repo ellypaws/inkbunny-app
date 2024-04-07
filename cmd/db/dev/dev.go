@@ -278,7 +278,7 @@ func ParseDataset(file utils.NameContent) utils.NameContent {
 
 func setTicketStatus() {
 	ticket.Closed = !ticket.Closed
-	err := sqlite.UpsertTicket(*ticket)
+	_, err := sqlite.UpsertTicket(*ticket)
 	if err != nil {
 		log.Printf("could not update ticket: %v", err)
 		options()
@@ -497,7 +497,7 @@ func newTicket() {
 		},
 	}
 
-	err = sqlite.UpsertTicket(ticket)
+	_, err = sqlite.UpsertTicket(ticket)
 	if err != nil {
 		log.Fatalf("could not insert ticket: %v", err)
 	}

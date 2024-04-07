@@ -101,7 +101,7 @@ const (
 				priority TEXT NOT NULL DEFAULT 'low',
 				flags BLOB,
 				closed BOOLEAN NOT NULL DEFAULT FALSE,
-				responses BLOB NOT NULL,
+				responses BLOB,
 				submissions_ids BLOB,
 				auditor_id INTEGER,
 				involved BLOB,

@@ -480,7 +480,12 @@ func Scan(scan map[any]any) error {
 			continue
 		}
 
+		v := reflect.ValueOf(value)
 		if p.Kind() == reflect.Pointer {
+			if v.Kind() == reflect.Pointer && v.IsNil() {
+				p.Set(reflect.Zero(p.Type()))
+				continue
+			}
 			// Allocate new memory if nil
 			if p.IsNil() {
 				p.Set(reflect.New(p.Type().Elem()))
@@ -504,7 +509,6 @@ func Scan(scan map[any]any) error {
 			}
 		}
 
-		v := reflect.ValueOf(value)
 		if v.Kind() == reflect.Pointer && p.Kind() != reflect.Pointer {
 			// If the value is a pointer but the element is not, dereference the value first
 			v = v.Elem()

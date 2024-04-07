@@ -7,6 +7,7 @@ import (
 	"github.com/ellypaws/inkbunny-app/cmd/app"
 	"github.com/ellypaws/inkbunny-app/cmd/crashy"
 	"github.com/ellypaws/inkbunny-app/cmd/db"
+	"github.com/ellypaws/inkbunny-sd/entities"
 	"github.com/ellypaws/inkbunny-sd/utils"
 	"github.com/ellypaws/inkbunny/api"
 	"github.com/labstack/echo/v4"
@@ -366,6 +367,11 @@ func GetAllAuditorsJHandler(c echo.Context) error {
 	return c.JSON(http.StatusOK, auditors)
 }
 
+// GetReviewHandler returns heuristic analysis of a submission
+//   - Set query "output" to "ticket", "submissions"
+//   - Set query "parameters" to "true" to parse the utils.Params from json/text files
+//   - Set query "interrogate" to "true" to parse entities.TaggerResponse from image files using (*sd.Host).Interrogate
+//   - TODO: Set query "heuristics" to "true" to parse entities.TextToImageRequest using utils.ParameterHeuristics
 func GetReviewHandler(c echo.Context) error {
 	sid, _, err := GetSIDandID(c)
 	if err != nil {
@@ -399,24 +405,19 @@ func GetReviewHandler(c echo.Context) error {
 		return c.JSON(http.StatusNotFound, crashy.ErrorResponse{ErrorString: "no submissions found"})
 	}
 
-	var submissions = make(map[string]db.Submission)
+	var submissions = make(map[int64]*db.Submission)
 	var userIDs []api.UsernameID
 	var ticketLabels []db.TicketLabel
 	var submissionIDsString []string
 	var submissionIDsInt64 []int64
-	var params = make(map[string]utils.Params)
 	var wg sync.WaitGroup
 	for i := range submissionDetails.Submissions {
+		submission := db.InkbunnySubmissionToDBSubmission(submissionDetails.Submissions[i])
 		if len(submissionDetails.Submissions[i].Files) > 0 {
 			wg.Add(1)
-			go ParseFile(&params, &wg, submissionDetails.Submissions[i].Files)
+			go parseFiles(c, &wg, &submission)
 		}
-		submission := db.InkbunnySubmissionToDBSubmission(submissionDetails.Submissions[i])
-		err := database.InsertSubmission(submission)
-		if err != nil {
-			return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
-		}
-		submissions[submissionDetails.Submissions[i].SubmissionID] = submission
+		submissions[submission.ID] = &submission
 		userIDs = append(userIDs, api.UsernameID{UserID: submissionDetails.Submissions[i].UserID, Username: submissionDetails.Submissions[i].Username})
 		ticketLabels = append(ticketLabels, db.SubmissionLabels(submission)...)
 		submissionIDsString = append(submissionIDsString, submission.URL)
@@ -424,20 +425,15 @@ func GetReviewHandler(c echo.Context) error {
 	}
 	wg.Wait()
 
-	if len(params) > 0 {
-		for id, p := range params {
-			for _, pngChunk := range p {
-				if _, ok := pngChunk[utils.Parameters]; ok {
-					s := submissions[id]
-					s.Metadata.HasGenerationDetails = true
-					submissions[id] = s
-					err := database.InsertSubmission(s)
-					if err != nil {
-						return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
-					}
-				}
-			}
+	var lastErr error
+	for _, sub := range submissions {
+		err := database.InsertSubmission(*sub)
+		if err != nil {
+			lastErr = err
 		}
+	}
+	if lastErr != nil {
+		return c.JSON(http.StatusInternalServerError, crashy.ErrorResponse{ErrorString: "some submissions failed to insert", Debug: err})
 	}
 
 	auditorAsUser := auditorAsUsernameID(auditor)
@@ -467,24 +463,103 @@ func GetReviewHandler(c echo.Context) error {
 		},
 	}
 
-	return c.JSON(http.StatusOK, ticket)
-}
-
-func ParseFile(allParams *map[string]utils.Params, wg *sync.WaitGroup, files []api.File) {
-	defer wg.Done()
-	var mutex sync.Mutex
-	for _, f := range files {
-		wg.Add(1)
-		go processFile(&mutex, wg, allParams, &f)
+	switch c.QueryParam("output") {
+	case "submissions":
+		return c.JSON(http.StatusOK, submissions)
+	default:
+		return c.JSON(http.StatusOK, ticket)
 	}
 }
 
-func processFile(mutex *sync.Mutex, wg *sync.WaitGroup, allParams *map[string]utils.Params, f *api.File) {
+func maxConfidence(old, new *entities.TaggerResponse) *entities.TaggerResponse {
+	if old == nil {
+		return new
+	}
+
+	var merged entities.TaggerResponse
+	merged.Caption.Tag = make(map[string]float64)
+	for label, oldConfidence := range old.Caption.Tag {
+		if new.Caption.Tag == nil {
+			merged.Caption.Tag = old.Caption.Tag
+			continue
+		}
+		merged.Caption.Tag = make(map[string]float64)
+		if newConfidence, ok := new.Caption.Tag[label]; ok {
+			merged.Caption.Tag[label] = max(oldConfidence, newConfidence)
+		} else {
+			merged.Caption.Tag[label] = oldConfidence
+		}
+	}
+
+	for label, newConfidence := range new.Caption.Tag {
+		if _, ok := merged.Caption.Tag[label]; !ok {
+			merged.Caption.Tag[label] = newConfidence
+		}
+	}
+
+	return &merged
+}
+
+func parseFiles(c echo.Context, wg *sync.WaitGroup, sub *db.Submission) {
 	defer wg.Done()
-	if !strings.HasPrefix(f.MimeType, "text") && !strings.HasSuffix(f.MimeType, "json") {
+	for i := range sub.Files {
+		if c.QueryParam("parameters") == "true" {
+			wg.Add(1)
+			go processParams(wg, sub, i)
+		}
+		if c.QueryParam("interrogate") == "true" {
+			wg.Add(1)
+			go processCaptions(wg, sub, i)
+		}
+	}
+}
+
+func processCaptions(wg *sync.WaitGroup, sub *db.Submission, i int) {
+	defer wg.Done()
+	f := &sub.Files[i].File
+	if !strings.HasPrefix(f.MimeType, "image") {
 		return
 	}
-	r, err := http.Get(f.FileURLFull)
+	req := defaultTaggerRequest
+	req.Image = &f.FileURLScreen
+	*req.Threshold = 0.7
+
+	t, err := host.Interrogate(&req)
+	if err != nil {
+		return
+	}
+
+	sub.Metadata.HumanConfidence = max(sub.Metadata.HumanConfidence, t.HumanPercent())
+	if t.HumanPercent() > 0.5 {
+		sub.Metadata.DetectedHuman = true
+	}
+
+	sub.Files[i].Caption = &t.Caption
+}
+
+func processParams(wg *sync.WaitGroup, sub *db.Submission, i int) {
+	defer wg.Done()
+
+	if sub.Metadata.HasGenerationDetails {
+		return
+	}
+
+	var textFile *db.File
+	for i, f := range sub.Files {
+		if strings.HasSuffix(f.File.MimeType, "json") {
+			textFile = &sub.Files[i]
+			break
+		}
+		if strings.HasPrefix(f.File.MimeType, "text") {
+			textFile = &sub.Files[i]
+			break
+		}
+	}
+
+	if textFile == nil {
+		return
+	}
+	r, err := http.Get(textFile.File.FileURLFull)
 	if err != nil {
 		return
 	}
@@ -493,11 +568,17 @@ func processFile(mutex *sync.Mutex, wg *sync.WaitGroup, allParams *map[string]ut
 		return
 	}
 	b, err := io.ReadAll(r.Body)
-	if err != nil {
+	if err != nil || len(b) == 0 {
 		return
 	}
+
+	if sub.Metadata.HasGenerationDetails {
+		return
+	}
+
 	// Because some artists already have standardized txt files, opt to split each file separately
 	var params utils.Params
+	f := &textFile.File
 	switch {
 	case strings.Contains(f.FileName, "_AutoSnep_"):
 		params, err = utils.AutoSnep(utils.WithBytes(b))
@@ -527,9 +608,8 @@ func processFile(mutex *sync.Mutex, wg *sync.WaitGroup, allParams *map[string]ut
 		return
 	}
 	if params != nil {
-		mutex.Lock()
-		(*allParams)[f.SubmissionID] = params
-		mutex.Unlock()
+		sub.Metadata.Params = &params
+		sub.Metadata.HasGenerationDetails = true
 	}
 }
 

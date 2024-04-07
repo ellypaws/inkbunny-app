@@ -2,6 +2,7 @@ package db
 
 import (
 	"github.com/ellypaws/inkbunny-sd/entities"
+	"github.com/ellypaws/inkbunny-sd/utils"
 	"github.com/ellypaws/inkbunny/api"
 	"time"
 )
@@ -284,16 +285,18 @@ type Submission struct {
 }
 
 type Metadata struct {
-	Generated            bool     `json:"generated,omitempty"`
-	Assisted             bool     `json:"assisted,omitempty"`
-	Img2Img              bool     `json:"img2img,omitempty"` // includes inpaint
-	HasJSON              bool     `json:"has_json,omitempty"`
-	HasTxt               bool     `json:"has_txt,omitempty"`
-	StableDiffusion      bool     `json:"stable_diffusion,omitempty"`
-	ComfyUI              bool     `json:"comfy_ui,omitempty"`
-	MultipleFiles        bool     `json:"multiple_files,omitempty"`
-	TaggedHuman          bool     `json:"tagged_human,omitempty"`
-	HumanPercentage      float64  `json:"human_percentage,omitempty"`
+	Generated            bool    `json:"generated,omitempty"`
+	Assisted             bool    `json:"assisted,omitempty"`
+	Img2Img              bool    `json:"img2img,omitempty"` // includes inpaint
+	HasJSON              bool    `json:"has_json,omitempty"`
+	HasTxt               bool    `json:"has_txt,omitempty"`
+	StableDiffusion      bool    `json:"stable_diffusion,omitempty"`
+	ComfyUI              bool    `json:"comfy_ui,omitempty"`
+	MultipleFiles        bool    `json:"multiple_files,omitempty"`
+	TaggedHuman          bool    `json:"tagged_human,omitempty"`
+	DetectedHuman        bool    `json:"detected_human,omitempty"`
+	HumanConfidence      float64 `json:"human_confidence,omitempty"`
+	*utils.Params        `json:"params,omitempty"`
 	AITitle              bool     `json:"ai_title,omitempty"`
 	AIDescription        bool     `json:"ai_description,omitempty"`
 	AIKeywords           []string `json:"ai_keywords,omitempty"`
@@ -306,9 +309,10 @@ func (s *Submission) Audit() *Audit {
 }
 
 type File struct {
-	File api.File        `json:"file"`
-	Info *GenerationInfo `json:"info,omitempty"`
-	Blob *string         `json:"blob,omitempty"`
+	File    api.File              `json:"file"`
+	Caption *entities.CaptionEnum `json:"caption,omitempty"`
+	Info    *GenerationInfo       `json:"info,omitempty"`
+	Blob    []byte                `json:"blob,omitempty"`
 }
 
 type SIDHash struct {

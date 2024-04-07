@@ -294,9 +294,10 @@ func InkbunnySubmissionToDBSubmission(submission api.Submission) Submission {
 
 	for _, f := range submission.Files {
 		dbSubmission.Files = append(dbSubmission.Files, File{
-			File: f,
-			Info: nil,
-			Blob: nil,
+			File:    f,
+			Caption: nil,
+			Info:    nil,
+			Blob:    nil,
 		})
 	}
 

@@ -61,6 +61,9 @@ const (
 	FROM auditors WHERE username = ?;
 	`
 
+	// selectAllAuditors statement for Auditor
+	selectAllAuditors = `SELECT * FROM auditors;`
+
 	// selectAuditsByAuditor statement for Audit
 	selectAuditsByAuditor = `
 	SELECT
@@ -657,4 +660,26 @@ func (db Sqlite) ModelNamesFromHash(hash string) []string {
 	}
 
 	return nil
+}
+
+func (db Sqlite) AllAuditors() []Auditor {
+	rows, err := db.QueryContext(db.context, selectAllAuditors)
+	if err != nil {
+		return nil
+	}
+	defer rows.Close()
+
+	var auditors []Auditor
+	for rows.Next() {
+		var auditor Auditor
+		var role string
+		err := rows.Scan(&auditor.UserID, &auditor.Username, &role, &auditor.AuditCount)
+		if err != nil {
+			return nil
+		}
+		auditor.Role = RoleLevel(role)
+		auditors = append(auditors, auditor)
+	}
+
+	return auditors
 }

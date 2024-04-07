@@ -24,6 +24,7 @@ var getHandlers = pathHandler{
 	"/image":                    handler{GetImageHandler, nil},
 	"/tickets/audits":           handler{GetAuditHandler, staffMiddleware},
 	"/tickets/get":              handler{GetTicketsHandler, staffMiddleware},
+	"/auditors":                 handler{GetAuditors, staffMiddleware},
 }
 
 // Deprecated: use registerAs((*echo.Echo).GET, getHandlers) instead
@@ -338,4 +339,12 @@ func validAuditor(user api.Credentials) bool {
 		return false
 	}
 	return database.IsAuditorRole(int64(user.UserID.Int()))
+}
+
+func GetAuditors(c echo.Context) error {
+	auditors := database.AllAuditors()
+	if auditors == nil {
+		return c.JSON(http.StatusInternalServerError, crashy.ErrorResponse{ErrorString: "no auditors found"})
+	}
+	return c.JSON(http.StatusOK, auditors)
 }

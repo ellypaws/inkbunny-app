@@ -371,7 +371,7 @@ func GetAllAuditorsJHandler(c echo.Context) error {
 //   - Set query "output" to "ticket", "submissions"
 //   - Set query "parameters" to "true" to parse the utils.Params from json/text files
 //   - Set query "interrogate" to "true" to parse entities.TaggerResponse from image files using (*sd.Host).Interrogate
-//   - TODO: Set query "heuristics" to "true" to parse entities.TextToImageRequest using utils.ParameterHeuristics
+//   - Set query "heuristics" to "true" to parse entities.TextToImageRequest using utils.ParameterHeuristics
 func GetReviewHandler(c echo.Context) error {
 	sid, _, err := GetSIDandID(c)
 	if err != nil {
@@ -505,7 +505,7 @@ func parseFiles(c echo.Context, wg *sync.WaitGroup, sub *db.Submission) {
 	for i := range sub.Files {
 		if c.QueryParam("parameters") == "true" {
 			wg.Add(1)
-			go processParams(wg, sub, i)
+			go processParams(wg, sub, c.QueryParam("heuristics") == "true")
 		}
 		if c.QueryParam("interrogate") == "true" {
 			wg.Add(1)
@@ -537,7 +537,7 @@ func processCaptions(wg *sync.WaitGroup, sub *db.Submission, i int) {
 	sub.Files[i].Caption = &t.Caption
 }
 
-func processParams(wg *sync.WaitGroup, sub *db.Submission, i int) {
+func processParams(wg *sync.WaitGroup, sub *db.Submission, heuristics bool) {
 	defer wg.Done()
 
 	if sub.Metadata.HasGenerationDetails {
@@ -608,8 +608,37 @@ func processParams(wg *sync.WaitGroup, sub *db.Submission, i int) {
 		return
 	}
 	if params != nil {
-		sub.Metadata.Params = &params
 		sub.Metadata.HasGenerationDetails = true
+		sub.Metadata.Params = &params
+		if heuristics {
+			parseObjects(wg, sub)
+		}
+	}
+}
+
+func parseObjects(wg *sync.WaitGroup, sub *db.Submission) {
+	if sub.Metadata.Objects != nil {
+		return
+	}
+
+	var mutex sync.Mutex
+	for subID, params := range *sub.Metadata.Params {
+		for file, parameters := range params {
+			wg.Add(1)
+			go func(file string, p string) {
+				defer wg.Done()
+				heuristics, err := utils.ParameterHeuristics(p)
+				if err != nil {
+					return
+				}
+				if sub.Metadata.Objects == nil {
+					sub.Metadata.Objects = make(map[string]entities.TextToImageRequest)
+				}
+				mutex.Lock()
+				sub.Metadata.Objects[file] = heuristics
+				mutex.Unlock()
+			}(fmt.Sprintf("%v_%v", subID, file), parameters)
+		}
 	}
 }
 

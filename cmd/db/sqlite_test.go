@@ -190,11 +190,6 @@ func TestSqlite_SyncAuditCount(t *testing.T) {
 					FileID:   "123",
 					FileName: "file",
 				},
-				Info: &GenerationInfo{
-					Generator: "generator",
-					Model:     "model",
-				},
-				Blob: nil,
 			},
 		},
 	}
@@ -276,11 +271,6 @@ func TestSqlite_InsertFile(t *testing.T) {
 			FileName:     "file",
 			SubmissionID: "123",
 		},
-		Info: &GenerationInfo{
-			Generator: "generator",
-			Model:     "model",
-		},
-		Blob: nil,
 	}
 
 	err := db.InsertFile(file)

@@ -302,6 +302,8 @@ type Metadata struct {
 	AIKeywords           []string `json:"ai_keywords,omitempty"`
 	AIAccount            bool     `json:"ai_account,omitempty"`
 	HasGenerationDetails bool     `json:"has_generation_details,omitempty"` // when the txt or json file parses as utils.Parameters
+
+	Objects map[string]entities.TextToImageRequest `json:"objects,omitempty"`
 }
 
 func (s *Submission) Audit() *Audit {
@@ -311,8 +313,6 @@ func (s *Submission) Audit() *Audit {
 type File struct {
 	File    api.File              `json:"file"`
 	Caption *entities.CaptionEnum `json:"caption,omitempty"`
-	Info    *GenerationInfo       `json:"info,omitempty"`
-	Blob    []byte                `json:"blob,omitempty"`
 }
 
 type SIDHash struct {

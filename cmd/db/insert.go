@@ -130,6 +130,11 @@ const (
 	DELETE FROM sids WHERE sid_hash = ?;
 	`
 
+	// deleteSIDHashes statement for SIDHash
+	deleteSIDHashes = `
+	DELETE FROM sids WHERE auditor_id = ?;
+	`
+
 	// upsertModel statement for ModelHashes
 	upsertModel = `
 	INSERT INTO models (hash, models) VALUES (?, ?)
@@ -590,7 +595,16 @@ func (db Sqlite) InsertSIDHash(sid SIDHash) error {
 }
 
 func (db Sqlite) RemoveSIDHash(sid SIDHash) error {
-	_, err := db.ExecContext(db.context, deleteSIDHash, sid.AuditorID)
+	_, err := db.ExecContext(db.context, deleteSIDHash, sid.Hash)
+	return err
+}
+
+func (db Sqlite) LogoutAll(sid SIDHash) error {
+	id, err := db.GetUserIDFromSID(sid.Hash)
+	if err != nil {
+		return err
+	}
+	_, err = db.ExecContext(db.context, deleteSIDHashes, id)
 	return err
 }
 

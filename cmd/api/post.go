@@ -35,7 +35,11 @@ var postHandlers = pathHandler{
 }
 
 func newTicket(c echo.Context) error {
-	var ticket db.Ticket
+	var ticket db.Ticket = db.Ticket{
+		DateOpened: time.Now(),
+		Priority:   "low",
+		Closed:     false,
+	}
 	if err := c.Bind(&ticket); err != nil {
 		return err
 	}

@@ -23,7 +23,7 @@ import (
 var postHandlers = pathHandler{
 	"/login":              handler{login, nil},
 	"/logout":             handler{logout, loggedInMiddleware},
-	"/validate":           handler{validate, nil},
+	"/validate":           handler{validate, loggedInMiddleware},
 	"/llm":                handler{inference, nil},
 	"/llm/json":           handler{stable, nil},
 	"/prefill":            handler{prefill, nil},
@@ -126,30 +126,14 @@ func login(c echo.Context) error {
 }
 
 func logout(c echo.Context) error {
-	var user *api.Credentials
-	if err := c.Bind(&user); err != nil {
-		return c.JSON(http.StatusBadRequest, crashy.Wrap(err))
+	sid, id, err := GetSIDandID(c)
+	if err != nil {
+		return c.JSON(http.StatusUnauthorized, crashy.Wrap(err))
 	}
 
-	if sid, err := c.Cookie("sid"); err == nil {
-		if user == nil {
-			user = &api.Credentials{Sid: sid.Value}
-		}
-		user.Sid = sid.Value
-	}
+	user := &api.Credentials{Sid: sid, UserID: api.IntString(id)}
 
-	if username, err := c.Cookie("username"); err == nil {
-		if user == nil {
-			user = &api.Credentials{Username: username.Value}
-		}
-		user.Username = username.Value
-	}
-
-	if user.Sid == "" {
-		return c.JSON(http.StatusBadRequest, crashy.ErrorResponse{ErrorString: "SID is required"})
-	}
-
-	err := user.Logout()
+	err = user.Logout()
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
 	}
@@ -167,24 +151,12 @@ func logout(c echo.Context) error {
 }
 
 func validate(c echo.Context) error {
-	var user api.Credentials
-	if err := c.Bind(user); err != nil {
-		return err
+	sid, _, err := GetSIDandID(c)
+	if err != nil {
+		return c.JSON(http.StatusUnauthorized, crashy.Wrap(err))
 	}
 
-	if cookie, err := c.Cookie("sid"); err == nil {
-		user.Sid = cookie.Value
-	}
-
-	if user.Sid == "" {
-		return c.JSON(http.StatusBadRequest, crashy.ErrorResponse{ErrorString: "SID is required"})
-	}
-
-	if err := db.Error(database); err != nil {
-		return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
-	}
-
-	if !database.ValidSID(user) {
+	if !database.ValidSID(api.Credentials{Sid: sid}) {
 		return c.JSON(http.StatusUnauthorized, crashy.ErrorResponse{ErrorString: "invalid SID"})
 	}
 

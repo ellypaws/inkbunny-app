@@ -234,6 +234,10 @@ func (r Role) String() string {
 	}
 }
 
+func (r Role) IsAuditor() bool {
+	return r <= RoleAuditor
+}
+
 func RoleLevel(s string) Role {
 	switch s {
 	case "admin":

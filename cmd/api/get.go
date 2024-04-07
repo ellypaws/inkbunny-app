@@ -22,7 +22,7 @@ var getHandlers = pathHandler{
 	"/inkbunny/submission/:ids": handler{GetInkbunnySubmission, nil},
 	"/inkbunny/search":          handler{GetInkbunnySearch, nil},
 	"/image":                    handler{GetImageHandler, nil},
-	"/tickets/audits":           handler{GetAuditHandler, loggedInMiddleware},
+	"/tickets/audits":           handler{GetAuditHandler, staffMiddleware},
 	"/tickets/get":              handler{GetTicketsHandler, staffMiddleware},
 }
 
@@ -305,38 +305,12 @@ func mail(c echo.Context, user *api.Credentials, response api.SubmissionSearchRe
 }
 
 func GetAuditHandler(c echo.Context) error {
-	var user *api.Credentials
-	err := c.Bind(&user)
+	auditor, err := GetAuditor(c)
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, crashy.Wrap(err))
+		return c.JSON(http.StatusUnauthorized, crashy.Wrap(err))
 	}
 
-	if cookie, err := c.Cookie("sid"); err == nil {
-		if user == nil {
-			user = &api.Credentials{Sid: cookie.Value}
-		}
-		user.Sid = cookie.Value
-	}
-
-	if err := db.Error(database); err != nil {
-		return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
-	}
-
-	if !database.ValidSID(*user) {
-		return c.JSON(http.StatusUnauthorized, crashy.ErrorResponse{ErrorString: "invalid SID"})
-	}
-	if user.Username == "" {
-		user.Username, err = database.GetUserIDFromSID(user.Sid)
-		if err != nil {
-			return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
-		}
-	}
-
-	if !validAuditor(*user) {
-		return c.JSON(http.StatusUnauthorized, crashy.ErrorResponse{ErrorString: "invalid auditor"})
-	}
-
-	audits, err := database.GetAuditsByAuditor(int64(user.UserID.Int()))
+	audits, err := database.GetAuditsByAuditor(auditor.UserID)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
 	}
@@ -345,38 +319,12 @@ func GetAuditHandler(c echo.Context) error {
 }
 
 func GetTicketsHandler(c echo.Context) error {
-	var user *api.Credentials
-	err := c.Bind(&user)
+	auditor, err := GetAuditor(c)
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, crashy.Wrap(err))
+		return c.JSON(http.StatusUnauthorized, crashy.Wrap(err))
 	}
 
-	if cookie, err := c.Cookie("sid"); err == nil {
-		if user == nil {
-			user = &api.Credentials{Sid: cookie.Value}
-		}
-		user.Sid = cookie.Value
-	}
-
-	if err := db.Error(database); err != nil {
-		return c.JSON(http.StatusInternalServerError, crashy.ErrorResponse{ErrorString: "database error", Debug: err})
-	}
-
-	if !database.ValidSID(*user) {
-		return c.JSON(http.StatusUnauthorized, crashy.ErrorResponse{ErrorString: "invalid SID"})
-	}
-	if user.Username == "" {
-		user.Username, err = database.GetUserIDFromSID(user.Sid)
-		if err != nil {
-			return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
-		}
-	}
-
-	if !validAuditor(*user) {
-		return c.JSON(http.StatusUnauthorized, crashy.ErrorResponse{ErrorString: "invalid auditor"})
-	}
-
-	tickets, err := database.GetTicketsByAuditor(int64(user.UserID.Int()))
+	tickets, err := database.GetTicketsByAuditor(auditor.UserID)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
 	}

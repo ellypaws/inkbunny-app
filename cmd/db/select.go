@@ -547,8 +547,8 @@ func (db Sqlite) GetAuditorFromHash(hash string) (Auditor, error) {
 	return db.GetAuditorByID(id)
 }
 
-func (db Sqlite) GetUserIDFromSID(sid string) (string, error) {
-	var id string
+func (db Sqlite) GetUserIDFromSID(sid string) (int64, error) {
+	var id int64
 	err := db.QueryRowContext(db.context, SelectAuditorIDFromHash, hash(sid)).Scan(&id)
 	return id, err
 }

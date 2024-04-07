@@ -343,9 +343,10 @@ const (
 )
 
 type Response struct {
-	SupportTeam bool      `json:"support_team"`
-	Date        time.Time `json:"date"`
-	Message     string    `json:"message"`
+	SupportTeam bool           `json:"support_team"`
+	User        api.UsernameID `json:"user"`
+	Date        time.Time      `json:"date"`
+	Message     string         `json:"message"`
 }
 
 type Involved struct {

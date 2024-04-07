@@ -7,7 +7,7 @@ replace github.com/ellypaws/inkbunny-app/cmd => ../
 require (
 	github.com/disintegration/imaging v1.6.2
 	github.com/ellypaws/inkbunny-app/cmd v0.0.0
-	github.com/ellypaws/inkbunny-sd v0.0.0-20240403082634-4997250121d0
+	github.com/ellypaws/inkbunny-sd v0.0.0-20240407084422-2ea0a9d8c0e5
 	github.com/ellypaws/inkbunny/api v0.0.0-20240405073124-c7ced75cc1c7
 	github.com/go-errors/errors v1.5.1
 	github.com/labstack/echo/v4 v4.11.4

@@ -595,11 +595,28 @@ func (db Sqlite) InsertSIDHash(sid SIDHash) error {
 }
 
 func (db Sqlite) RemoveSIDHash(sid SIDHash) error {
-	_, err := db.ExecContext(db.context, deleteSIDHash, sid.Hash)
-	return err
+	if sid.Hash == hash("") {
+		return fmt.Errorf("error: sid hash cannot be empty")
+	}
+	res, err := db.ExecContext(db.context, deleteSIDHash, sid.Hash)
+	if err != nil {
+		return err
+	}
+	r, err := res.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if r == 0 {
+		return fmt.Errorf("error: no rows affected")
+	}
+
+	return nil
 }
 
 func (db Sqlite) LogoutAll(sid SIDHash) error {
+	if sid.Hash == hash("") {
+		return fmt.Errorf("error: sid hash cannot be empty")
+	}
 	id, err := db.GetUserIDFromSID(sid.Hash)
 	if err != nil {
 		return err

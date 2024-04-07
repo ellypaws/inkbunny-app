@@ -582,6 +582,9 @@ func (db Sqlite) ValidSID(user api.Credentials) bool {
 	//return row.Err() == nil
 	// use Query instead
 
+	if user.Sid == "" {
+		return false
+	}
 	rows, err := db.QueryContext(db.context, selectSIDsFromHash, hash(user.Sid))
 	if err != nil {
 		return false

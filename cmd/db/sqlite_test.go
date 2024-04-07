@@ -827,7 +827,7 @@ func TestSqlite_Tickets(t *testing.T) {
 		},
 	}
 
-	err = db.UpsertTicket(ticket)
+	_, err = db.UpsertTicket(ticket)
 	if err != nil {
 		t.Fatalf("could not insert ticket: %v", err)
 	}
@@ -858,7 +858,7 @@ func TestSqlite_Tickets(t *testing.T) {
 		},
 	}
 
-	err = db.UpsertTicket(ticket)
+	_, err = db.UpsertTicket(ticket)
 	if err != nil {
 		t.Fatalf("could not insert ticket: %v", err)
 	}

@@ -324,7 +324,7 @@ type Ticket struct {
 	Closed        bool          `json:"closed"`
 	Flags         []Flag        `json:"flags,omitempty"`
 	Responses     []Response    `json:"responses,omitempty"`
-	SubmissionIDs []int64       `json:"submissions_ids,omitempty"`
+	SubmissionIDs []int64       `json:"submission_ids,omitempty"`
 	auditor       *Auditor
 	AssignedID    *int64   `json:"assigned_id,omitempty"` // Auditor ID
 	UsersInvolved Involved `json:"involved"`

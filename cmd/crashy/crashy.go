@@ -36,12 +36,21 @@ func (e ErrorResponse) Map() map[string]any {
 }
 
 func (e ErrorResponse) MarshalJSON() ([]byte, error) {
+	if _, ok := e.Debug.(error); ok {
+		return json.Marshal(struct {
+			Error string         `json:"error"`
+			Debug map[string]any `json:"debug,omitempty"`
+		}{
+			Error: e.ErrorString,
+			Debug: e.Map(),
+		})
+	}
 	return json.Marshal(struct {
-		Error string         `json:"error"`
-		Debug map[string]any `json:"debug,omitempty"`
+		Error string `json:"error"`
+		Debug any    `json:"debug,omitempty"`
 	}{
 		Error: e.ErrorString,
-		Debug: e.Map(),
+		Debug: e.Debug,
 	})
 }
 

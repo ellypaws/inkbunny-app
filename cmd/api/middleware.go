@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"github.com/coocood/freecache"
 	"github.com/ellypaws/inkbunny-app/cmd/crashy"
 	"github.com/ellypaws/inkbunny-app/cmd/db"
@@ -9,6 +10,8 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/gommon/bytes"
 	"net/http"
+	"strings"
+	"time"
 )
 
 // LoggedInMiddleware is a middleware for echo that checks if the "sid" cookie is set.
@@ -96,18 +99,50 @@ func GetCurrentAuditor(c echo.Context) (auditor *db.Auditor, err error) {
 
 var staffMiddleware = []echo.MiddlewareFunc{LoggedInMiddleware, RequireAuditor}
 
+const timeToLive = 5 * time.Minute
+
+var timeToLiveString = fmt.Sprintf("max-age=%v", timeToLive.Seconds())
+
+var defaultCacheConfig = &cache.Config{
+	Methods: []string{echo.GET, echo.HEAD},
+	TTL:     timeToLive,
+	Refresh: func(r *http.Request) bool {
+		return r.Header.Get("Cache-Control") == "no-cache"
+	},
+}
+
 var globalCache = func() echo.MiddlewareFunc {
 	c := freecache.NewCache(256 * bytes.MiB)
-	return cache.New(&cache.Config{
-		Methods: []string{echo.GET, echo.HEAD},
-		Refresh: func(r *http.Request) bool {
-			return r.Header.Get("Cache-Control") == "no-cache"
-		},
-	}, c)
+	return cache.New(defaultCacheConfig, c)
 }()
 
 func CacheMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
 	return globalCache(next)
 }
 
-var withCache = []echo.MiddlewareFunc{CacheMiddleware}
+func SetCacheHeaders(next echo.HandlerFunc) echo.HandlerFunc {
+	return func(c echo.Context) error {
+		c.Response().Header().Set("Cache-Control", timeToLiveString)
+		return next(c)
+	}
+}
+
+var withCache = []echo.MiddlewareFunc{SetCacheHeaders, CacheMiddleware}
+
+func Static(next echo.HandlerFunc) echo.HandlerFunc {
+	return func(c echo.Context) error {
+		s := strings.Split(c.Request().RequestURI, "/")
+		etag := s[len(s)-1]
+
+		c.Response().Header().Set("Etag", etag)
+		c.Response().Header().Set("Cache-Control", "public, max-age=86400") // 24 hours
+		if match := c.Request().Header.Get("If-None-Match"); match != "" {
+			if strings.Contains(match, etag) {
+				return c.NoContent(http.StatusNotModified)
+			}
+		}
+		return next(c)
+	}
+}
+
+var staticMiddleware = []echo.MiddlewareFunc{Static}

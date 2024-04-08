@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	_ "embed"
 	"fmt"
 	. "github.com/ellypaws/inkbunny-app/api/entities"
 	"github.com/ellypaws/inkbunny-app/cmd/app"
@@ -27,11 +28,16 @@ var getHandlers = pathHandler{
 	"/inkbunny/submission":      handler{GetInkbunnySubmission, withCache},
 	"/inkbunny/submission/:ids": handler{GetInkbunnySubmission, withCache},
 	"/inkbunny/search":          handler{GetInkbunnySearch, withCache},
-	"/image":                    handler{GetImageHandler, withCache},
+	"/image":                    handler{GetImageHandler, staticMiddleware},
 	"/review/:id":               handler{GetReviewHandler, append(staffMiddleware, CacheMiddleware)},
 	"/tickets/audits":           handler{GetAuditHandler, staffMiddleware},
 	"/tickets/get":              handler{GetTicketsHandler, staffMiddleware},
 	"/auditors":                 handler{GetAllAuditorsJHandler, staffMiddleware},
+	"/robots.txt":               handler{robots, staticMiddleware},
+}
+
+func robots(c echo.Context) error {
+	return c.File("public/robots.txt")
 }
 
 // Deprecated: use registerAs((*echo.Echo).GET, getHandlers) instead

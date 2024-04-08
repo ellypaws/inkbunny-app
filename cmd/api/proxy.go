@@ -16,18 +16,21 @@ import (
 
 var fileCache = &FileCache{
 	items:    make(map[string]*CacheItem),
+	ongoing:  make(map[string]chan *CacheItem),
 	maxSize:  256 * bytes.MiB,
 	maxItems: 20,
 }
 
 var textCache = &FileCache{
 	items:    make(map[string]*CacheItem),
+	ongoing:  make(map[string]chan *CacheItem),
 	maxSize:  32 * bytes.MiB,
 	maxItems: 256,
 }
 
 type FileCache struct {
 	items       map[string]*CacheItem
+	ongoing     map[string]chan *CacheItem
 	maxSize     int64 // Max size in bytes
 	maxItems    int
 	currentSize int64
@@ -80,12 +83,31 @@ func GetCache(c echo.Context, key string, fileURL string) (*CacheItem, func(c ec
 	}
 	cacheItem, found := cacheToUse.Get(key)
 	if found {
-		c.Logger().Infof("Cache hit for %s", key)
+		c.Logger().Infof("Cache hit for %s", fileURL)
 		c.Response().Header().Set("Cache-Control", "public, max-age=86400") // 24 hours
 		return cacheItem, nil
 	}
 
-	c.Logger().Infof("Cache miss for %s, retrieving %s", key, fileURL)
+	cacheToUse.mu.Lock()
+	if ongoing, found := cacheToUse.ongoing[key]; found {
+		cacheToUse.mu.Unlock()
+		c.Logger().Debugf("Still receiving %s", fileURL)
+		item := <-ongoing
+		item, found := cacheToUse.Get(key)
+		if found {
+			c.Logger().Debugf("Retrieved %s %s %dKiB", key, item.MimeType, len(item.Blob)/bytes.KiB)
+			c.Response().Header().Set("Cache-Control", "public, max-age=86400") // 24 hours
+			return item, nil
+		}
+		return nil, func(c echo.Context) error { return c.NoContent(http.StatusInternalServerError) }
+	}
+
+	c.Logger().Infof("Cache miss for %s retrieving...", fileURL)
+
+	done := make(chan *CacheItem)
+	cacheToUse.ongoing[key] = done
+	cacheToUse.mu.Unlock()
+
 	resp, err := http.Get(fileURL)
 	if err != nil {
 		return nil, func(c echo.Context) error {
@@ -117,6 +139,7 @@ func GetCache(c echo.Context, key string, fileURL string) (*CacheItem, func(c ec
 	cacheToUse.Set(key, item)
 	c.Logger().Debugf("Cached %s %s %dKiB", key, mimeType, len(blob)/bytes.KiB)
 	c.Response().Header().Set("Cache-Control", "public, max-age=86400")
+
 	return item, nil
 }
 
@@ -125,12 +148,16 @@ func (c *FileCache) Get(key string) (*CacheItem, bool) {
 	defer c.mu.Unlock()
 	item, found := c.items[key]
 	if found {
-		backoff := int64(min(math.Pow(2, float64(item.HitCount-1)), 24*time.Hour.Seconds())) // max backoff of 24 hours
-		item.LastAccess = time.Now().Add(time.Duration(backoff) * time.Second)
-		item.HitCount += 1
+		item.Accessed()
 		return item, true
 	}
 	return nil, false
+}
+
+func (item *CacheItem) Accessed() {
+	backoff := int64(min(math.Pow(2, float64(item.HitCount-1)), 24*time.Hour.Seconds()))
+	item.LastAccess = time.Now().Add(time.Duration(backoff) * time.Second)
+	item.HitCount += 1
 }
 
 func (c *FileCache) Set(key string, item *CacheItem) {
@@ -143,6 +170,10 @@ func (c *FileCache) Set(key string, item *CacheItem) {
 		}
 		c.items[key] = item
 		c.currentSize += int64(len(item.Blob))
+	}
+	if channel, found := c.ongoing[key]; found && channel != nil {
+		close(channel)
+		delete(c.ongoing, key)
 	}
 }
 

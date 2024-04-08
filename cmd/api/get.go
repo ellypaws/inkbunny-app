@@ -376,7 +376,6 @@ func GetAllAuditorsJHandler(c echo.Context) error {
 //   - Set query "output" to "ticket", "submissions"
 //   - Set query "parameters" to "true" to parse the utils.Params from json/text files
 //   - Set query "interrogate" to "true" to parse entities.TaggerResponse from image files using (*sd.Host).Interrogate
-//   - Set query "heuristics" to "true" to parse entities.TextToImageRequest using utils.ParameterHeuristics
 //   - Set query "multiple" to "true" to separate each db.Ticket by submission
 func GetReviewHandler(c echo.Context) error {
 	sid, _, err := GetSIDandID(c)
@@ -432,13 +431,6 @@ func GetReviewHandler(c echo.Context) error {
 
 	var lastErr error
 	for _, sub := range submissions {
-		if len(sub.Metadata.Objects) == 0 && c.QueryParam("heuristics") == "true" {
-			c.Logger().Debugf("processing description heuristics for %v", sub.URL)
-			heuristics, err := utils.DescriptionHeuristics(sub.Description)
-			if err == nil {
-				sub.Metadata.Objects = map[string]entities.TextToImageRequest{"description_heuristics": heuristics}
-			}
-		}
 		err := database.InsertSubmission(*sub)
 		if err != nil {
 			c.Logger().Errorf("error inserting submission %v: %v", sub.ID, err)
@@ -555,7 +547,7 @@ func parseFiles(c echo.Context, wg *sync.WaitGroup, sub *db.Submission) {
 	defer wg.Done()
 	if c.QueryParam("parameters") == "true" {
 		wg.Add(1)
-		go processParams(c, wg, sub, c.QueryParam("heuristics") == "true")
+		go processParams(c, wg, sub)
 	}
 	for i := range sub.Files {
 		if c.QueryParam("interrogate") == "true" {
@@ -598,7 +590,7 @@ func processCaptions(c echo.Context, wg *sync.WaitGroup, sub *db.Submission, i i
 	sub.Files[i].Caption = &t.Caption
 }
 
-func processParams(c echo.Context, wg *sync.WaitGroup, sub *db.Submission, heuristics bool) {
+func processParams(c echo.Context, wg *sync.WaitGroup, sub *db.Submission) {
 	defer wg.Done()
 
 	if sub.Metadata.Params != nil {
@@ -668,9 +660,15 @@ func processParams(c echo.Context, wg *sync.WaitGroup, sub *db.Submission, heuri
 	if params != nil {
 		c.Logger().Debugf("finished params for %v", f.FileName)
 		sub.Metadata.Params = &params
-		if heuristics {
-			c.Logger().Debugf("processing object for %v", f.FileName)
-			parseObjects(c, wg, sub)
+
+		c.Logger().Debugf("processing object for %v", f.FileName)
+		parseObjects(c, wg, sub)
+	}
+	if len(sub.Metadata.Objects) == 0 {
+		c.Logger().Debugf("processing description heuristics for %v", sub.URL)
+		heuristics, err := utils.DescriptionHeuristics(sub.Description)
+		if err == nil {
+			sub.Metadata.Objects = map[string]entities.TextToImageRequest{"description_heuristics": heuristics}
 		}
 	}
 }

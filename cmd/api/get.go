@@ -432,23 +432,19 @@ func GetReviewHandler(c echo.Context) error {
 
 	var lastErr error
 	for _, sub := range submissions {
-		wg.Add(1)
-		go func(sub *db.Submission) {
-			defer wg.Done()
-			if len(sub.Metadata.Objects) == 0 && c.QueryParam("heuristics") == "true" {
-				c.Logger().Debugf("processing description heuristics for %v", sub.URL)
-				heuristics, err := utils.DescriptionHeuristics(sub.Description)
-				if err == nil {
-					sub.Metadata.Objects = map[string]entities.TextToImageRequest{"description_heuristics": heuristics}
-				}
+		if len(sub.Metadata.Objects) == 0 && c.QueryParam("heuristics") == "true" {
+			c.Logger().Debugf("processing description heuristics for %v", sub.URL)
+			heuristics, err := utils.DescriptionHeuristics(sub.Description)
+			if err == nil {
+				sub.Metadata.Objects = map[string]entities.TextToImageRequest{"description_heuristics": heuristics}
 			}
-			err := database.InsertSubmission(*sub)
-			if err != nil {
-				lastErr = err
-			}
-		}(sub)
+		}
+		err := database.InsertSubmission(*sub)
+		if err != nil {
+			c.Logger().Errorf("error inserting submission %v: %v", sub.ID, err)
+			lastErr = err
+		}
 	}
-	wg.Wait()
 	if lastErr != nil {
 		return c.JSON(http.StatusInternalServerError, crashy.ErrorResponse{ErrorString: "some submissions failed to insert", Debug: err})
 	}

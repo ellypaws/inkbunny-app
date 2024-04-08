@@ -381,14 +381,34 @@ func SetSubmissionMeta(submission *Submission) {
 
 func SubmissionLabels(submission Submission) []TicketLabel {
 	var labels []TicketLabel
-	if submission.Metadata.Generated {
+	m := submission.Metadata
+	var hasGenerationDetails bool
+	if m.Generated {
 		labels = append(labels, LabelAIGenerated)
 	}
-	if submission.Metadata.Assisted {
+	if m.Assisted {
 		labels = append(labels, LabelAIAssisted)
 	}
-	if submission.Metadata.Img2Img {
+	if m.Img2Img {
 		labels = append(labels, LabelImg2Img)
+	}
+	if m.TaggedHuman {
+		labels = append(labels, LabelTaggedHuman)
+	}
+	if m.DetectedHuman {
+		labels = append(labels, LabelDetectedHuman)
+	}
+	if m.Params != nil {
+		hasGenerationDetails = true
+	}
+	if m.Objects != nil {
+		hasGenerationDetails = true
+	}
+	if m.HasTxt || m.HasJSON {
+		hasGenerationDetails = true
+	}
+	if !hasGenerationDetails {
+		labels = append(labels, LabelMissingPrompt)
 	}
 	return labels
 }

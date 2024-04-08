@@ -285,23 +285,23 @@ type Submission struct {
 }
 
 type Metadata struct {
-	Generated            bool    `json:"generated,omitempty"`
-	Assisted             bool    `json:"assisted,omitempty"`
-	Img2Img              bool    `json:"img2img,omitempty"` // includes inpaint
-	HasJSON              bool    `json:"has_json,omitempty"`
-	HasTxt               bool    `json:"has_txt,omitempty"`
-	StableDiffusion      bool    `json:"stable_diffusion,omitempty"`
-	ComfyUI              bool    `json:"comfy_ui,omitempty"`
-	MultipleFiles        bool    `json:"multiple_files,omitempty"`
-	TaggedHuman          bool    `json:"tagged_human,omitempty"`
-	DetectedHuman        bool    `json:"detected_human,omitempty"`
-	HumanConfidence      float64 `json:"human_confidence,omitempty"`
-	*utils.Params        `json:"params,omitempty"`
-	AITitle              bool     `json:"ai_title,omitempty"`
-	AIDescription        bool     `json:"ai_description,omitempty"`
-	AIKeywords           []string `json:"ai_keywords,omitempty"`
-	AIAccount            bool     `json:"ai_account,omitempty"`
-	HasGenerationDetails bool     `json:"has_generation_details,omitempty"` // when the txt or json file parses as utils.Parameters
+	Generated       bool     `json:"generated,omitempty"`
+	Assisted        bool     `json:"assisted,omitempty"`
+	Img2Img         bool     `json:"img2img,omitempty"` // includes inpaint
+	HasJSON         bool     `json:"has_json,omitempty"`
+	HasTxt          bool     `json:"has_txt,omitempty"`
+	StableDiffusion bool     `json:"stable_diffusion,omitempty"`
+	ComfyUI         bool     `json:"comfy_ui,omitempty"`
+	MultipleFiles   bool     `json:"multiple_files,omitempty"`
+	TaggedHuman     bool     `json:"tagged_human,omitempty"`
+	DetectedHuman   bool     `json:"detected_human,omitempty"`
+	HumanConfidence float64  `json:"human_confidence,omitempty"`
+	AITitle         bool     `json:"ai_title,omitempty"`
+	AIDescription   bool     `json:"ai_description,omitempty"`
+	AIKeywords      []string `json:"ai_keywords,omitempty"`
+	AIAccount       bool     `json:"ai_account,omitempty"`
+
+	*utils.Params `json:"params,omitempty"`
 
 	Objects map[string]entities.TextToImageRequest `json:"objects,omitempty"`
 }
@@ -348,9 +348,14 @@ func (t Ticket) Auditor() *Auditor {
 type TicketLabel string
 
 const (
-	LabelAIGenerated TicketLabel = "ai_generated"
-	LabelAIAssisted  TicketLabel = "ai_assisted"
-	LabelImg2Img     TicketLabel = "img2img"
+	LabelAIGenerated   TicketLabel = "ai_generated"
+	LabelAIAssisted    TicketLabel = "ai_assisted"
+	LabelImg2Img       TicketLabel = "img2img"
+	LabelTaggedHuman   TicketLabel = "tagged_human"
+	LabelDetectedHuman TicketLabel = "detected_human"
+	LabelJSON          TicketLabel = "json"
+	LabelTxt           TicketLabel = "txt"
+	LabelMissingPrompt TicketLabel = "missing_prompt"
 )
 
 type Response struct {

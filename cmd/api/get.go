@@ -377,6 +377,7 @@ func GetAllAuditorsJHandler(c echo.Context) error {
 //   - Set query "parameters" to "true" to parse the utils.Params from json/text files
 //   - Set query "interrogate" to "true" to parse entities.TaggerResponse from image files using (*sd.Host).Interrogate
 //   - Set query "heuristics" to "true" to parse entities.TextToImageRequest using utils.ParameterHeuristics
+//   - Set query "multiple" to "true" to separate each db.Ticket by submission
 func GetReviewHandler(c echo.Context) error {
 	sid, _, err := GetSIDandID(c)
 	if err != nil {
@@ -412,7 +413,6 @@ func GetReviewHandler(c echo.Context) error {
 
 	var submissions = make(map[int64]*db.Submission)
 	var userIDs []api.UsernameID
-	var ticketLabels []db.TicketLabel
 	var submissionIDsString []string
 	var submissionIDsInt64 []int64
 	var wg sync.WaitGroup
@@ -425,7 +425,6 @@ func GetReviewHandler(c echo.Context) error {
 		}
 		submissions[submission.ID] = &submission
 		userIDs = append(userIDs, api.UsernameID{UserID: submissionDetails.Submissions[i].UserID, Username: submissionDetails.Submissions[i].Username})
-		ticketLabels = append(ticketLabels, db.SubmissionLabels(submission)...)
 		submissionIDsString = append(submissionIDsString, submission.URL)
 		submissionIDsInt64 = append(submissionIDsInt64, submission.ID)
 	}
@@ -433,16 +432,66 @@ func GetReviewHandler(c echo.Context) error {
 
 	var lastErr error
 	for _, sub := range submissions {
-		err := database.InsertSubmission(*sub)
-		if err != nil {
-			lastErr = err
-		}
+		wg.Add(1)
+		go func(sub *db.Submission) {
+			defer wg.Done()
+			if len(sub.Metadata.Objects) == 0 && c.QueryParam("heuristics") == "true" {
+				c.Logger().Debugf("processing description heuristics for %v", sub.URL)
+				heuristics, err := utils.DescriptionHeuristics(sub.Description)
+				if err == nil {
+					sub.Metadata.Objects = map[string]entities.TextToImageRequest{"description_heuristics": heuristics}
+				}
+			}
+			err := database.InsertSubmission(*sub)
+			if err != nil {
+				lastErr = err
+			}
+		}(sub)
 	}
+	wg.Wait()
 	if lastErr != nil {
 		return c.JSON(http.StatusInternalServerError, crashy.ErrorResponse{ErrorString: "some submissions failed to insert", Debug: err})
 	}
 
 	auditorAsUser := auditorAsUsernameID(auditor)
+
+	if c.QueryParam("multiple") == "true" {
+		var tickets []db.Ticket
+		for _, sub := range submissions {
+			ticket := db.Ticket{
+				ID:         sub.ID,
+				Subject:    sub.Title,
+				DateOpened: time.Now().UTC(),
+				Status:     "triage",
+				Labels:     db.SubmissionLabels(*sub),
+				Priority:   "low",
+				Closed:     false,
+				Responses: []db.Response{
+					{
+						SupportTeam: false,
+						User:        auditorAsUser,
+						Date:        time.Now().UTC(),
+						Message:     fmt.Sprintf("The following submission doesn't include the prompts: %d", sub.ID),
+					},
+				},
+				SubmissionIDs: []int64{sub.ID},
+				AssignedID:    &auditor.UserID,
+				UsersInvolved: db.Involved{
+					Reporter: auditorAsUser,
+					ReportedIDs: []api.UsernameID{
+						{UserID: strconv.FormatInt(sub.UserID, 10)},
+					},
+				},
+			}
+			tickets = append(tickets, ticket)
+		}
+		return c.JSON(http.StatusOK, tickets)
+	}
+
+	var ticketLabels []db.TicketLabel
+	for _, sub := range submissions {
+		ticketLabels = append(ticketLabels, db.SubmissionLabels(*sub)...)
+	}
 
 	ticket := db.Ticket{
 		ID:         1,
@@ -556,7 +605,7 @@ func processCaptions(c echo.Context, wg *sync.WaitGroup, sub *db.Submission, i i
 func processParams(c echo.Context, wg *sync.WaitGroup, sub *db.Submission, heuristics bool) {
 	defer wg.Done()
 
-	if sub.Metadata.HasGenerationDetails {
+	if sub.Metadata.Params != nil {
 		return
 	}
 
@@ -582,7 +631,7 @@ func processParams(c echo.Context, wg *sync.WaitGroup, sub *db.Submission, heuri
 		return
 	}
 
-	if sub.Metadata.HasGenerationDetails {
+	if sub.Metadata.Params != nil {
 		return
 	}
 
@@ -622,7 +671,6 @@ func processParams(c echo.Context, wg *sync.WaitGroup, sub *db.Submission, heuri
 	}
 	if params != nil {
 		c.Logger().Debugf("finished params for %v", f.FileName)
-		sub.Metadata.HasGenerationDetails = true
 		sub.Metadata.Params = &params
 		if heuristics {
 			c.Logger().Debugf("processing object for %v", f.FileName)

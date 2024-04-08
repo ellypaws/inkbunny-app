@@ -53,7 +53,7 @@ func main() {
 	e.Use(middleware.LoggerWithConfig(
 		middleware.LoggerConfig{
 			Skipper:          nil,
-			Format:           `${time_custom}     	${status} ${method} uri=${uri} in ${latency_human} from ${host} ${remote_ip} ${error}` + "\n",
+			Format:           `${time_custom}     	${status} ${method}  ${host}${uri} in ${latency_human} from ${remote_ip} ${error}` + "\n",
 			CustomTimeFormat: time.DateTime,
 		},
 	))

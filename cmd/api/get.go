@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	_ "embed"
+	"encoding/base64"
 	"fmt"
 	. "github.com/ellypaws/inkbunny-app/api/entities"
 	"github.com/ellypaws/inkbunny-app/cmd/app"
@@ -12,8 +13,6 @@ import (
 	"github.com/ellypaws/inkbunny-sd/utils"
 	"github.com/ellypaws/inkbunny/api"
 	"github.com/labstack/echo/v4"
-	"io"
-	"log"
 	"net/http"
 	"slices"
 	"strconv"
@@ -357,9 +356,9 @@ func GetTicketsHandler(c echo.Context) error {
 	return c.JSON(http.StatusOK, tickets)
 }
 
-func validAuditor(user api.Credentials) bool {
+func validAuditor(c echo.Context, user api.Credentials) bool {
 	if err := db.Error(database); err != nil {
-		log.Printf("warning: validAuditor was called with a nil database: %v", err)
+		c.Logger().Warnf("warning: validAuditor was called with a nil database: %v", err)
 		return false
 	}
 	return database.IsAuditorRole(int64(user.UserID.Int()))
@@ -420,6 +419,7 @@ func GetReviewHandler(c echo.Context) error {
 	for i := range submissionDetails.Submissions {
 		submission := db.InkbunnySubmissionToDBSubmission(submissionDetails.Submissions[i])
 		if len(submissionDetails.Submissions[i].Files) > 0 {
+			c.Logger().Infof("processing files for %v", submission.ID)
 			wg.Add(1)
 			go parseFiles(c, &wg, &submission)
 		}
@@ -511,29 +511,39 @@ func parseFiles(c echo.Context, wg *sync.WaitGroup, sub *db.Submission) {
 	for i := range sub.Files {
 		if c.QueryParam("parameters") == "true" {
 			wg.Add(1)
-			go processParams(wg, sub, c.QueryParam("heuristics") == "true")
+			go processParams(c, wg, sub, c.QueryParam("heuristics") == "true")
 		}
 		if c.QueryParam("interrogate") == "true" {
 			wg.Add(1)
-			go processCaptions(wg, sub, i)
+			go processCaptions(c, wg, sub, i)
 		}
 	}
 }
 
-func processCaptions(wg *sync.WaitGroup, sub *db.Submission, i int) {
+func processCaptions(c echo.Context, wg *sync.WaitGroup, sub *db.Submission, i int) {
 	defer wg.Done()
 	f := &sub.Files[i].File
 	if !strings.HasPrefix(f.MimeType, "image") {
 		return
 	}
-	req := defaultTaggerRequest
-	req.Image = &f.FileURLScreen
-	*req.Threshold = 0.7
-
-	t, err := host.Interrogate(&req)
-	if err != nil {
+	c.Set("cache", fileCache)
+	item, errorFunc := GetCache(c, f.FileName, f.FileURLScreen)
+	if errorFunc != nil {
 		return
 	}
+	req := defaultTaggerRequest
+
+	base64String := base64.StdEncoding.EncodeToString(item.Blob)
+	req.Image = &base64String
+	*req.Threshold = 0.7
+
+	c.Logger().Debugf("processing captions for %v", f.FileURLFull)
+	t, err := host.Interrogate(&req)
+	if err != nil {
+		c.Logger().Errorf("error processing captions for %v: %v", f.FileURLFull, err)
+		return
+	}
+	c.Logger().Debugf("finished captions for %v", f.FileURLFull)
 
 	sub.Metadata.HumanConfidence = max(sub.Metadata.HumanConfidence, t.HumanPercent())
 	if t.HumanPercent() > 0.5 {
@@ -543,7 +553,7 @@ func processCaptions(wg *sync.WaitGroup, sub *db.Submission, i int) {
 	sub.Files[i].Caption = &t.Caption
 }
 
-func processParams(wg *sync.WaitGroup, sub *db.Submission, heuristics bool) {
+func processParams(c echo.Context, wg *sync.WaitGroup, sub *db.Submission, heuristics bool) {
 	defer wg.Done()
 
 	if sub.Metadata.HasGenerationDetails {
@@ -565,16 +575,10 @@ func processParams(wg *sync.WaitGroup, sub *db.Submission, heuristics bool) {
 	if textFile == nil {
 		return
 	}
-	r, err := http.Get(textFile.File.FileURLFull)
-	if err != nil {
-		return
-	}
-	defer r.Body.Close()
-	if r.StatusCode != http.StatusOK {
-		return
-	}
-	b, err := io.ReadAll(r.Body)
-	if err != nil || len(b) == 0 {
+	c.Logger().Debugf("getting file for %v", textFile.File.FileName)
+	c.Request().Header.Set("Accept", "text/plain")
+	b, errFunc := GetCache(c, textFile.File.FileName, textFile.File.FileURLFull)
+	if errFunc != nil {
 		return
 	}
 
@@ -584,66 +588,74 @@ func processParams(wg *sync.WaitGroup, sub *db.Submission, heuristics bool) {
 
 	// Because some artists already have standardized txt files, opt to split each file separately
 	var params utils.Params
+	var err error
 	f := &textFile.File
+	c.Logger().Debugf("processing params for %v", f.FileName)
 	switch {
 	case strings.Contains(f.FileName, "_AutoSnep_"):
-		params, err = utils.AutoSnep(utils.WithBytes(b))
+		params, err = utils.AutoSnep(utils.WithBytes(b.Blob))
 	case strings.Contains(f.FileName, "_druge_"):
-		params, err = utils.Common(utils.WithBytes(b), utils.UseDruge())
+		params, err = utils.Common(utils.WithBytes(b.Blob), utils.UseDruge())
 	case strings.Contains(f.FileName, "_AIBean_"):
-		params, err = utils.Common(utils.WithBytes(b), utils.UseAIBean())
+		params, err = utils.Common(utils.WithBytes(b.Blob), utils.UseAIBean())
 	case strings.Contains(f.FileName, "_artiedragon_"):
-		params, err = utils.Common(utils.WithBytes(b), utils.UseArtie())
+		params, err = utils.Common(utils.WithBytes(b.Blob), utils.UseArtie())
 	case strings.Contains(f.FileName, "_picker52578_"):
 		params, err = utils.Common(
-			utils.WithBytes(b),
+			utils.WithBytes(b.Blob),
 			utils.WithFilename("picker52578_"),
 			utils.WithKeyCondition(func(line string) bool { return strings.HasPrefix(line, "File Name") }))
 	case strings.Contains(f.FileName, "_fairygarden_"):
 		params, err = utils.Common(
 			// prepend "photo 1" to the input in case it's missing
-			utils.WithBytes(bytes.Join([][]byte{[]byte("photo 1"), b}, []byte("\n"))),
+			utils.WithBytes(bytes.Join([][]byte{[]byte("photo 1"), b.Blob}, []byte("\n"))),
 			utils.UseFairyGarden())
 	default:
 		params, err = utils.Common(
 			// prepend "photo 1" to the input in case it's missing
-			utils.WithBytes(bytes.Join([][]byte{[]byte(f.FileName), b}, []byte("\n"))),
+			utils.WithBytes(bytes.Join([][]byte{[]byte(f.FileName), b.Blob}, []byte("\n"))),
 			utils.WithKeyCondition(func(line string) bool { return strings.HasPrefix(line, f.FileName) }))
 	}
 	if err != nil {
+		c.Logger().Errorf("error processing params for %v: %v", f.FileName, err)
 		return
 	}
 	if params != nil {
+		c.Logger().Debugf("finished params for %v", f.FileName)
 		sub.Metadata.HasGenerationDetails = true
 		sub.Metadata.Params = &params
 		if heuristics {
-			parseObjects(wg, sub)
+			c.Logger().Debugf("processing object for %v", f.FileName)
+			parseObjects(c, wg, sub)
 		}
 	}
 }
 
-func parseObjects(wg *sync.WaitGroup, sub *db.Submission) {
+func parseObjects(c echo.Context, wg *sync.WaitGroup, sub *db.Submission) {
 	if sub.Metadata.Objects != nil {
 		return
 	}
 
 	var mutex sync.Mutex
-	for subID, params := range *sub.Metadata.Params {
-		for file, parameters := range params {
+	for fileName, params := range *sub.Metadata.Params {
+		if p, ok := params[utils.Parameters]; ok {
+			c.Logger().Debugf("processing heuristics for %v", fileName)
 			wg.Add(1)
-			go func(file string, p string) {
+			go func(name string, content string) {
 				defer wg.Done()
-				heuristics, err := utils.ParameterHeuristics(p)
+				defer c.Logger().Debugf("finished heuristics for %v", name)
+				heuristics, err := utils.ParameterHeuristics(content)
 				if err != nil {
+					c.Logger().Errorf("error processing heuristics for %v: %v", name, err)
 					return
 				}
 				if sub.Metadata.Objects == nil {
 					sub.Metadata.Objects = make(map[string]entities.TextToImageRequest)
 				}
 				mutex.Lock()
-				sub.Metadata.Objects[file] = heuristics
+				sub.Metadata.Objects[name] = heuristics
 				mutex.Unlock()
-			}(fmt.Sprintf("%v_%v", subID, file), parameters)
+			}(fileName, p)
 		}
 	}
 }

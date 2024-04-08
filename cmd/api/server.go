@@ -5,9 +5,11 @@ import (
 	sd "github.com/ellypaws/inkbunny-sd/stable_diffusion"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
+	logger "github.com/labstack/gommon/log"
 	"log"
 	"net/url"
 	"os"
+	"time"
 )
 
 var (
@@ -48,7 +50,13 @@ func main() {
 	e := echo.New()
 
 	// Middleware
-	e.Use(middleware.Logger())
+	e.Use(middleware.LoggerWithConfig(
+		middleware.LoggerConfig{
+			Skipper:          nil,
+			Format:           `${time_custom}     	${status} ${method} uri=${uri} in ${latency_human} from ${host} ${remote_ip} ${error}` + "\n",
+			CustomTimeFormat: time.DateTime,
+		},
+	))
 	e.Use(middleware.Recover())
 
 	e.Use(middleware.CORSWithConfig(middleware.CORSConfig{
@@ -61,6 +69,9 @@ func main() {
 	registerAs(e.POST, postHandlers)
 	registerAs(e.HEAD, headHandlers)
 	registerAs(e.DELETE, deleteHandlers)
+
+	e.Logger.SetLevel(logger.DEBUG)
+	e.Logger.SetHeader(`${time_rfc3339} ${level}	${short_file}:${line}	`)
 
 	// Start server
 	e.Logger.Fatal(e.Start(":" + port))

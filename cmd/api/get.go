@@ -508,11 +508,11 @@ func maxConfidence(old, new *entities.TaggerResponse) *entities.TaggerResponse {
 
 func parseFiles(c echo.Context, wg *sync.WaitGroup, sub *db.Submission) {
 	defer wg.Done()
+	if c.QueryParam("parameters") == "true" {
+		wg.Add(1)
+		go processParams(c, wg, sub, c.QueryParam("heuristics") == "true")
+	}
 	for i := range sub.Files {
-		if c.QueryParam("parameters") == "true" {
-			wg.Add(1)
-			go processParams(c, wg, sub, c.QueryParam("heuristics") == "true")
-		}
 		if c.QueryParam("interrogate") == "true" {
 			wg.Add(1)
 			go processCaptions(c, wg, sub, i)
@@ -537,13 +537,13 @@ func processCaptions(c echo.Context, wg *sync.WaitGroup, sub *db.Submission, i i
 	req.Image = &base64String
 	*req.Threshold = 0.7
 
-	c.Logger().Debugf("processing captions for %v", f.FileURLFull)
+	c.Logger().Debugf("processing captions for %v", f.FileURLScreen)
 	t, err := host.Interrogate(&req)
 	if err != nil {
-		c.Logger().Errorf("error processing captions for %v: %v", f.FileURLFull, err)
+		c.Logger().Errorf("error processing captions for %v: %v", f.FileURLScreen, err)
 		return
 	}
-	c.Logger().Debugf("finished captions for %v", f.FileURLFull)
+	c.Logger().Debugf("finished captions for %v", f.FileURLScreen)
 
 	sub.Metadata.HumanConfidence = max(sub.Metadata.HumanConfidence, t.HumanPercent())
 	if t.HumanPercent() > 0.5 {

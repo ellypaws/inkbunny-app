@@ -413,6 +413,10 @@ func GetReviewHandler(c echo.Context) error {
 		return c.JSON(http.StatusNotFound, crashy.ErrorResponse{ErrorString: "no submissions found"})
 	}
 
+	if c.QueryParam("interrogate") == "true" && !host.Alive() {
+		c.Logger().Warn("interrogate was set to true but host is offline, only using cached captions...")
+	}
+
 	type details struct {
 		URL        string
 		ID         api.IntString
@@ -430,9 +434,6 @@ func GetReviewHandler(c echo.Context) error {
 		submission := db.InkbunnySubmissionToDBSubmission(sub)
 		go processSubmission(c, &eachSubmission, &dbMutex, &submission)
 
-		if c.QueryParam("interrogate") == "true" && !host.Alive() {
-			c.Logger().Warn("interrogate was set to true but host is offline, only using cached captions...")
-		}
 		submissions[submission.ID] = details{
 			URL:        submission.URL,
 			ID:         api.IntString(submission.ID),

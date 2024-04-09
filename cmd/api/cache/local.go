@@ -88,9 +88,8 @@ func (l *LocalCache) Get(c echo.Context, url string) (*Item, error) {
 	mimeType := resp.Header.Get("Content-Type")
 	item := &Item{
 		Blob:       blob,
-		LastAccess: time.Now().Add(1 * time.Second),
+		LastAccess: time.Now().UTC(),
 		MimeType:   mimeType,
-		HitCount:   1,
 	}
 	err = l.Set(c, url, item)
 	if err != nil {

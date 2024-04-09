@@ -2,6 +2,7 @@ package cache
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/labstack/echo/v4"
@@ -9,6 +10,7 @@ import (
 	"github.com/redis/go-redis/v9"
 	"log"
 	"os"
+	"time"
 )
 
 func init() {
@@ -64,31 +66,57 @@ func NewRedisClient() *redis.Client {
 }
 
 func (r *Redis) Get(c echo.Context, key string) (*Item, error) {
-	c.Logger().Debugf("retrieving %s from redis", key)
-	val, err := (*redis.Client)(r).Get(ctx, key).Result()
+	c.Logger().Debugf("Retrieving %s", key)
+	val, err := (*redis.Client)(r).JSONGet(ctx, key, "$").Result()
 	if errors.Is(err, redis.Nil) {
 		return nil, fmt.Errorf("key %s not found", key)
 	}
 	if err != nil {
 		return nil, err
 	}
-	var item Item
-	err = item.UnmarshalBinary([]byte(val))
+	var items []JSONItem
+	err = json.Unmarshal([]byte(val), &items)
 	if err != nil {
 		return nil, err
 	}
+	if len(items) == 0 {
+		return nil, fmt.Errorf("empty item %s", key)
+	}
+
+	var item Item = Item{
+		LastAccess: time.Now().UTC(),
+		MimeType:   items[0].MimeType,
+		HitCount:   items[0].HitCount + 1,
+	}
+
+	if item.MimeType == echo.MIMEApplicationJSON {
+		b, err := json.Marshal(items[0].Blob)
+		if err != nil {
+			return nil, err
+		}
+		item.Blob = b
+	}
+
+	c.Logger().Info("Cache hit for %s", key)
 	return &item, nil
 }
 
+type JSONItem struct {
+	Blob       any       `json:"blob,omitempty"`
+	LastAccess time.Time `json:"last_access"`
+	MimeType   string    `json:"mime_type,omitempty"`
+	HitCount   int       `json:"hit_count,omitempty"`
+}
+
 func (r *Redis) Set(c echo.Context, key string, item *Item) error {
-	bin, err := item.MarshalBinary()
+	i, err := item.MarshalBinary()
 	if err != nil {
 		return fmt.Errorf("failed to marshal item: %w", err)
 	}
-	cmd := (*redis.Client)(r).Set(ctx, key, bin, 0)
+	cmd := (*redis.Client)(r).JSONSet(ctx, key, "$", i)
 	if cmd.Err() != nil {
 		return fmt.Errorf("failed to set item: %w", cmd.Err())
 	}
-	c.Logger().Debugf("[redis] cached %s %s %dKiB", key, item.MimeType, len(item.Blob)/bytes.KiB)
+	c.Logger().Debugf("Cached %s %s %dKiB", key, item.MimeType, len(i)/bytes.KiB)
 	return nil
 }

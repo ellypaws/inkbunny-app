@@ -430,6 +430,9 @@ func GetReviewHandler(c echo.Context) error {
 		submission := db.InkbunnySubmissionToDBSubmission(sub)
 		go processSubmission(c, &eachSubmission, &dbMutex, &submission)
 
+		if c.QueryParam("interrogate") == "true" && !host.Alive() {
+			c.Logger().Warn("interrogate was set to true but host is offline, only using cached captions...")
+		}
 		submissions[submission.ID] = details{
 			URL:        submission.URL,
 			ID:         api.IntString(submission.ID),
@@ -601,9 +604,6 @@ func parseFiles(c echo.Context, wg *sync.WaitGroup, sub *db.Submission) {
 	}
 	if c.QueryParam("interrogate") != "true" {
 		return
-	}
-	if !host.Alive() {
-		c.Logger().Warn("interrogate was set to true but host is offline")
 	}
 	for i := range sub.Files {
 		wg.Add(1)

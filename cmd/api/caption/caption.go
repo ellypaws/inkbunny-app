@@ -51,6 +51,10 @@ func ProcessCaption(c echo.Context, wg *sync.WaitGroup, sub *db.Submission, i in
 		return
 	}
 
+	if !host.Alive() {
+		return
+	}
+
 	c.Logger().Infof("Cache miss for %s interrogating...", key)
 
 	item, errorFunc := cache.GetLocalCache(c).Get(c, f.FileURLScreen)

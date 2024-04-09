@@ -63,7 +63,7 @@ func (l *LocalCache) Get(c echo.Context, url string) (*Item, error) {
 		return item, nil
 	}
 
-	c.Logger().Infof("Cache miss for %s retrieving...", url)
+	c.Logger().Infof("Downloading %s", url)
 
 	done := make(chan *Item)
 	l.ongoing[url] = done

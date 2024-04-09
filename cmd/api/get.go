@@ -603,8 +603,7 @@ func parseFiles(c echo.Context, wg *sync.WaitGroup, sub *db.Submission) {
 		return
 	}
 	if !host.Alive() {
-		c.Logger().Errorf("interrogate was set to true but host is offline")
-		return
+		c.Logger().Warn("interrogate was set to true but host is offline")
 	}
 	for i := range sub.Files {
 		wg.Add(1)

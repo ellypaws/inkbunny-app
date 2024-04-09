@@ -544,6 +544,8 @@ func processSubmission(c echo.Context, eachSubmission *sync.WaitGroup, mutex *sy
 	}
 	fileWaitGroup.Wait()
 
+	mutex.Lock()
+	defer mutex.Unlock()
 	if c.QueryParam("stream") == "true" {
 		enc := json.NewEncoder(c.Response())
 		if err := enc.Encode(sub); err != nil {
@@ -556,8 +558,6 @@ func processSubmission(c echo.Context, eachSubmission *sync.WaitGroup, mutex *sy
 		c.Logger().Infof("finished processing %v", sub.ID)
 	}
 
-	mutex.Lock()
-	defer mutex.Unlock()
 	err := database.InsertSubmission(*sub)
 	if err != nil {
 		c.Logger().Errorf("error inserting submission %v: %v", sub.ID, err)

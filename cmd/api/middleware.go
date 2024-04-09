@@ -145,4 +145,13 @@ func Static(next echo.HandlerFunc) echo.HandlerFunc {
 	}
 }
 
+func OriginalResponseWriter(next echo.HandlerFunc) echo.HandlerFunc {
+	return func(c echo.Context) error {
+		c.Set("writer", c.Response().Writer)
+		return next(c)
+	}
+}
+
+var withOriginalResponseWriter = []echo.MiddlewareFunc{LoggedInMiddleware, RequireAuditor, OriginalResponseWriter, CacheMiddleware}
+
 var staticMiddleware = []echo.MiddlewareFunc{Static}

@@ -29,7 +29,7 @@ var postHandlers = pathHandler{
 	"/prefill":            handler{prefill, nil},
 	"/interrogate":        handler{interrogate, nil},
 	"/interrogate/upload": handler{interrogateImage, nil},
-	"/review/:id":         handler{GetReviewHandler, staffMiddleware},
+	"/review/:id":         handler{GetReviewHandler, withOriginalResponseWriter},
 	"/sd/:path":           handler{handlePath, nil},
 	"/tickets/new":        handler{newTicket, staffMiddleware},
 	"/tickets/upsert":     handler{updateTicket, staffMiddleware},

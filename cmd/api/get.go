@@ -4,6 +4,7 @@ import (
 	"bytes"
 	_ "embed"
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	. "github.com/ellypaws/inkbunny-app/api/entities"
 	"github.com/ellypaws/inkbunny-app/cmd/app"
@@ -28,7 +29,7 @@ var getHandlers = pathHandler{
 	"/inkbunny/submission/:ids": handler{GetInkbunnySubmission, withCache},
 	"/inkbunny/search":          handler{GetInkbunnySearch, withCache},
 	"/image":                    handler{GetImageHandler, staticMiddleware},
-	"/review/:id":               handler{GetReviewHandler, append(staffMiddleware, CacheMiddleware)},
+	"/review/:id":               handler{GetReviewHandler, withOriginalResponseWriter},
 	"/tickets/audits":           handler{GetAuditHandler, staffMiddleware},
 	"/tickets/get":              handler{GetTicketsHandler, staffMiddleware},
 	"/auditors":                 handler{GetAllAuditorsJHandler, staffMiddleware},
@@ -377,6 +378,7 @@ func GetAllAuditorsJHandler(c echo.Context) error {
 //   - Set query "parameters" to "true" to parse the utils.Params from json/text files
 //   - Set query "interrogate" to "true" to parse entities.TaggerResponse from image files using (*sd.Host).Interrogate
 //   - Set query "multiple" to "true" to separate each db.Ticket by submission
+//   - Set query "stream" to "true" to receive multiple JSON objects
 func GetReviewHandler(c echo.Context) error {
 	sid, _, err := GetSIDandID(c)
 	if err != nil {
@@ -410,48 +412,45 @@ func GetReviewHandler(c echo.Context) error {
 		return c.JSON(http.StatusNotFound, crashy.ErrorResponse{ErrorString: "no submissions found"})
 	}
 
-	var submissions = make(map[int64]*db.Submission)
-	var userIDs []api.UsernameID
-	var submissionIDsString []string
-	var submissionIDsInt64 []int64
-	var wg sync.WaitGroup
-	for i := range submissionDetails.Submissions {
-		submission := db.InkbunnySubmissionToDBSubmission(submissionDetails.Submissions[i])
-		if len(submissionDetails.Submissions[i].Files) > 0 {
-			c.Logger().Infof("processing files for %v", submission.ID)
-			wg.Add(1)
-			go parseFiles(c, &wg, &submission)
-		}
-		submissions[submission.ID] = &submission
-		userIDs = append(userIDs, api.UsernameID{UserID: submissionDetails.Submissions[i].UserID, Username: submissionDetails.Submissions[i].Username})
-		submissionIDsString = append(submissionIDsString, submission.URL)
-		submissionIDsInt64 = append(submissionIDsInt64, submission.ID)
+	type details struct {
+		URL        string
+		ID         api.IntString
+		User       api.UsernameID
+		Submission *db.Submission
 	}
-	wg.Wait()
 
-	var lastErr error
-	for _, sub := range submissions {
-		err := database.InsertSubmission(*sub)
-		if err != nil {
-			c.Logger().Errorf("error inserting submission %v: %v", sub.ID, err)
-			lastErr = err
+	var submissions = make(map[int64]details)
+
+	var eachSubmission sync.WaitGroup
+	for _, sub := range submissionDetails.Submissions {
+		eachSubmission.Add(1)
+
+		submission := db.InkbunnySubmissionToDBSubmission(sub)
+		go processSubmission(c, &eachSubmission, &submission)
+
+		submissions[submission.ID] = details{
+			URL:        submission.URL,
+			ID:         api.IntString(submission.ID),
+			User:       api.UsernameID{UserID: sub.UserID, Username: sub.Username},
+			Submission: &submission,
 		}
 	}
-	if lastErr != nil {
-		return c.JSON(http.StatusInternalServerError, crashy.ErrorResponse{ErrorString: "some submissions failed to insert", Debug: err})
+	eachSubmission.Wait()
+	if c.QueryParam("stream") == "true" {
+		return nil
 	}
 
 	auditorAsUser := auditorAsUsernameID(auditor)
 
 	if c.QueryParam("multiple") == "true" {
 		var tickets []db.Ticket
-		for _, sub := range submissions {
+		for id, sub := range submissions {
 			ticket := db.Ticket{
-				ID:         sub.ID,
-				Subject:    sub.Title,
+				ID:         id,
+				Subject:    sub.Submission.Title,
 				DateOpened: time.Now().UTC(),
 				Status:     "triage",
-				Labels:     db.SubmissionLabels(*sub),
+				Labels:     db.SubmissionLabels(*sub.Submission),
 				Priority:   "low",
 				Closed:     false,
 				Responses: []db.Response{
@@ -462,12 +461,12 @@ func GetReviewHandler(c echo.Context) error {
 						Message:     fmt.Sprintf("The following submission doesn't include the prompts: %d", sub.ID),
 					},
 				},
-				SubmissionIDs: []int64{sub.ID},
+				SubmissionIDs: []int64{id},
 				AssignedID:    &auditor.UserID,
 				UsersInvolved: db.Involved{
 					Reporter: auditorAsUser,
 					ReportedIDs: []api.UsernameID{
-						{UserID: strconv.FormatInt(sub.UserID, 10)},
+						sub.User,
 					},
 				},
 			}
@@ -478,7 +477,7 @@ func GetReviewHandler(c echo.Context) error {
 
 	var ticketLabels []db.TicketLabel
 	for _, sub := range submissions {
-		ticketLabels = append(ticketLabels, db.SubmissionLabels(*sub)...)
+		ticketLabels = append(ticketLabels, db.SubmissionLabels(*sub.Submission)...)
 	}
 
 	ticket := db.Ticket{
@@ -494,15 +493,34 @@ func GetReviewHandler(c echo.Context) error {
 				SupportTeam: false,
 				User:        auditorAsUser,
 				Date:        time.Now().UTC(),
-				Message: fmt.Sprintf("The following submission doesn't include the prompts: \n%v",
-					strings.Join(submissionIDsString, "\n")),
+				Message: func() string {
+					var sb strings.Builder
+					sb.WriteString("The following submissions don't include their prompts: ")
+					for _, sub := range submissions {
+						sb.WriteString("\n")
+						sb.WriteString(sub.URL)
+					}
+					return sb.String()
+				}(),
 			},
 		},
-		SubmissionIDs: submissionIDsInt64,
-		AssignedID:    &auditor.UserID,
+		SubmissionIDs: func() []int64 {
+			var ids []int64
+			for id := range submissions {
+				ids = append(ids, id)
+			}
+			return ids
+		}(),
+		AssignedID: &auditor.UserID,
 		UsersInvolved: db.Involved{
-			Reporter:    auditorAsUser,
-			ReportedIDs: userIDs,
+			Reporter: auditorAsUser,
+			ReportedIDs: func() []api.UsernameID {
+				var ids []api.UsernameID
+				for _, sub := range submissions {
+					ids = append(ids, sub.User)
+				}
+				return ids
+			}(),
 		},
 	}
 
@@ -511,6 +529,33 @@ func GetReviewHandler(c echo.Context) error {
 		return c.JSON(http.StatusOK, submissions)
 	default:
 		return c.JSON(http.StatusOK, ticket)
+	}
+}
+
+func processSubmission(c echo.Context, eachSubmission *sync.WaitGroup, sub *db.Submission) {
+	defer eachSubmission.Done()
+	var fileWaitGroup sync.WaitGroup
+	if len(sub.Files) > 0 {
+		fileWaitGroup.Add(1)
+		c.Logger().Infof("processing files for %v", sub.ID)
+		go parseFiles(c, &fileWaitGroup, sub)
+	}
+	fileWaitGroup.Wait()
+	err := database.InsertSubmission(*sub)
+	if err != nil {
+		c.Logger().Errorf("error inserting submission %v: %v", sub.ID, err)
+	}
+
+	if c.QueryParam("stream") == "true" {
+		enc := json.NewEncoder(c.Response())
+		if err := enc.Encode(sub); err != nil {
+			c.Logger().Errorf("error encoding submission %v: %v", sub.ID, err)
+		}
+		c.Logger().Debugf("flushing %v", sub.ID)
+		c.Response().Header().Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+		c.Response().WriteHeader(http.StatusOK)
+		c.Get("writer").(http.Flusher).Flush()
+		c.Logger().Infof("finished processing %v", sub.ID)
 	}
 }
 

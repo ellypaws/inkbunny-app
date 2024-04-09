@@ -40,7 +40,6 @@ func ProcessCaption(c echo.Context, wg *sync.WaitGroup, sub *db.Submission, i in
 
 	item, err := cacheToUse.Get(c, key)
 	if err == nil {
-		c.Logger().Infof("Cache hit for %s", f.FileURLScreen)
 		var result *e.CaptionEnum
 		err := json.Unmarshal(item.Blob, &result)
 		if err != nil {

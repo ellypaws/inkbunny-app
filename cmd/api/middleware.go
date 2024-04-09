@@ -3,10 +3,11 @@ package main
 import (
 	"fmt"
 	"github.com/coocood/freecache"
+	"github.com/ellypaws/inkbunny-app/api/cache"
 	"github.com/ellypaws/inkbunny-app/cmd/crashy"
 	"github.com/ellypaws/inkbunny-app/cmd/db"
 	"github.com/ellypaws/inkbunny/api"
-	cache "github.com/gitsight/go-echo-cache"
+	gocache "github.com/gitsight/go-echo-cache"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/gommon/bytes"
 	"net/http"
@@ -103,7 +104,7 @@ const timeToLive = 5 * time.Minute
 
 var timeToLiveString = fmt.Sprintf("max-age=%v", timeToLive.Seconds())
 
-var defaultCacheConfig = &cache.Config{
+var defaultCacheConfig = &gocache.Config{
 	Methods: []string{echo.GET, echo.HEAD},
 	TTL:     timeToLive,
 	Refresh: func(r *http.Request) bool {
@@ -113,7 +114,7 @@ var defaultCacheConfig = &cache.Config{
 
 var globalCache = func() echo.MiddlewareFunc {
 	c := freecache.NewCache(256 * bytes.MiB)
-	return cache.New(defaultCacheConfig, c)
+	return gocache.New(defaultCacheConfig, c)
 }()
 
 func CacheMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
@@ -155,3 +156,15 @@ func OriginalResponseWriter(next echo.HandlerFunc) echo.HandlerFunc {
 var withOriginalResponseWriter = []echo.MiddlewareFunc{LoggedInMiddleware, RequireAuditor, OriginalResponseWriter, CacheMiddleware}
 
 var staticMiddleware = []echo.MiddlewareFunc{Static}
+
+var withRedis = []echo.MiddlewareFunc{LoggedInMiddleware, RequireAuditor, OriginalResponseWriter, RedisMiddleware, CacheMiddleware}
+
+func RedisMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
+	return func(c echo.Context) error {
+		if !cache.Initialized {
+			return next(c)
+		}
+		c.Set("redis", cache.RedisClient())
+		return next(c)
+	}
+}

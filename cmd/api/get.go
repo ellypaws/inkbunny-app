@@ -3,9 +3,10 @@ package main
 import (
 	"bytes"
 	_ "embed"
-	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"github.com/ellypaws/inkbunny-app/api/cache"
+	"github.com/ellypaws/inkbunny-app/api/caption"
 	. "github.com/ellypaws/inkbunny-app/api/entities"
 	"github.com/ellypaws/inkbunny-app/cmd/app"
 	"github.com/ellypaws/inkbunny-app/cmd/crashy"
@@ -29,7 +30,7 @@ var getHandlers = pathHandler{
 	"/inkbunny/submission/:ids": handler{GetInkbunnySubmission, withCache},
 	"/inkbunny/search":          handler{GetInkbunnySearch, withCache},
 	"/image":                    handler{GetImageHandler, staticMiddleware},
-	"/review/:id":               handler{GetReviewHandler, withOriginalResponseWriter},
+	"/review/:id":               handler{GetReviewHandler, withRedis},
 	"/tickets/audits":           handler{GetAuditHandler, staffMiddleware},
 	"/tickets/get":              handler{GetTicketsHandler, staffMiddleware},
 	"/auditors":                 handler{GetAllAuditorsJHandler, staffMiddleware},
@@ -598,45 +599,17 @@ func parseFiles(c echo.Context, wg *sync.WaitGroup, sub *db.Submission) {
 		wg.Add(1)
 		go processParams(c, wg, sub)
 	}
+	if c.QueryParam("interrogate") != "true" {
+		return
+	}
+	if !host.Alive() {
+		c.Logger().Errorf("interrogate was set to true but host is offline")
+		return
+	}
 	for i := range sub.Files {
-		if c.QueryParam("interrogate") == "true" {
-			wg.Add(1)
-			go processCaptions(c, wg, sub, i)
-		}
+		wg.Add(1)
+		go caption.ProcessCaption(c, wg, sub, i, host)
 	}
-}
-
-func processCaptions(c echo.Context, wg *sync.WaitGroup, sub *db.Submission, i int) {
-	defer wg.Done()
-	f := &sub.Files[i].File
-	if !strings.HasPrefix(f.MimeType, "image") {
-		return
-	}
-	c.Set("cache", fileCache)
-	item, errorFunc := GetCache(c, f.FileName, f.FileURLScreen)
-	if errorFunc != nil {
-		return
-	}
-	req := defaultTaggerRequest
-
-	base64String := base64.StdEncoding.EncodeToString(item.Blob)
-	req.Image = &base64String
-	*req.Threshold = 0.7
-
-	c.Logger().Debugf("processing captions for %v", f.FileURLScreen)
-	t, err := host.Interrogate(&req)
-	if err != nil {
-		c.Logger().Errorf("error processing captions for %v: %v", f.FileURLScreen, err)
-		return
-	}
-	c.Logger().Debugf("finished captions for %v", f.FileURLScreen)
-
-	sub.Metadata.HumanConfidence = max(sub.Metadata.HumanConfidence, t.HumanPercent())
-	if t.HumanPercent() > 0.5 {
-		sub.Metadata.DetectedHuman = true
-	}
-
-	sub.Files[i].Caption = &t.Caption
 }
 
 func processParams(c echo.Context, wg *sync.WaitGroup, sub *db.Submission) {
@@ -663,7 +636,7 @@ func processParams(c echo.Context, wg *sync.WaitGroup, sub *db.Submission) {
 	}
 	c.Logger().Debugf("getting file for %v", textFile.File.FileName)
 	c.Request().Header.Set("Accept", "text/plain")
-	b, errFunc := GetCache(c, textFile.File.FileName, textFile.File.FileURLFull)
+	b, errFunc := cache.Retrieve(c, cache.GetLocalCache(c), textFile.File.FileURLFull)
 	if errFunc != nil {
 		return
 	}

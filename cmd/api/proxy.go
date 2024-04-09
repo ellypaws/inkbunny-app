@@ -2,47 +2,13 @@ package main
 
 import (
 	"fmt"
-	"github.com/ellypaws/inkbunny-app/cmd/crashy"
+	"github.com/ellypaws/inkbunny-app/api/cache"
 	"github.com/labstack/echo/v4"
-	"github.com/labstack/gommon/bytes"
 	"io"
-	"math"
 	"net/http"
 	"net/url"
 	"strings"
-	"sync"
-	"time"
 )
-
-var fileCache = &FileCache{
-	items:    make(map[string]*CacheItem),
-	ongoing:  make(map[string]chan *CacheItem),
-	maxSize:  256 * bytes.MiB,
-	maxItems: 20,
-}
-
-var textCache = &FileCache{
-	items:    make(map[string]*CacheItem),
-	ongoing:  make(map[string]chan *CacheItem),
-	maxSize:  32 * bytes.MiB,
-	maxItems: 256,
-}
-
-type FileCache struct {
-	items       map[string]*CacheItem
-	ongoing     map[string]chan *CacheItem
-	maxSize     int64 // Max size in bytes
-	maxItems    int
-	currentSize int64
-	mu          sync.Mutex
-}
-
-type CacheItem struct {
-	Blob       []byte    // The image data
-	LastAccess time.Time // Last access time
-	MimeType   string    // MIME type of the image
-	HitCount   int       // Number of accesses
-}
 
 // GetImageHandler handles image apis, caching them as needed.
 func GetImageHandler(c echo.Context) error {
@@ -64,149 +30,12 @@ func GetImageHandler(c echo.Context) error {
 
 	key := parse.Path
 
-	cacheItem, errorFunc := GetCache(c, key, imageURL)
+	cacheItem, errorFunc := cache.Retrieve(c, cache.GetLocalCache(c), key)
 	if errorFunc != nil {
 		return errorFunc(c)
 	}
 
 	return c.Blob(http.StatusOK, cacheItem.MimeType, cacheItem.Blob)
-}
-
-func GetCache(c echo.Context, key string, fileURL string) (*CacheItem, func(c echo.Context) error) {
-	cacheToUse := fileCache
-	accept := c.Request().Header.Get("Accept")
-	if strings.HasPrefix(accept, "text") {
-		cacheToUse = textCache
-	}
-	if strings.HasSuffix(accept, "json") {
-		cacheToUse = textCache
-	}
-	cacheItem, found := cacheToUse.Get(key)
-	if found {
-		c.Logger().Infof("Cache hit for %s", fileURL)
-		c.Response().Header().Set("Cache-Control", "public, max-age=86400") // 24 hours
-		return cacheItem, nil
-	}
-
-	cacheToUse.mu.Lock()
-	if ongoing, found := cacheToUse.ongoing[key]; found {
-		cacheToUse.mu.Unlock()
-		c.Logger().Debugf("Still receiving %s", fileURL)
-		item := <-ongoing
-		item, found := cacheToUse.Get(key)
-		if found {
-			c.Logger().Debugf("Retrieved %s %s %dKiB", key, item.MimeType, len(item.Blob)/bytes.KiB)
-			c.Response().Header().Set("Cache-Control", "public, max-age=86400") // 24 hours
-			return item, nil
-		}
-		return nil, func(c echo.Context) error { return c.NoContent(http.StatusInternalServerError) }
-	}
-
-	c.Logger().Infof("Cache miss for %s retrieving...", fileURL)
-
-	done := make(chan *CacheItem)
-	cacheToUse.ongoing[key] = done
-	cacheToUse.mu.Unlock()
-
-	resp, err := http.Get(fileURL)
-	if err != nil {
-		return nil, func(c echo.Context) error {
-			return c.JSON(http.StatusInternalServerError, crashy.ErrorResponse{ErrorString: "failed to fetch image", Debug: err})
-		}
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return nil, func(c echo.Context) error {
-			return c.NoContent(resp.StatusCode)
-		}
-	}
-
-	blob, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, func(c echo.Context) error {
-			return c.JSON(http.StatusInternalServerError, crashy.ErrorResponse{ErrorString: "failed to read data", Debug: err})
-		}
-	}
-
-	mimeType := resp.Header.Get("Content-Type")
-	item := &CacheItem{
-		Blob:       blob,
-		LastAccess: time.Now().Add(1 * time.Second),
-		MimeType:   mimeType,
-		HitCount:   1,
-	}
-	cacheToUse.Set(key, item)
-	c.Logger().Debugf("Cached %s %s %dKiB", key, mimeType, len(blob)/bytes.KiB)
-	c.Response().Header().Set("Cache-Control", "public, max-age=86400")
-
-	return item, nil
-}
-
-func (c *FileCache) Get(key string) (*CacheItem, bool) {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	item, found := c.items[key]
-	if found {
-		item.Accessed()
-		return item, true
-	}
-	return nil, false
-}
-
-func (item *CacheItem) Accessed() {
-	backoff := int64(min(math.Pow(2, float64(item.HitCount-1)), 24*time.Hour.Seconds()))
-	item.LastAccess = time.Now().Add(time.Duration(backoff) * time.Second)
-	item.HitCount += 1
-}
-
-func (c *FileCache) Set(key string, item *CacheItem) {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-
-	if _, found := c.items[key]; !found {
-		if len(c.items) >= c.maxItems || (c.currentSize) > c.maxSize {
-			c.evict()
-		}
-		c.items[key] = item
-		c.currentSize += int64(len(item.Blob))
-	}
-	if channel, found := c.ongoing[key]; found && channel != nil {
-		close(channel)
-		delete(c.ongoing, key)
-	}
-}
-
-func (c *FileCache) evict() {
-	now := time.Now()
-	for k, v := range c.items {
-		// Check if an item is past its expiration time
-		if now.After(v.LastAccess) {
-			delete(c.items, k)
-			c.currentSize -= int64(len(v.Blob))
-		}
-	}
-
-	// If still over capacity, remove least recently accessed items
-	for (len(c.items) > c.maxItems || c.currentSize > c.maxSize) && len(c.items) > 0 {
-		var oldestKey string
-		var oldestItem *CacheItem
-		for k, v := range c.items {
-			if oldestItem == nil || v.LastAccess.Before(oldestItem.LastAccess) {
-				oldestKey = k
-				oldestItem = v
-			}
-		}
-		if oldestItem != nil { // Found an item to remove
-			delete(c.items, oldestKey)
-			c.currentSize -= int64(len(oldestItem.Blob))
-		}
-	}
-}
-
-func handlePath(c echo.Context) error {
-	path := c.Param("path")
-	return ProxyHandler(path)(c)
 }
 
 func ProxyHandler(path string) echo.HandlerFunc {
@@ -247,4 +76,9 @@ func ProxyHandler(path string) echo.HandlerFunc {
 
 		return nil
 	}
+}
+
+func HandlePath(c echo.Context) error {
+	path := c.Param("path")
+	return ProxyHandler(path)(c)
 }

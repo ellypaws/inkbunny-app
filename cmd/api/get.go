@@ -422,11 +422,12 @@ func GetReviewHandler(c echo.Context) error {
 	var submissions = make(map[int64]details)
 
 	var eachSubmission sync.WaitGroup
+	var dbMutex sync.Mutex
 	for _, sub := range submissionDetails.Submissions {
 		eachSubmission.Add(1)
 
 		submission := db.InkbunnySubmissionToDBSubmission(sub)
-		go processSubmission(c, &eachSubmission, &submission)
+		go processSubmission(c, &eachSubmission, &dbMutex, &submission)
 
 		submissions[submission.ID] = details{
 			URL:        submission.URL,
@@ -532,7 +533,7 @@ func GetReviewHandler(c echo.Context) error {
 	}
 }
 
-func processSubmission(c echo.Context, eachSubmission *sync.WaitGroup, sub *db.Submission) {
+func processSubmission(c echo.Context, eachSubmission *sync.WaitGroup, mutex *sync.Mutex, sub *db.Submission) {
 	defer eachSubmission.Done()
 	var fileWaitGroup sync.WaitGroup
 	if len(sub.Files) > 0 {
@@ -541,10 +542,6 @@ func processSubmission(c echo.Context, eachSubmission *sync.WaitGroup, sub *db.S
 		go parseFiles(c, &fileWaitGroup, sub)
 	}
 	fileWaitGroup.Wait()
-	err := database.InsertSubmission(*sub)
-	if err != nil {
-		c.Logger().Errorf("error inserting submission %v: %v", sub.ID, err)
-	}
 
 	if c.QueryParam("stream") == "true" {
 		enc := json.NewEncoder(c.Response())
@@ -556,6 +553,13 @@ func processSubmission(c echo.Context, eachSubmission *sync.WaitGroup, sub *db.S
 		c.Response().WriteHeader(http.StatusOK)
 		c.Get("writer").(http.Flusher).Flush()
 		c.Logger().Infof("finished processing %v", sub.ID)
+	}
+
+	mutex.Lock()
+	defer mutex.Unlock()
+	err := database.InsertSubmission(*sub)
+	if err != nil {
+		c.Logger().Errorf("error inserting submission %v: %v", sub.ID, err)
 	}
 }
 

@@ -10,6 +10,7 @@ import (
 	"github.com/redis/go-redis/v9"
 	"log"
 	"os"
+	"strings"
 	"time"
 )
 
@@ -97,7 +98,7 @@ func (r *Redis) Get(c echo.Context, key string) (*Item, error) {
 		item.Blob = b
 	}
 
-	c.Logger().Info("Cache hit for %s", key)
+	c.Logger().Infof("Cache hit for %s", key)
 	return &item, nil
 }
 
@@ -109,6 +110,9 @@ type JSONItem struct {
 }
 
 func (r *Redis) Set(c echo.Context, key string, item *Item) error {
+	if strings.HasPrefix(item.MimeType, "image") {
+		// set as binary
+	}
 	i, err := item.MarshalBinary()
 	if err != nil {
 		return fmt.Errorf("failed to marshal item: %w", err)

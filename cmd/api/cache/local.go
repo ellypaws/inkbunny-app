@@ -56,6 +56,7 @@ func (l *LocalCache) Get(c echo.Context, url string) (*Item, error) {
 		item := <-ongoing
 		item, err := l.get(url)
 		if err != nil {
+			c.Logger().Errorf("could not get %s from cache %T", url, l)
 			return nil, err
 		}
 		c.Logger().Debugf("Retrieved %s %s %dKiB", url, item.MimeType, len(item.Blob)/bytes.KiB)
@@ -71,12 +72,14 @@ func (l *LocalCache) Get(c echo.Context, url string) (*Item, error) {
 
 	resp, err := http.Get(url)
 	if err != nil {
+		c.Logger().Errorf("failed to fetch resource %v", url)
 		return nil, crashy.ErrorResponse{ErrorString: fmt.Sprintf("failed to fetch resource %v", url), Debug: err}
 	}
 
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
+		c.Logger().Errorf("unexpected status code %d", resp.StatusCode)
 		return nil, fmt.Errorf("%w: %d", StatusNotOK, resp.StatusCode)
 	}
 
@@ -95,7 +98,7 @@ func (l *LocalCache) Get(c echo.Context, url string) (*Item, error) {
 	if err != nil {
 		c.Logger().Errorf("could not set %s in cache %T", url, l)
 	}
-	c.Logger().Debugf("Cached %s %s %dKiB", url, mimeType, len(blob)/bytes.KiB)
+
 	c.Response().Header().Set("Cache-Control", "public, max-age=86400")
 
 	return item, nil
@@ -117,6 +120,7 @@ func (l *LocalCache) Set(c echo.Context, key string, item *Item) error {
 		delete(l.ongoing, key)
 	}
 
+	c.Logger().Debugf("Cached %s %s %dKiB", key, item.MimeType, len(item.Blob)/bytes.KiB)
 	return nil
 }
 

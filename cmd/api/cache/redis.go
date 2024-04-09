@@ -10,7 +10,6 @@ import (
 	"github.com/redis/go-redis/v9"
 	"log"
 	"os"
-	"strings"
 	"time"
 )
 
@@ -70,6 +69,7 @@ func (r *Redis) Get(c echo.Context, key string) (*Item, error) {
 	c.Logger().Debugf("Retrieving %s", key)
 	val, err := (*redis.Client)(r).JSONGet(ctx, key, "$").Result()
 	if errors.Is(err, redis.Nil) {
+		c.Logger().Errorf("key %s not found", key)
 		return nil, fmt.Errorf("key %s not found", key)
 	}
 	if err != nil {
@@ -81,6 +81,7 @@ func (r *Redis) Get(c echo.Context, key string) (*Item, error) {
 		return nil, err
 	}
 	if len(items) == 0 {
+		c.Logger().Errorf("empty item %s", key)
 		return nil, fmt.Errorf("empty item %s", key)
 	}
 
@@ -93,6 +94,7 @@ func (r *Redis) Get(c echo.Context, key string) (*Item, error) {
 	if item.MimeType == echo.MIMEApplicationJSON {
 		b, err := json.Marshal(items[0].Blob)
 		if err != nil {
+			c.Logger().Errorf("failed to marshal item: %v", err)
 			return nil, err
 		}
 		item.Blob = b
@@ -110,15 +112,15 @@ type JSONItem struct {
 }
 
 func (r *Redis) Set(c echo.Context, key string, item *Item) error {
-	if strings.HasPrefix(item.MimeType, "image") {
-		// set as binary
-	}
+	// TODO: Use different strategy when item is image binary
 	i, err := item.MarshalBinary()
 	if err != nil {
+		c.Logger().Errorf("failed to marshal item: %v", err)
 		return fmt.Errorf("failed to marshal item: %w", err)
 	}
 	cmd := (*redis.Client)(r).JSONSet(ctx, key, "$", i)
 	if cmd.Err() != nil {
+		c.Logger().Errorf("failed to set item: %v", cmd.Err())
 		return fmt.Errorf("failed to set item: %w", cmd.Err())
 	}
 	c.Logger().Debugf("Cached %s %s %dKiB", key, item.MimeType, len(i)/bytes.KiB)

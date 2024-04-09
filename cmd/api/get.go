@@ -633,9 +633,12 @@ func processParams(c echo.Context, wg *sync.WaitGroup, sub *db.Submission) {
 	if textFile == nil {
 		return
 	}
-	c.Logger().Debugf("getting file for %v", textFile.File.FileName)
+
 	c.Request().Header.Set("Accept", "text/plain")
-	b, errFunc := cache.Retrieve(c, cache.GetLocalCache(c), textFile.File.FileURLFull)
+
+	cacheToUse := cache.SwitchCache(c)
+
+	b, errFunc := cache.Retrieve(c, cacheToUse, fmt.Sprintf("text/plain:%v", textFile.File.FileURLFull), textFile.File.FileURLFull)
 	if errFunc != nil {
 		return
 	}
@@ -681,8 +684,6 @@ func processParams(c echo.Context, wg *sync.WaitGroup, sub *db.Submission) {
 	if params != nil {
 		c.Logger().Debugf("finished params for %v", f.FileName)
 		sub.Metadata.Params = &params
-
-		c.Logger().Debugf("processing object for %v", f.FileName)
 		parseObjects(c, wg, sub)
 	}
 	if len(sub.Metadata.Objects) == 0 {
@@ -706,7 +707,6 @@ func parseObjects(c echo.Context, wg *sync.WaitGroup, sub *db.Submission) {
 			wg.Add(1)
 			go func(name string, content string) {
 				defer wg.Done()
-				defer c.Logger().Debugf("finished heuristics for %v", name)
 				heuristics, err := utils.ParameterHeuristics(content)
 				if err != nil {
 					c.Logger().Errorf("error processing heuristics for %v: %v", name, err)

@@ -155,7 +155,7 @@ func OriginalResponseWriter(next echo.HandlerFunc) echo.HandlerFunc {
 
 var withOriginalResponseWriter = []echo.MiddlewareFunc{LoggedInMiddleware, RequireAuditor, OriginalResponseWriter, CacheMiddleware}
 
-var staticMiddleware = []echo.MiddlewareFunc{Static}
+var staticMiddleware = []echo.MiddlewareFunc{Static, RedisMiddleware}
 
 var withRedis = []echo.MiddlewareFunc{LoggedInMiddleware, RequireAuditor, OriginalResponseWriter, RedisMiddleware, CacheMiddleware}
 

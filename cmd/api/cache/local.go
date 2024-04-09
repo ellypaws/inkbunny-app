@@ -3,11 +3,9 @@ package cache
 import (
 	"errors"
 	"fmt"
-	"github.com/ellypaws/inkbunny-app/cmd/crashy"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/gommon/bytes"
-	"io"
-	"net/http"
+	"github.com/redis/go-redis/v9"
 	"strings"
 	"sync"
 	"time"
@@ -15,21 +13,18 @@ import (
 
 var FileCache = &LocalCache{
 	items:    make(map[string]*Item),
-	ongoing:  make(map[string]chan *Item),
 	maxSize:  256 * bytes.MiB,
 	maxItems: 20,
 }
 
 var TextCache = &LocalCache{
 	items:    make(map[string]*Item),
-	ongoing:  make(map[string]chan *Item),
 	maxSize:  32 * bytes.MiB,
 	maxItems: 256,
 }
 
 type LocalCache struct {
 	items       map[string]*Item
-	ongoing     map[string]chan *Item
 	maxSize     int64 // Max size in bytes
 	maxItems    int
 	currentSize int64
@@ -40,71 +35,22 @@ var UrlNotString = errors.New("url is set but cannot be coerced into string")
 var UrlNotSet = errors.New("url is not set")
 var StatusNotOK = errors.New("unexpected status code")
 
-// Get downloads and sets the cache
-func (l *LocalCache) Get(c echo.Context, url string) (*Item, error) {
-	cacheItem, err := l.get(url)
-	if err == nil {
-		c.Logger().Infof("Cache hit for %s", url)
-		c.Response().Header().Set("Cache-Control", "public, max-age=86400") // 24 hours
-		return cacheItem, nil
-	}
-
+func (l *LocalCache) Get(key string) (*Item, error) {
 	l.mu.Lock()
-	if ongoing, found := l.ongoing[url]; found {
-		l.mu.Unlock()
-		c.Logger().Debugf("Still receiving %s", url)
-		item := <-ongoing
-		item, err := l.get(url)
-		if err != nil {
-			c.Logger().Errorf("could not get %s from cache %T", url, l)
-			return nil, err
-		}
-		c.Logger().Debugf("Retrieved %s %s %dKiB", url, item.MimeType, len(item.Blob)/bytes.KiB)
-		c.Response().Header().Set("Cache-Control", "public, max-age=86400") // 24 hours
+	defer l.mu.Unlock()
+	item, found := l.items[key]
+	if found {
+		item.Accessed()
 		return item, nil
 	}
-
-	c.Logger().Infof("Downloading %s", url)
-
-	done := make(chan *Item)
-	l.ongoing[url] = done
-	l.mu.Unlock()
-
-	resp, err := http.Get(url)
-	if err != nil {
-		c.Logger().Errorf("failed to fetch resource %v", url)
-		return nil, crashy.ErrorResponse{ErrorString: fmt.Sprintf("failed to fetch resource %v", url), Debug: err}
-	}
-
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		c.Logger().Errorf("unexpected status code %d", resp.StatusCode)
-		return nil, fmt.Errorf("%w: %d", StatusNotOK, resp.StatusCode)
-	}
-
-	blob, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, crashy.ErrorResponse{ErrorString: "failed to read data", Debug: err}
-	}
-
-	mimeType := resp.Header.Get("Content-Type")
-	item := &Item{
-		Blob:       blob,
-		LastAccess: time.Now().UTC(),
-		MimeType:   mimeType,
-	}
-	err = l.Set(c, url, item)
-	if err != nil {
-		c.Logger().Errorf("could not set %s in cache %T", url, l)
-	}
-
-	c.Response().Header().Set("Cache-Control", "public, max-age=86400")
-
-	return item, nil
+	return nil, redis.Nil
 }
 
-func (l *LocalCache) Set(c echo.Context, key string, item *Item) error {
+func (l *LocalCache) Set(key string, item *Item) error {
+	if !strings.HasPrefix(key, item.MimeType) {
+		key = fmt.Sprintf("%s:%s", item.MimeType, key)
+	}
+
 	l.mu.Lock()
 	defer l.mu.Unlock()
 
@@ -115,12 +61,7 @@ func (l *LocalCache) Set(c echo.Context, key string, item *Item) error {
 		l.items[key] = item
 		l.currentSize += int64(len(item.Blob))
 	}
-	if channel, found := l.ongoing[key]; found && channel != nil {
-		close(channel)
-		delete(l.ongoing, key)
-	}
 
-	c.Logger().Debugf("Cached %s %s %dKiB", key, item.MimeType, len(item.Blob)/bytes.KiB)
 	return nil
 }
 
@@ -139,17 +80,6 @@ func GetLocalCache(c echo.Context) *LocalCache {
 }
 
 var ErrNoItem = errors.New("no such key")
-
-func (l *LocalCache) get(key string) (*Item, error) {
-	l.mu.Lock()
-	defer l.mu.Unlock()
-	item, found := l.items[key]
-	if found {
-		item.Accessed()
-		return item, nil
-	}
-	return nil, ErrNoItem
-}
 
 func (l *LocalCache) Evict() {
 	now := time.Now()

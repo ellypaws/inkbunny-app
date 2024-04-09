@@ -6,10 +6,10 @@ import (
 	"errors"
 	"fmt"
 	"github.com/labstack/echo/v4"
-	"github.com/labstack/gommon/bytes"
 	"github.com/redis/go-redis/v9"
 	"log"
 	"os"
+	"strings"
 	"time"
 )
 
@@ -34,7 +34,7 @@ func init() {
 
 type Redis redis.Client
 
-var client *redis.Client
+var client *Redis
 
 var addr string = "localhost:6379"
 
@@ -52,55 +52,70 @@ func NewContext() context.Context {
 }
 
 func RedisClient() *Redis {
-	return (*Redis)(client)
+	return client
 }
 
-func NewRedisClient() *redis.Client {
+func NewRedisClient() *Redis {
 	client := redis.NewClient(&redis.Options{
 		Addr:     addr,
 		Username: "default",
 		Password: "",
 		DB:       0,
 	})
-	return client
+	return (*Redis)(client)
 }
 
-func (r *Redis) Get(c echo.Context, key string) (*Item, error) {
-	c.Logger().Debugf("Retrieving %s", key)
+func (r *Redis) Get(key string) (*Item, error) {
+	if !strings.HasPrefix(key, echo.MIMEApplicationJSON) {
+		val, err := (*redis.Client)(r).Get(ctx, key).Bytes()
+		if errors.Is(err, redis.Nil) {
+			return nil, fmt.Errorf("key %s not found", key)
+		}
+		if err != nil {
+			return nil, err
+		}
+		var mimeType string
+		if strings.Contains(key, ":") {
+			mimeType = key[:strings.Index(key, ":")]
+		}
+		if strings.HasPrefix(mimeType, "http") {
+			mimeType = MimeType(key)
+		}
+		if mimeType == "" {
+			mimeType = echo.MIMEOctetStream
+		}
+		return &Item{
+			LastAccess: time.Now().UTC(),
+			MimeType:   mimeType,
+			Blob:       val,
+		}, nil
+	}
+
 	val, err := (*redis.Client)(r).JSONGet(ctx, key, "$").Result()
-	if errors.Is(err, redis.Nil) {
-		c.Logger().Errorf("key %s not found", key)
+	if errors.Is(err, redis.Nil) || len(val) == 0 {
 		return nil, fmt.Errorf("key %s not found", key)
 	}
+
 	if err != nil {
 		return nil, err
 	}
-	var items []JSONItem
+
+	var items []map[string]any
 	err = json.Unmarshal([]byte(val), &items)
 	if err != nil {
 		return nil, err
 	}
+
 	if len(items) == 0 {
-		c.Logger().Errorf("empty item %s", key)
 		return nil, fmt.Errorf("empty item %s", key)
 	}
 
 	var item Item = Item{
+		Blob:       []byte(val[1 : len(val)-1]),
 		LastAccess: time.Now().UTC(),
-		MimeType:   items[0].MimeType,
-		HitCount:   items[0].HitCount + 1,
+		MimeType:   echo.MIMEApplicationJSON,
 	}
 
-	if item.MimeType == echo.MIMEApplicationJSON {
-		b, err := json.Marshal(items[0].Blob)
-		if err != nil {
-			c.Logger().Errorf("failed to marshal item: %v", err)
-			return nil, err
-		}
-		item.Blob = b
-	}
-
-	c.Logger().Infof("Cache hit for %s", key)
 	return &item, nil
 }
 
@@ -111,18 +126,25 @@ type JSONItem struct {
 	HitCount   int       `json:"hit_count,omitempty"`
 }
 
-func (r *Redis) Set(c echo.Context, key string, item *Item) error {
-	// TODO: Use different strategy when item is image binary
-	i, err := item.MarshalBinary()
-	if err != nil {
-		c.Logger().Errorf("failed to marshal item: %v", err)
-		return fmt.Errorf("failed to marshal item: %w", err)
+func (r *Redis) Set(key string, item *Item) error {
+	if !strings.HasPrefix(key, item.MimeType) {
+		key = fmt.Sprintf("%s:%s", item.MimeType, key)
 	}
-	cmd := (*redis.Client)(r).JSONSet(ctx, key, "$", i)
+
+	if strings.HasSuffix(item.MimeType, "json") {
+		cmd := (*redis.Client)(r).JSONSet(ctx, key, "$", item.Blob)
+		if cmd.Err() != nil {
+			return fmt.Errorf("failed to set item: %w", cmd.Err())
+		}
+		(*redis.Client)(r).ExpireAt(ctx, key, time.Now().UTC().AddDate(1, 0, 0))
+
+		return nil
+	}
+
+	cmd := (*redis.Client)(r).Set(ctx, key, item.Blob, 24*time.Hour)
 	if cmd.Err() != nil {
-		c.Logger().Errorf("failed to set item: %v", cmd.Err())
 		return fmt.Errorf("failed to set item: %w", cmd.Err())
 	}
-	c.Logger().Debugf("Cached %s %s %dKiB", key, item.MimeType, len(i)/bytes.KiB)
+
 	return nil
 }

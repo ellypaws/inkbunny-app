@@ -36,9 +36,9 @@ func ProcessCaption(c echo.Context, wg *sync.WaitGroup, sub *db.Submission, i in
 		cacheToUse = cache.GetLocalCache(c)
 	}
 
-	key := fmt.Sprintf("caption:%s", f.FileURLScreen)
+	key := fmt.Sprintf("%s:%s", echo.MIMEApplicationJSON, f.FileURLScreen)
 
-	item, err := cacheToUse.Get(c, key)
+	item, err := cacheToUse.Get(key)
 	if err == nil {
 		var result *e.CaptionEnum
 		err := json.Unmarshal(item.Blob, &result)
@@ -54,9 +54,9 @@ func ProcessCaption(c echo.Context, wg *sync.WaitGroup, sub *db.Submission, i in
 		return
 	}
 
-	c.Logger().Infof("Cache miss for %s interrogating...", key)
+	c.Logger().Debugf("Cache miss for %s retrieving image...", key)
 
-	item, errorFunc := cache.GetLocalCache(c).Get(c, f.FileURLScreen)
+	item, errorFunc := cache.Retrieve(c, cacheToUse, fmt.Sprintf("%v:%v", f.MimeType, f.FileURLScreen), f.FileURLScreen)
 	if errorFunc != nil {
 		return
 	}
@@ -66,7 +66,7 @@ func ProcessCaption(c echo.Context, wg *sync.WaitGroup, sub *db.Submission, i in
 	req.Image = &base64String
 	*req.Threshold = 0.7
 
-	c.Logger().Debugf("processing captions for %v", f.FileURLScreen)
+	c.Logger().Infof("Interrogating captions for %v", f.FileURLScreen)
 	t, err := host.Interrogate(&req)
 	if err != nil {
 		c.Logger().Errorf("error processing captions for %v: %v", f.FileURLScreen, err)
@@ -86,7 +86,7 @@ func ProcessCaption(c echo.Context, wg *sync.WaitGroup, sub *db.Submission, i in
 		return
 	}
 
-	err = cacheToUse.Set(c, key, &cache.Item{
+	err = cacheToUse.Set(key, &cache.Item{
 		Blob:       blob,
 		LastAccess: time.Now().UTC(),
 		MimeType:   echo.MIMEApplicationJSON,

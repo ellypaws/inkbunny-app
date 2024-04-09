@@ -28,9 +28,7 @@ func GetImageHandler(c echo.Context) error {
 		return c.String(http.StatusBadRequest, "URL must be from inkbunny.net")
 	}
 
-	key := parse.Path
-
-	cacheItem, errorFunc := cache.Retrieve(c, cache.GetLocalCache(c), key)
+	cacheItem, errorFunc := cache.Retrieve(c, cache.SwitchCache(c), cache.MimeTypeURL(imageURL), imageURL)
 	if errorFunc != nil {
 		return errorFunc(c)
 	}

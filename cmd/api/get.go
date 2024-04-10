@@ -419,10 +419,10 @@ func GetReviewHandler(c echo.Context) error {
 	}
 
 	type details struct {
-		URL        string
-		ID         api.IntString
-		User       api.UsernameID
-		Submission *db.Submission
+		URL        string         `json:"url"`
+		ID         api.IntString  `json:"id"`
+		User       api.UsernameID `json:"user"`
+		Submission *db.Submission `json:"submission"`
 	}
 
 	var submissions = make([]details, len(submissionDetails.Submissions))

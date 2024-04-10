@@ -407,7 +407,7 @@ func SubmissionLabels(submission Submission) []TicketLabel {
 	if m.HasTxt || m.HasJSON {
 		hasGenerationDetails = true
 	}
-	if !hasGenerationDetails {
+	if (m.AITitle || m.AIDescription || len(m.AIKeywords) > 0) && !hasGenerationDetails {
 		labels = append(labels, LabelMissingPrompt)
 	}
 	return labels

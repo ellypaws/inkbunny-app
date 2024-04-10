@@ -59,7 +59,7 @@ func ProcessCaption(c echo.Context, wg *sync.WaitGroup, sub *db.Submission, i in
 
 	item, errorFunc := cache.Retrieve(c, cacheToUse, cache.Fetch{
 		Key:      f.FileName,
-		URL:      f.FileURLFull,
+		URL:      f.FileURLScreen,
 		MimeType: f.MimeType,
 	})
 	if errorFunc != nil {

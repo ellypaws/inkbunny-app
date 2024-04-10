@@ -2,10 +2,10 @@ github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/dustin/go-humanize v1.0.1 h1:GzkhY7T5VNhEkwH0PVJgjz+fX1rhBrR7pRT3mDkpeCY=
 github.com/dustin/go-humanize v1.0.1/go.mod h1:Mu1zIs6XwVuF/gI1OepvI0qD18qycQx+mFykh5fBlto=
-github.com/ellypaws/inkbunny-sd v0.0.0-20240407200905-d9ec4f5e09dc h1:xbFj2tHXR8qJW6zpp7+U6lfE1ormdGkry2EFEl974VM=
-github.com/ellypaws/inkbunny-sd v0.0.0-20240407200905-d9ec4f5e09dc/go.mod h1:4GEXVJm4dZdqKtiMQ+2/SWZrqiHfJo7EYBPMnquGU5s=
-github.com/ellypaws/inkbunny/api v0.0.0-20240410203008-7327a8cacbd4 h1:2MQEaDCg4080KXMxZ6pyMqKaMSR8HuM6uZFqA+2qANs=
-github.com/ellypaws/inkbunny/api v0.0.0-20240410203008-7327a8cacbd4/go.mod h1:wdWqyRSEoSVdu5FnUGv44PvqdLfKQfgaXvDQpZFJs3A=
+github.com/ellypaws/inkbunny-sd v0.0.0-20240410210406-8371eb974535 h1:jMD0FSyu8XppY2BpESv6HQAmFUTUJMDoEN+Qfk/cHAo=
+github.com/ellypaws/inkbunny-sd v0.0.0-20240410210406-8371eb974535/go.mod h1:TShSxSxItdbMfKBfqCzO6PKPtIGwfa/k5H2AAQFb8B0=
+github.com/ellypaws/inkbunny/api v0.0.0-20240410205923-ecc2b20b5ba2 h1:7Hp5b3EolY4s8Z44kh2YOyy0nyyOHVzk+VzDrdzz5Pg=
+github.com/ellypaws/inkbunny/api v0.0.0-20240410205923-ecc2b20b5ba2/go.mod h1:wdWqyRSEoSVdu5FnUGv44PvqdLfKQfgaXvDQpZFJs3A=
 github.com/go-errors/errors v1.5.1 h1:ZwEMSLRCapFLflTpT7NKaAc7ukJ8ZPEjzlxt8rPN8bk=
 github.com/go-errors/errors v1.5.1/go.mod h1:sIVyrIiJhuEF+Pj9Ebtd6P/rEYROXFi3BopGUQ5a5Og=
 github.com/google/pprof v0.0.0-20221118152302-e6195bd50e26 h1:Xim43kblpZXfIBQsbuBVKCudVG457BR2GZFIz3uw3hQ=

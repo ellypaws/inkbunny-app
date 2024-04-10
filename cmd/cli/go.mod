@@ -16,8 +16,8 @@ require (
 	github.com/charmbracelet/bubbletea v0.25.0
 	github.com/charmbracelet/lipgloss v0.10.0
 	github.com/ellypaws/inkbunny-app/api/library v0.0.0
-	github.com/ellypaws/inkbunny-sd v0.0.0-20240407200905-d9ec4f5e09dc
-	github.com/ellypaws/inkbunny/api v0.0.0-20240410203008-7327a8cacbd4
+	github.com/ellypaws/inkbunny-sd v0.0.0-20240410210406-8371eb974535
+	github.com/ellypaws/inkbunny/api v0.0.0-20240410205923-ecc2b20b5ba2
 	github.com/lrstanley/bubblezone v0.0.0-20240125042004-b7bafc493195
 	golang.org/x/sys v0.19.0
 )
@@ -47,7 +47,7 @@ require (
 	github.com/xo/terminfo v0.0.0-20220910002029-abceb7e1c41e // indirect
 	golang.org/x/image v0.15.0 // indirect
 	golang.org/x/net v0.24.0 // indirect
-	golang.org/x/sync v0.6.0 // indirect
+	golang.org/x/sync v0.7.0 // indirect
 	golang.org/x/term v0.19.0 // indirect
 	golang.org/x/text v0.14.0 // indirect
 )

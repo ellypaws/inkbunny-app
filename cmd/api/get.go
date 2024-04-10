@@ -15,6 +15,7 @@ import (
 	"github.com/ellypaws/inkbunny-sd/utils"
 	"github.com/ellypaws/inkbunny/api"
 	"github.com/labstack/echo/v4"
+	units "github.com/labstack/gommon/bytes"
 	"net/http"
 	"slices"
 	"strconv"
@@ -405,9 +406,35 @@ func GetReviewHandler(c echo.Context) error {
 		ShowDescriptionBbcodeParsed: true,
 	}
 
-	submissionDetails, err := api.Credentials{Sid: sid}.SubmissionDetails(req)
-	if err != nil {
-		return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
+	cacheToUse := cache.SwitchCache(c)
+	key := fmt.Sprintf("%v:inkbunny:submissions:%v", echo.MIMEApplicationJSON, submissionID)
+
+	var submissionDetails api.SubmissionDetailsResponse
+	item, errFunc := cacheToUse.Get(key)
+	if errFunc == nil {
+		if err := json.Unmarshal(item.Blob, &submissionDetails); err == nil {
+			c.Logger().Infof("Cache hit for %s", key)
+		}
+	} else {
+		c.Logger().Infof("Cache miss for %s retrieving submission...", key)
+		submissionDetails, err = api.Credentials{Sid: sid}.SubmissionDetails(req)
+		if err != nil {
+			return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
+		}
+		bin, err := json.Marshal(submissionDetails)
+		if err != nil {
+			c.Logger().Errorf("error marshaling submission details: %v", err)
+		}
+		err = cacheToUse.Set(key, &cache.Item{
+			Blob:       bin,
+			LastAccess: time.Now().UTC(),
+			MimeType:   echo.MIMEApplicationJSON,
+		})
+		if err != nil {
+			c.Logger().Errorf("error caching submission details: %v", err)
+		} else {
+			c.Logger().Infof("Cached %s %s %dKiB", key, echo.MIMEApplicationJSON, len(bin)/units.KiB)
+		}
 	}
 
 	if len(submissionDetails.Submissions) == 0 {

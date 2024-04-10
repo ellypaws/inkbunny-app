@@ -30,7 +30,8 @@ var getHandlers = pathHandler{
 	"/inkbunny/submission/:ids": handler{GetInkbunnySubmission, withCache},
 	"/inkbunny/search":          handler{GetInkbunnySearch, withCache},
 	"/image":                    handler{GetImageHandler, staticMiddleware},
-	"/review/:id":               handler{GetReviewHandler, withRedis},
+	"/review/:id":               handler{GetReviewHandler, append(staffMiddleware, withRedis...)},
+	"/heuristics/:id":           handler{GetHeuristicsHandler, append(loggedInMiddleware, withRedis...)},
 	"/tickets/audits":           handler{GetAuditHandler, staffMiddleware},
 	"/tickets/get":              handler{GetTicketsHandler, staffMiddleware},
 	"/auditors":                 handler{GetAllAuditorsJHandler, staffMiddleware},
@@ -791,4 +792,98 @@ func parseObjects(c echo.Context, sub *db.Submission) {
 
 func auditorAsUsernameID(auditor *db.Auditor) api.UsernameID {
 	return api.UsernameID{UserID: strconv.FormatInt(auditor.UserID, 10), Username: auditor.Username}
+}
+
+// GetHeuristicsHandler returns the heuristics of a submission
+func GetHeuristicsHandler(c echo.Context) error {
+	sid, _, err := GetSIDandID(c)
+	if err != nil {
+		return c.JSON(http.StatusUnauthorized, crashy.Wrap(err))
+	}
+
+	submissionID := c.Param("id")
+	if submissionID == "" {
+		return c.JSON(http.StatusBadRequest, crashy.ErrorResponse{ErrorString: "missing submission ID"})
+	}
+
+	req := api.SubmissionDetailsRequest{
+		SID:                         sid,
+		SubmissionIDs:               submissionID,
+		OutputMode:                  "json",
+		ShowDescription:             true,
+		ShowDescriptionBbcodeParsed: true,
+	}
+
+	submissionDetails, err := api.Credentials{Sid: sid}.SubmissionDetails(req)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
+	}
+
+	if len(submissionDetails.Submissions) == 0 {
+		return c.JSON(http.StatusNotFound, crashy.ErrorResponse{ErrorString: "no submissions found"})
+	}
+
+	type details struct {
+		URL        string
+		ID         api.IntString
+		User       api.UsernameID
+		Submission *db.Submission
+	}
+
+	var submissions = make(map[int64]details)
+
+	var waitGroup sync.WaitGroup
+	var mutex sync.Locker
+	for _, sub := range submissionDetails.Submissions {
+		waitGroup.Add(1)
+
+		submission := db.InkbunnySubmissionToDBSubmission(sub)
+		go func(wg *sync.WaitGroup, sub *db.Submission) {
+			defer wg.Done()
+			var p sync.WaitGroup
+			p.Add(1)
+			go processParams(c, &p, sub)
+			p.Wait()
+			if c.QueryParam("stream") == "true" {
+				mutex.Lock()
+				defer mutex.Unlock()
+				if c.QueryParam("stream") == "true" {
+					enc := json.NewEncoder(c.Response())
+					if err := enc.Encode(sub); err != nil {
+						c.Logger().Errorf("error encoding submission %v: %v", sub.ID, err)
+					}
+					c.Logger().Debugf("flushing %v", sub.ID)
+					c.Response().Header().Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+					c.Response().WriteHeader(http.StatusOK)
+					c.Get("writer").(http.Flusher).Flush()
+					c.Logger().Infof("finished processing %v", sub.ID)
+				}
+			}
+		}(&waitGroup, &submission)
+
+		submissions[submission.ID] = details{
+			URL:        submission.URL,
+			ID:         api.IntString(submission.ID),
+			User:       api.UsernameID{UserID: sub.UserID, Username: sub.Username},
+			Submission: &submission,
+		}
+	}
+	waitGroup.Wait()
+	if c.QueryParam("stream") == "true" {
+		return nil
+	}
+
+	type p struct {
+		Params  *utils.Params                          `json:"params"`
+		Objects map[string]entities.TextToImageRequest `json:"objects"`
+	}
+	var params = make(map[string]*p)
+	for id, sub := range submissions {
+		params[fmt.Sprintf("https://inkbunny.net/s/%d", id)] = &p{
+			Params:  sub.Submission.Metadata.Params,
+			Objects: sub.Submission.Metadata.Objects,
+		}
+	}
+
+	return c.JSON(http.StatusOK, params)
 }

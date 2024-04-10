@@ -424,17 +424,17 @@ func GetReviewHandler(c echo.Context) error {
 		Submission *db.Submission
 	}
 
-	var submissions = make(map[int64]details)
+	var submissions = make([]details, len(submissionDetails.Submissions))
 
 	var eachSubmission sync.WaitGroup
 	var dbMutex sync.Mutex
-	for _, sub := range submissionDetails.Submissions {
+	for i, sub := range submissionDetails.Submissions {
 		eachSubmission.Add(1)
 
 		submission := db.InkbunnySubmissionToDBSubmission(sub)
 		go processSubmission(c, &eachSubmission, &dbMutex, &submission)
 
-		submissions[submission.ID] = details{
+		submissions[i] = details{
 			URL:        submission.URL,
 			ID:         api.IntString(submission.ID),
 			User:       api.UsernameID{UserID: sub.UserID, Username: sub.Username},
@@ -450,9 +450,9 @@ func GetReviewHandler(c echo.Context) error {
 
 	if c.QueryParam("multiple") == "true" {
 		var tickets []db.Ticket
-		for id, sub := range submissions {
+		for _, sub := range submissions {
 			ticket := db.Ticket{
-				ID:         id,
+				ID:         int64(sub.ID),
 				Subject:    sub.Submission.Title,
 				DateOpened: time.Now().UTC(),
 				Status:     "triage",
@@ -467,7 +467,7 @@ func GetReviewHandler(c echo.Context) error {
 						Message:     fmt.Sprintf("The following submission doesn't include the prompts: %d", sub.ID),
 					},
 				},
-				SubmissionIDs: []int64{id},
+				SubmissionIDs: []int64{int64(sub.ID)},
 				AssignedID:    &auditor.UserID,
 				UsersInvolved: db.Involved{
 					Reporter: auditorAsUser,
@@ -512,8 +512,8 @@ func GetReviewHandler(c echo.Context) error {
 		},
 		SubmissionIDs: func() []int64 {
 			var ids []int64
-			for id := range submissions {
-				ids = append(ids, id)
+			for _, sub := range submissions {
+				ids = append(ids, int64(sub.ID))
 			}
 			return ids
 		}(),

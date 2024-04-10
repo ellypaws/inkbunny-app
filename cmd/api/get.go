@@ -296,7 +296,7 @@ func mail(c echo.Context, user *api.Credentials, response api.SubmissionSearchRe
 				FileID:             file.FileID,
 				FileName:           file.FileName,
 				FilePreview:        file.FileURLPreview,
-				NonCustomThumb:     file.ThumbURLLargeNonCustom,
+				NonCustomThumb:     file.ThumbnailURLLargeNonCustom,
 				FileURL:            file.FileURLFull,
 				UserID:             file.UserID,
 				CreateDateTime:     file.CreateDateTime,

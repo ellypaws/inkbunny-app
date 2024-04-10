@@ -464,7 +464,7 @@ func GetReviewHandler(c echo.Context) error {
 						SupportTeam: false,
 						User:        auditorAsUser,
 						Date:        time.Now().UTC(),
-						Message:     fmt.Sprintf("The following submission doesn't include the prompts: %d", sub.ID),
+						Message:     submissionMessage(sub.Submission),
 					},
 				},
 				SubmissionIDs: []int64{int64(sub.ID)},
@@ -536,6 +536,67 @@ func GetReviewHandler(c echo.Context) error {
 	default:
 		return c.JSON(http.StatusOK, ticket)
 	}
+}
+
+func submissionMessage(sub *db.Submission) string {
+	var sb strings.Builder
+	sb.WriteString("The following submission is pending review: ")
+	sb.WriteString(sub.URL)
+
+	flags := db.SubmissionLabels(*sub)
+	if len(flags) > 0 {
+		sb.WriteString("\n")
+		sb.WriteString("The following flags were detected: ")
+		for i, flag := range flags {
+			if i > 0 {
+				sb.WriteString(", ")
+			}
+			sb.WriteString(string(flag))
+		}
+	}
+
+	if sub.Metadata.HasJSON {
+		sb.WriteString("\n")
+		sb.WriteString("The submission has a JSON file")
+	}
+
+	if sub.Metadata.HasTxt {
+		sb.WriteString("\n")
+		sb.WriteString("The submission has a text file")
+	}
+
+	if len(sub.Metadata.AIKeywords) > 0 {
+		sb.WriteString("\n")
+		sb.WriteString("The submission has the following AI keywords: ")
+		for i, keyword := range sub.Metadata.AIKeywords {
+			if i > 0 {
+				sb.WriteString(", ")
+			}
+			sb.WriteString(keyword)
+		}
+		if sub.Metadata.Params == nil {
+			sb.WriteString("\n")
+			sb.WriteString("The submission is potentially missing parameters")
+		}
+	} else {
+		if sub.Metadata.Params != nil {
+			sb.WriteString("\n")
+			sb.WriteString("Parameters were detected but no AI keywords were found")
+		}
+	}
+
+	if sub.Metadata.DetectedHuman {
+		sb.WriteString("\n")
+		if !sub.Metadata.TaggedHuman {
+			sb.WriteString("A human was detected in the submission but was not tagged\n")
+		} else {
+			sb.WriteString("A human was detected in the submission and was tagged\n")
+		}
+		sb.WriteString("The detection rate is: ")
+		sb.WriteString(fmt.Sprintf("%.2f", sub.Metadata.HumanConfidence))
+	}
+
+	return sb.String()
 }
 
 func processSubmission(c echo.Context, eachSubmission *sync.WaitGroup, mutex *sync.Mutex, sub *db.Submission) {

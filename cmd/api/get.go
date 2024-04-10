@@ -453,6 +453,7 @@ func GetReviewHandler(c echo.Context) error {
 		Submission *db.Submission  `json:"submission,omitempty"`
 		Inkbunny   *api.Submission `json:"inkbunny,omitempty"`
 		Ticket     *db.Ticket      `json:"ticket,omitempty"`
+		Images     []*db.File      `json:"images,omitempty"`
 	}
 
 	var submissions = make([]details, len(submissionDetails.Submissions))
@@ -503,6 +504,12 @@ func GetReviewHandler(c echo.Context) error {
 						user,
 					},
 				},
+			}
+			for i, file := range sub.Files {
+				if !strings.Contains(file.MimeType, "image") {
+					continue
+				}
+				submissions[i].Images = append(submissions[i].Images, &submission.Files[i])
 			}
 		}
 	}

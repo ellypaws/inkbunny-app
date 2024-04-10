@@ -57,7 +57,11 @@ func ProcessCaption(c echo.Context, wg *sync.WaitGroup, sub *db.Submission, i in
 
 	c.Logger().Debugf("Cache miss for %s retrieving image...", key)
 
-	item, errorFunc := cache.Retrieve(c, cacheToUse, fmt.Sprintf("%v:%v", f.MimeType, f.FileURLScreen), f.FileURLScreen)
+	item, errorFunc := cache.Retrieve(c, cacheToUse, cache.Fetch{
+		Key:      f.FileName,
+		URL:      f.FileURLFull,
+		MimeType: f.MimeType,
+	})
 	if errorFunc != nil {
 		return
 	}

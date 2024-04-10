@@ -79,7 +79,7 @@ func (r *Redis) Get(key string) (*Item, error) {
 			mimeType = key[:strings.Index(key, ":")]
 		}
 		if strings.HasPrefix(mimeType, "http") {
-			mimeType = MimeType(key)
+			mimeType = MimeTypeFromURL(key)
 		}
 		if mimeType == "" {
 			mimeType = echo.MIMEOctetStream

@@ -696,11 +696,13 @@ func processParams(c echo.Context, wg *sync.WaitGroup, sub *db.Submission) {
 		return
 	}
 
-	c.Request().Header.Set("Accept", "text/plain")
-
 	cacheToUse := cache.SwitchCache(c)
 
-	b, errFunc := cache.Retrieve(c, cacheToUse, fmt.Sprintf("text/plain:%v", textFile.File.FileURLFull), textFile.File.FileURLFull)
+	b, errFunc := cache.Retrieve(c, cacheToUse, cache.Fetch{
+		Key:      textFile.File.FileName,
+		URL:      textFile.File.FileURLFull,
+		MimeType: textFile.File.MimeType,
+	})
 	if errFunc != nil {
 		return
 	}

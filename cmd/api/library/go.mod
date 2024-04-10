@@ -8,7 +8,7 @@ require (
 	github.com/disintegration/imaging v1.6.2
 	github.com/ellypaws/inkbunny-app/api v0.0.0
 	github.com/ellypaws/inkbunny-sd v0.0.0-20240407200905-d9ec4f5e09dc
-	github.com/ellypaws/inkbunny/api v0.0.0-20240405073124-c7ced75cc1c7
+	github.com/ellypaws/inkbunny/api v0.0.0-20240410203008-7327a8cacbd4
 	github.com/stretchr/testify v1.9.0
 	golang.org/x/net v0.24.0
 )

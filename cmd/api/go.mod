@@ -12,11 +12,12 @@ require (
 	github.com/ellypaws/inkbunny-app/api/library v0.0.0
 	github.com/ellypaws/inkbunny-app/cmd v0.0.0
 	github.com/ellypaws/inkbunny-sd v0.0.0-20240407200905-d9ec4f5e09dc
-	github.com/ellypaws/inkbunny/api v0.0.0-20240405073124-c7ced75cc1c7
+	github.com/ellypaws/inkbunny/api v0.0.0-20240410203008-7327a8cacbd4
 	github.com/gitsight/go-echo-cache v1.0.1
 	github.com/go-errors/errors v1.5.1
 	github.com/labstack/echo/v4 v4.11.4
 	github.com/labstack/gommon v0.4.2
+	github.com/redis/go-redis/v9 v9.5.1
 	github.com/stretchr/testify v1.9.0
 )
 
@@ -33,7 +34,6 @@ require (
 	github.com/mcuadros/go-defaults v1.2.0 // indirect
 	github.com/ncruces/go-strftime v0.1.9 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
-	github.com/redis/go-redis/v9 v9.5.1 // indirect
 	github.com/remyoudompheng/bigfft v0.0.0-20230129092748-24d4a6f8daec // indirect
 	github.com/valyala/bytebufferpool v1.0.0 // indirect
 	github.com/valyala/fasttemplate v1.2.2 // indirect

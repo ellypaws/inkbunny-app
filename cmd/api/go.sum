@@ -1,4 +1,8 @@
 github.com/OneOfOne/xxhash v1.2.2/go.mod h1:HSdplMjZKSmBqAxg5vPj2TmRDmfkzw+cTzAElWljhcU=
+github.com/bsm/ginkgo/v2 v2.12.0 h1:Ny8MWAHyOepLGlLKYmXG4IEkioBysk6GpaRTLC8zwWs=
+github.com/bsm/ginkgo/v2 v2.12.0/go.mod h1:SwYbGRRDovPVboqFv0tPTcG1sN61LM1Z4ARdbAV9g4c=
+github.com/bsm/gomega v1.27.10 h1:yeMWxP2pV2fG3FgAODIY8EiRE3dy0aeFYt4l7wh6yKA=
+github.com/bsm/gomega v1.27.10/go.mod h1:JyEr/xRbxbtgWNi8tIEVPUYZ5Dzef52k01W3YH0H+O0=
 github.com/cespare/xxhash v1.1.0/go.mod h1:XrSqR1VqqWfGrhpAt58auRo0WTKS1nRRg3ghfAqPWnc=
 github.com/cespare/xxhash/v2 v2.1.2/go.mod h1:VGX0DQ3Q6kWi7AoAeZDth3/j3BFtOZR5XLFGgcrjCOs=
 github.com/cespare/xxhash/v2 v2.3.0 h1:UL815xU9SqsFlibzuggzjXhog7bL6oX9BbNZnL2UFvs=
@@ -18,8 +22,8 @@ github.com/dustin/go-humanize v1.0.1 h1:GzkhY7T5VNhEkwH0PVJgjz+fX1rhBrR7pRT3mDkp
 github.com/dustin/go-humanize v1.0.1/go.mod h1:Mu1zIs6XwVuF/gI1OepvI0qD18qycQx+mFykh5fBlto=
 github.com/ellypaws/inkbunny-sd v0.0.0-20240407200905-d9ec4f5e09dc h1:xbFj2tHXR8qJW6zpp7+U6lfE1ormdGkry2EFEl974VM=
 github.com/ellypaws/inkbunny-sd v0.0.0-20240407200905-d9ec4f5e09dc/go.mod h1:4GEXVJm4dZdqKtiMQ+2/SWZrqiHfJo7EYBPMnquGU5s=
-github.com/ellypaws/inkbunny/api v0.0.0-20240405073124-c7ced75cc1c7 h1:5VcANijvaLt/06y5z3N/ZhOmfZhEAXAOB1J/y4sF9ks=
-github.com/ellypaws/inkbunny/api v0.0.0-20240405073124-c7ced75cc1c7/go.mod h1:wdWqyRSEoSVdu5FnUGv44PvqdLfKQfgaXvDQpZFJs3A=
+github.com/ellypaws/inkbunny/api v0.0.0-20240410203008-7327a8cacbd4 h1:2MQEaDCg4080KXMxZ6pyMqKaMSR8HuM6uZFqA+2qANs=
+github.com/ellypaws/inkbunny/api v0.0.0-20240410203008-7327a8cacbd4/go.mod h1:wdWqyRSEoSVdu5FnUGv44PvqdLfKQfgaXvDQpZFJs3A=
 github.com/gitsight/go-echo-cache v1.0.1 h1:+xIrb6BLwX5gmYBq084NaDc4v7SUF7xTvjlAI1MJXlM=
 github.com/gitsight/go-echo-cache v1.0.1/go.mod h1:snPqGf9OCb+YtaPOi0jRthyJPljD2iT5KJBcfPCO2ec=
 github.com/go-errors/errors v1.5.1 h1:ZwEMSLRCapFLflTpT7NKaAc7ukJ8ZPEjzlxt8rPN8bk=

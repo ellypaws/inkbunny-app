@@ -745,10 +745,10 @@ func processParams(c echo.Context, wg *sync.WaitGroup, sub *db.Submission) {
 		c.Logger().Errorf("error processing params for %v: %v", f.FileName, err)
 		return
 	}
-	if params != nil {
+	if len(params) > 0 {
 		c.Logger().Debugf("finished params for %v", f.FileName)
 		sub.Metadata.Params = &params
-		parseObjects(c, wg, sub)
+		parseObjects(c, sub)
 	}
 	if len(sub.Metadata.Objects) == 0 {
 		c.Logger().Debugf("processing description heuristics for %v", sub.URL)
@@ -759,11 +759,12 @@ func processParams(c echo.Context, wg *sync.WaitGroup, sub *db.Submission) {
 	}
 }
 
-func parseObjects(c echo.Context, wg *sync.WaitGroup, sub *db.Submission) {
+func parseObjects(c echo.Context, sub *db.Submission) {
 	if sub.Metadata.Objects != nil {
 		return
 	}
 
+	var wg sync.WaitGroup
 	var mutex sync.Mutex
 	for fileName, params := range *sub.Metadata.Params {
 		if p, ok := params[utils.Parameters]; ok {
@@ -785,6 +786,7 @@ func parseObjects(c echo.Context, wg *sync.WaitGroup, sub *db.Submission) {
 			}(fileName, p)
 		}
 	}
+	wg.Wait()
 }
 
 func auditorAsUsernameID(auditor *db.Auditor) api.UsernameID {

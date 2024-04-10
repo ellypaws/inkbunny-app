@@ -382,6 +382,7 @@ func GetAllAuditorsJHandler(c echo.Context) error {
 //   - Set query "interrogate" to "true" to parse entities.TaggerResponse from image files using (*sd.Host).Interrogate
 //   - Set query "multiple" to "true" to separate each db.Ticket by submission
 //   - Set query "stream" to "true" to receive multiple JSON objects
+//   - Set query "full" to "true" to include the original api.Submission
 func GetReviewHandler(c echo.Context) error {
 	sid, _, err := GetSIDandID(c)
 	if err != nil {
@@ -446,13 +447,17 @@ func GetReviewHandler(c echo.Context) error {
 	}
 
 	type details struct {
-		URL        string         `json:"url"`
-		ID         api.IntString  `json:"id"`
-		User       api.UsernameID `json:"user"`
-		Submission *db.Submission `json:"submission"`
+		URL        string          `json:"url"`
+		ID         api.IntString   `json:"id"`
+		User       api.UsernameID  `json:"user"`
+		Submission *db.Submission  `json:"submission,omitempty"`
+		Inkbunny   *api.Submission `json:"inkbunny,omitempty"`
+		Ticket     *db.Ticket      `json:"ticket,omitempty"`
 	}
 
 	var submissions = make([]details, len(submissionDetails.Submissions))
+
+	auditorAsUser := auditorAsUsernameID(auditor)
 
 	var eachSubmission sync.WaitGroup
 	var dbMutex sync.Mutex
@@ -462,29 +467,24 @@ func GetReviewHandler(c echo.Context) error {
 		submission := db.InkbunnySubmissionToDBSubmission(sub)
 		go processSubmission(c, &eachSubmission, &dbMutex, &submission)
 
+		user := api.UsernameID{UserID: sub.UserID, Username: sub.Username}
+		labels := db.SubmissionLabels(submission)
+
 		submissions[i] = details{
 			URL:        submission.URL,
 			ID:         api.IntString(submission.ID),
-			User:       api.UsernameID{UserID: sub.UserID, Username: sub.Username},
+			User:       user,
 			Submission: &submission,
 		}
-	}
-	eachSubmission.Wait()
-	if c.QueryParam("stream") == "true" {
-		return nil
-	}
 
-	auditorAsUser := auditorAsUsernameID(auditor)
-
-	if c.QueryParam("multiple") == "true" {
-		var tickets []db.Ticket
-		for _, sub := range submissions {
-			ticket := db.Ticket{
-				ID:         int64(sub.ID),
-				Subject:    sub.Submission.Title,
+		if c.QueryParam("full") == "true" || c.QueryParam("multiple") == "true" {
+			submissions[i].Inkbunny = &sub
+			submissions[i].Ticket = &db.Ticket{
+				ID:         submission.ID,
+				Subject:    fmt.Sprintf("Review for %v", submission.URL),
 				DateOpened: time.Now().UTC(),
 				Status:     "triage",
-				Labels:     db.SubmissionLabels(*sub.Submission),
+				Labels:     labels,
 				Priority:   "low",
 				Closed:     false,
 				Responses: []db.Response{
@@ -492,19 +492,29 @@ func GetReviewHandler(c echo.Context) error {
 						SupportTeam: false,
 						User:        auditorAsUser,
 						Date:        time.Now().UTC(),
-						Message:     submissionMessage(sub.Submission),
+						Message:     submissionMessage(&submission),
 					},
 				},
-				SubmissionIDs: []int64{int64(sub.ID)},
+				SubmissionIDs: []int64{int64(submission.ID)},
 				AssignedID:    &auditor.UserID,
 				UsersInvolved: db.Involved{
 					Reporter: auditorAsUser,
 					ReportedIDs: []api.UsernameID{
-						sub.User,
+						user,
 					},
 				},
 			}
-			tickets = append(tickets, ticket)
+		}
+	}
+	eachSubmission.Wait()
+	if c.QueryParam("stream") == "true" {
+		return nil
+	}
+
+	if c.QueryParam("multiple") == "true" {
+		var tickets []db.Ticket
+		for _, sub := range submissions {
+			tickets = append(tickets, *sub.Ticket)
 		}
 		return c.JSON(http.StatusOK, tickets)
 	}
@@ -514,55 +524,53 @@ func GetReviewHandler(c echo.Context) error {
 		ticketLabels = append(ticketLabels, db.SubmissionLabels(*sub.Submission)...)
 	}
 
-	ticket := db.Ticket{
-		ID:         1,
-		Subject:    "subject",
-		DateOpened: time.Now().UTC(),
-		Status:     "triage",
-		Labels:     ticketLabels,
-		Priority:   "low",
-		Closed:     false,
-		Responses: []db.Response{
-			{
-				SupportTeam: false,
-				User:        auditorAsUser,
-				Date:        time.Now().UTC(),
-				Message: func() string {
-					var sb strings.Builder
-					sb.WriteString("The following submissions don't include their prompts: ")
-					for _, sub := range submissions {
-						sb.WriteString("\n")
-						sb.WriteString(sub.URL)
-					}
-					return sb.String()
-				}(),
-			},
-		},
-		SubmissionIDs: func() []int64 {
-			var ids []int64
-			for _, sub := range submissions {
-				ids = append(ids, int64(sub.ID))
-			}
-			return ids
-		}(),
-		AssignedID: &auditor.UserID,
-		UsersInvolved: db.Involved{
-			Reporter: auditorAsUser,
-			ReportedIDs: func() []api.UsernameID {
-				var ids []api.UsernameID
-				for _, sub := range submissions {
-					ids = append(ids, sub.User)
-				}
-				return ids
-			}(),
-		},
-	}
-
 	switch c.QueryParam("output") {
 	case "submissions":
 		return c.JSON(http.StatusOK, submissions)
 	default:
-		return c.JSON(http.StatusOK, ticket)
+		return c.JSON(http.StatusOK, db.Ticket{
+			ID:         1,
+			Subject:    "subject",
+			DateOpened: time.Now().UTC(),
+			Status:     "triage",
+			Labels:     ticketLabels,
+			Priority:   "low",
+			Closed:     false,
+			Responses: []db.Response{
+				{
+					SupportTeam: false,
+					User:        auditorAsUser,
+					Date:        time.Now().UTC(),
+					Message: func() string {
+						var sb strings.Builder
+						sb.WriteString("The following submissions don't include their prompts: ")
+						for _, sub := range submissions {
+							sb.WriteString("\n")
+							sb.WriteString(sub.URL)
+						}
+						return sb.String()
+					}(),
+				},
+			},
+			SubmissionIDs: func() []int64 {
+				var ids []int64
+				for _, sub := range submissions {
+					ids = append(ids, int64(sub.ID))
+				}
+				return ids
+			}(),
+			AssignedID: &auditor.UserID,
+			UsersInvolved: db.Involved{
+				Reporter: auditorAsUser,
+				ReportedIDs: func() []api.UsernameID {
+					var ids []api.UsernameID
+					for _, sub := range submissions {
+						ids = append(ids, sub.User)
+					}
+					return ids
+				}(),
+			},
+		})
 	}
 }
 

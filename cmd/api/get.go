@@ -29,7 +29,7 @@ var getHandlers = pathHandler{
 	"/inkbunny/description":     handler{GetInkbunnyDescription, withCache},
 	"/inkbunny/submission":      handler{GetInkbunnySubmission, withCache},
 	"/inkbunny/submission/:ids": handler{GetInkbunnySubmission, withCache},
-	"/inkbunny/search":          handler{GetInkbunnySearch, withCache},
+	"/inkbunny/search":          handler{GetInkbunnySearch, append(loggedInMiddleware, withCache...)},
 	"/image":                    handler{GetImageHandler, staticMiddleware},
 	"/review/:id":               handler{GetReviewHandler, append(staffMiddleware, withRedis...)},
 	"/heuristics/:id":           handler{GetHeuristicsHandler, append(loggedInMiddleware, withRedis...)},

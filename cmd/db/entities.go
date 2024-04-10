@@ -285,21 +285,22 @@ type Submission struct {
 }
 
 type Metadata struct {
-	Generated       bool     `json:"generated,omitempty"`
-	Assisted        bool     `json:"assisted,omitempty"`
-	Img2Img         bool     `json:"img2img,omitempty"` // includes inpaint
-	HasJSON         bool     `json:"has_json,omitempty"`
-	HasTxt          bool     `json:"has_txt,omitempty"`
-	StableDiffusion bool     `json:"stable_diffusion,omitempty"`
-	ComfyUI         bool     `json:"comfy_ui,omitempty"`
-	MultipleFiles   bool     `json:"multiple_files,omitempty"`
-	TaggedHuman     bool     `json:"tagged_human,omitempty"`
-	DetectedHuman   bool     `json:"detected_human,omitempty"`
-	HumanConfidence float64  `json:"human_confidence,omitempty"`
-	AITitle         bool     `json:"ai_title,omitempty"`
-	AIDescription   bool     `json:"ai_description,omitempty"`
+	Generated       bool     `json:"generated"`
+	Assisted        bool     `json:"assisted"`
+	Img2Img         bool     `json:"img2img"` // includes inpaint
+	HasJSON         bool     `json:"has_json"`
+	HasTxt          bool     `json:"has_txt"`
+	StableDiffusion bool     `json:"stable_diffusion"`
+	ComfyUI         bool     `json:"comfy_ui"`
+	MultipleFiles   bool     `json:"multiple_files"`
+	TaggedHuman     bool     `json:"tagged_human"`
+	DetectedHuman   bool     `json:"detected_human"`
+	HumanConfidence float64  `json:"human_confidence"`
+	AITitle         bool     `json:"ai_title"`
+	AIDescription   bool     `json:"ai_description"`
 	AIKeywords      []string `json:"ai_keywords,omitempty"`
-	AIAccount       bool     `json:"ai_account,omitempty"`
+	AIAccount       bool     `json:"ai_account"`
+	AISubmission    bool     `json:"ai_submission"`
 
 	*utils.Params `json:"params,omitempty"`
 

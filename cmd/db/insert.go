@@ -323,18 +323,23 @@ func SetSubmissionMeta(submission *Submission) {
 		case "ai generated", "ai art":
 			submission.Metadata.Generated = true
 			submission.Metadata.AIKeywords = append(submission.Metadata.AIKeywords, keyword.KeywordName)
+			submission.Metadata.AISubmission = true
 		case "ai assisted":
 			submission.Metadata.Assisted = true
 			submission.Metadata.AIKeywords = append(submission.Metadata.AIKeywords, keyword.KeywordName)
+			submission.Metadata.AISubmission = true
 		case "img2img":
 			submission.Metadata.Img2Img = true
 			submission.Metadata.AIKeywords = append(submission.Metadata.AIKeywords, keyword.KeywordName)
+			submission.Metadata.AISubmission = true
 		case "stable diffusion":
 			submission.Metadata.StableDiffusion = true
 			submission.Metadata.AIKeywords = append(submission.Metadata.AIKeywords, keyword.KeywordName)
+			submission.Metadata.AISubmission = true
 		case "comfyui", "comfy ui":
 			submission.Metadata.ComfyUI = true
 			submission.Metadata.AIKeywords = append(submission.Metadata.AIKeywords, keyword.KeywordName)
+			submission.Metadata.AISubmission = true
 		case "human":
 			submission.Metadata.TaggedHuman = true
 		}
@@ -366,16 +371,25 @@ func SetSubmissionMeta(submission *Submission) {
 	if images > 1 {
 		submission.Metadata.MultipleFiles = true
 	}
+	if submission.Metadata.Objects != nil {
+		submission.Metadata.AISubmission = true
+	}
+	if submission.Metadata.Params != nil && len(*submission.Metadata.Params) > 0 {
+		submission.Metadata.AISubmission = true
+	}
 	if strings.Contains(submission.Title, "AI") {
 		submission.Metadata.AITitle = true
+		submission.Metadata.AISubmission = true
 	}
 	if strings.Contains(submission.Description, "stable diffusion") {
 		submission.Metadata.StableDiffusion = true
 		submission.Metadata.AIDescription = true
+		submission.Metadata.AISubmission = true
 	}
 	if strings.Contains(submission.Description, "comfyui") {
 		submission.Metadata.ComfyUI = true
 		submission.Metadata.AIDescription = true
+		submission.Metadata.AISubmission = true
 	}
 }
 
@@ -407,7 +421,7 @@ func SubmissionLabels(submission Submission) []TicketLabel {
 	if m.HasTxt || m.HasJSON {
 		hasGenerationDetails = true
 	}
-	if (m.AITitle || m.AIDescription || len(m.AIKeywords) > 0) && !hasGenerationDetails {
+	if submission.Metadata.AISubmission && !hasGenerationDetails {
 		labels = append(labels, LabelMissingPrompt)
 	}
 	return labels

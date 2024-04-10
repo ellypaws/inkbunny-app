@@ -447,13 +447,13 @@ func GetReviewHandler(c echo.Context) error {
 	}
 
 	type details struct {
-		URL        string          `json:"url"`
-		ID         api.IntString   `json:"id"`
-		User       api.UsernameID  `json:"user"`
-		Submission *db.Submission  `json:"submission,omitempty"`
-		Inkbunny   *api.Submission `json:"inkbunny,omitempty"`
-		Ticket     *db.Ticket      `json:"ticket,omitempty"`
-		Images     []*db.File      `json:"images,omitempty"`
+		URL        string             `json:"url"`
+		ID         api.IntString      `json:"id"`
+		User       api.UsernameID     `json:"user"`
+		Submission *db.Submission     `json:"submission,omitempty"`
+		Inkbunny   *api.Submission    `json:"inkbunny,omitempty"`
+		Ticket     *db.Ticket         `json:"ticket,omitempty"`
+		Images     map[int64]*db.File `json:"images,omitempty"`
 	}
 
 	var submissions = make([]details, len(submissionDetails.Submissions))
@@ -509,7 +509,10 @@ func GetReviewHandler(c echo.Context) error {
 				if !strings.Contains(file.MimeType, "image") {
 					continue
 				}
-				submissions[i].Images = append(submissions[i].Images, &submission.Files[i])
+				if submissions[i].Images == nil {
+					submissions[i].Images = make(map[int64]*db.File)
+				}
+				submissions[i].Images[submission.ID] = &submission.Files[i]
 			}
 		}
 	}

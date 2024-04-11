@@ -40,6 +40,7 @@ var getHandlers = pathHandler{
 	"/auditors":                 handler{GetAllAuditorsJHandler, staffMiddleware},
 	"/robots.txt":               handler{robots, staticMiddleware},
 	"/username/:username":       handler{GetUsernameHandler, append(loggedInMiddleware, withRedis...)},
+	"/artists/get":              handler{GetArtistsHandler, append(loggedInMiddleware, withRedis...)},
 }
 
 func robots(c echo.Context) error {
@@ -1012,4 +1013,9 @@ func GetUsernameHandler(c echo.Context) error {
 	})
 
 	return c.JSON(http.StatusOK, users)
+}
+
+// GetArtistsHandler returns a list of known artists
+func GetArtistsHandler(c echo.Context) error {
+	return c.JSON(http.StatusOK, database.AllArtists())
 }

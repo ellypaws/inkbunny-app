@@ -370,3 +370,8 @@ type Involved struct {
 	Reporter    api.UsernameID   `json:"reporter"`
 	ReportedIDs []api.UsernameID `json:"reported,omitempty"`
 }
+
+type Artist struct {
+	Username string  `json:"username" query:"username"`
+	UserID   *string `json:"user_id,omitempty" query:"user_id"`
+}

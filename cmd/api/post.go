@@ -34,6 +34,7 @@ var postHandlers = pathHandler{
 	"/sd/:path":           handler{HandlePath, nil},
 	"/tickets/new":        handler{newTicket, staffMiddleware},
 	"/tickets/upsert":     handler{updateTicket, staffMiddleware},
+	"/artists/upsert":     handler{upsertArtist, staffMiddleware},
 }
 
 func newTicket(c echo.Context) error {
@@ -494,4 +495,22 @@ func resizeImage(src image.Image, max [2]int) string {
 		return ""
 	}
 	return base64.StdEncoding.EncodeToString(writer.Bytes())
+}
+
+func upsertArtist(c echo.Context) error {
+	var artist db.Artist
+	if err := c.Bind(&artist); err != nil {
+		return err
+	}
+
+	if err := db.Error(database); err != nil {
+		return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
+	}
+
+	err := database.UpsertArtist(artist)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
+	}
+
+	return c.JSON(http.StatusOK, artist)
 }

@@ -150,6 +150,9 @@ const (
 
 	// selectModels statement for ModelHashes
 	selectModels = `SELECT hash, models FROM models;`
+
+	// selectArtists statement for ArtistHashes
+	selectArtists = `SELECT username, user_id FROM artists;`
 )
 
 func (db Sqlite) GetAuditBySubmissionID(submissionID int64) (Audit, error) {
@@ -691,4 +694,24 @@ func (db Sqlite) AllAuditors() []Auditor {
 	}
 
 	return auditors
+}
+
+func (db Sqlite) AllArtists() []Artist {
+	rows, err := db.QueryContext(db.context, selectArtists)
+	if err != nil {
+		return nil
+	}
+	defer rows.Close()
+
+	var artists []Artist
+	for rows.Next() {
+		var artist Artist
+		err := rows.Scan(&artist.Username, &artist.UserID)
+		if err != nil {
+			return nil
+		}
+		artists = append(artists, artist)
+	}
+
+	return artists
 }

@@ -140,6 +140,16 @@ const (
 	INSERT INTO models (hash, models) VALUES (?, ?)
 	ON CONFLICT(hash) DO UPDATE SET models=excluded.models;
 	`
+
+	// upsertArtist statement for Artist
+	upsertArtist = `
+	INSERT INTO artists (username, user_id) VALUES (?, ?)
+	ON CONFLICT(username) DO UPDATE SET user_id=excluded.user_id;
+	`
+
+	// deleteArtist statement for Artist
+	deleteArtist         = `DELETE FROM artists WHERE user_id = ?;`
+	deleteArtistUsername = `DELETE FROM artists WHERE username = ?;`
 )
 
 func (db Sqlite) InsertAuditor(auditor Auditor) error {
@@ -314,6 +324,7 @@ const (
 	AIArt             = "672082"
 )
 
+// SetSubmissionMeta modifies a submission's Metadata based on its Keywords and other fields.
 func SetSubmissionMeta(submission *Submission) {
 	if submission == nil {
 		return
@@ -373,6 +384,16 @@ func SetSubmissionMeta(submission *Submission) {
 	}
 	if submission.Metadata.Objects != nil {
 		submission.Metadata.AISubmission = true
+		for _, obj := range submission.Metadata.Objects {
+			artistNames := []string{
+				"ai", "artificial intelligence", "neural network", "deep learning",
+			}
+			for _, artist := range artistNames {
+				if strings.Contains(obj.Prompt, artist) {
+					submission.Metadata.ArtistUsed = true
+				}
+			}
+		}
 	}
 	if submission.Metadata.Params != nil && len(*submission.Metadata.Params) > 0 {
 		submission.Metadata.AISubmission = true
@@ -734,4 +755,24 @@ func (db Sqlite) UpsertModel(models ModelHashes) error {
 	}
 
 	return nil
+}
+
+func (db Sqlite) UpsertArtist(artists ...Artist) error {
+	if len(artists) == 0 {
+		return nil
+	}
+
+	for _, artist := range artists {
+		_, err := db.ExecContext(db.context, upsertArtist, artist.Username, artist.UserID)
+		if err != nil {
+			return fmt.Errorf("error: upserting artist: %w", err)
+		}
+	}
+
+	return nil
+}
+
+func (db Sqlite) DeleteArtist(username string) error {
+	_, err := db.ExecContext(db.context, deleteArtistUsername, username)
+	return err
 }

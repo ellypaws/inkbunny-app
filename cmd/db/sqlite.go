@@ -38,6 +38,7 @@ var migrations = []migration{
 	{migrationName: "create tickets table", migrationQuery: createTickets},
 	{migrationName: "create sids table", migrationQuery: createSIDs},
 	{migrationName: "create models table", migrationQuery: createModels},
+	{migrationName: "create artists table", migrationQuery: createArtists},
 }
 
 // sql statements
@@ -122,6 +123,14 @@ const (
 	CREATE TABLE IF NOT EXISTS models (
 		hash TEXT PRIMARY KEY,
 		models BLOB
+	)
+	`
+
+	// createArtists statement for ArtistHashes
+	createArtists = `
+	CREATE TABLE IF NOT EXISTS artists (
+		username TEXT PRIMARY KEY,
+		user_id INTEGER
 	)
 	`
 )

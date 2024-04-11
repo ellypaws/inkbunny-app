@@ -100,7 +100,7 @@ func (r *Redis) Get(key string) (*Item, error) {
 		return nil, err
 	}
 
-	var items []map[string]any
+	var items []any
 	err = json.Unmarshal([]byte(val), &items)
 	if err != nil {
 		return nil, err
@@ -111,9 +111,17 @@ func (r *Redis) Get(key string) (*Item, error) {
 	}
 
 	var item Item = Item{
-		Blob:       []byte(val[1 : len(val)-1]),
 		LastAccess: time.Now().UTC(),
 		MimeType:   echo.MIMEApplicationJSON,
+	}
+
+	switch len(items) {
+	case 0:
+		return nil, fmt.Errorf("empty item %s %w", key, redis.Nil)
+	case 1:
+		item.Blob = []byte(val[1 : len(val)-1])
+	default:
+		item.Blob = []byte(val)
 	}
 
 	return &item, nil

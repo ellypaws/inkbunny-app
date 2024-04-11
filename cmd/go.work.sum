@@ -8,7 +8,7 @@ github.com/chzyer/readline v1.5.0 h1:lSwwFrbNviGePhkewF1az4oLmcwqCZijQ2/Wi3BGHAI
 github.com/chzyer/readline v1.5.0/go.mod h1:x22KAscuvRqlLoK9CsoYsmxoXZMMFVyOl86cAH8qUic=
 github.com/dgrijalva/jwt-go v3.2.0+incompatible h1:7qlOGliEKZXTDg6OTjfoBKDXWrumCAMpl/TFQ4/5kLM=
 github.com/ellypaws/inkbunny/api v0.0.0-20240320233248-1659f4be4758/go.mod h1:wdWqyRSEoSVdu5FnUGv44PvqdLfKQfgaXvDQpZFJs3A=
-github.com/ellypaws/inkbunny/api v0.0.0-20240410211242-8f495385a75e h1:5MS6bFj27gUNW+SF0ZvyQmdByQqOeE0NZi0LC1U+EBo=
+github.com/ellypaws/inkbunny/api v0.0.0-20240411110242-d491ced97f23 h1:zA39bgGdGZYxLbACqM8oH2eb8oUUYj83qDds9jRdUwc=
 github.com/fsnotify/fsnotify v1.4.9 h1:hsms1Qyu0jgnwNXIxa+/V/PDsU6CfLf6CNO8H7IWoS4=
 github.com/fsnotify/fsnotify v1.4.9/go.mod h1:znqG4EE+3YCdAaPaxE2ZRY/06pZUdp0tY4IgpuI1SZQ=
 github.com/gocarina/gocsv v0.0.0-20211203214250-4735fba0c1d9 h1:ptTza/LLPmfRtmz77X+6J61Wyf5e1hz5xYMvRk/hkE4=

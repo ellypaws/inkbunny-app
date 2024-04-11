@@ -175,7 +175,7 @@ func GetInkbunnySearch(c echo.Context) error {
 		Text:               "ai_generated",
 		SubmissionsPerPage: 10,
 		Random:             api.Yes,
-		Type:               api.SubmissionTypePicturePinup,
+		Type:               api.SubmissionTypes{api.SubmissionTypePicturePinup},
 	}
 	var bind = struct {
 		*api.SubmissionSearchRequest
@@ -183,6 +183,7 @@ func GetInkbunnySearch(c echo.Context) error {
 		SearchTerm *string `json:"text,omitempty" query:"text"`
 		UserID     *string `json:"user_id,omitempty" query:"user_id"`
 		Username   *string `json:"username,omitempty" query:"username"`
+		Type       *string `json:"types,omitempty" query:"types"`
 	}{
 		SubmissionSearchRequest: &request,
 	}
@@ -213,6 +214,21 @@ func GetInkbunnySearch(c echo.Context) error {
 
 	if bind.Username != nil {
 		request.Username = *bind.Username
+	}
+
+	if bind.Type != nil {
+		*bind.Type = strings.TrimPrefix(*bind.Type, "[")
+		*bind.Type = strings.TrimSuffix(*bind.Type, "]")
+		for _, t := range strings.Split(*bind.Type, ",") {
+			i, err := strconv.Atoi(t)
+			if err != nil {
+				return c.JSON(http.StatusBadRequest, crashy.ErrorResponse{
+					ErrorString: "invalid submission type",
+					Debug:       err,
+				})
+			}
+			request.Type = append(request.Type, api.SubmissionType(i))
+		}
 	}
 
 	user := &api.Credentials{Sid: request.SID}

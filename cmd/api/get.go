@@ -4,6 +4,7 @@ import (
 	"bytes"
 	_ "embed"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/ellypaws/inkbunny-app/api/cache"
 	"github.com/ellypaws/inkbunny-app/api/caption"
@@ -16,6 +17,7 @@ import (
 	"github.com/ellypaws/inkbunny/api"
 	"github.com/labstack/echo/v4"
 	units "github.com/labstack/gommon/bytes"
+	"github.com/redis/go-redis/v9"
 	"net/http"
 	"slices"
 	"strconv"
@@ -37,6 +39,7 @@ var getHandlers = pathHandler{
 	"/tickets/get":              handler{GetTicketsHandler, staffMiddleware},
 	"/auditors":                 handler{GetAllAuditorsJHandler, staffMiddleware},
 	"/robots.txt":               handler{robots, staticMiddleware},
+	"/username/:username":       handler{GetUsernameHandler, append(loggedInMiddleware, withRedis...)},
 }
 
 func robots(c echo.Context) error {
@@ -928,4 +931,57 @@ func GetHeuristicsHandler(c echo.Context) error {
 	}
 
 	return c.JSON(http.StatusOK, params)
+}
+
+// GetUsernameHandler returns a list of suggested users based on a username
+// Set query "exact" to "true" to only return a single exact match
+func GetUsernameHandler(c echo.Context) error {
+	username := c.Param("username")
+	if username == "" {
+		return c.JSON(http.StatusBadRequest, crashy.ErrorResponse{ErrorString: "missing username"})
+	}
+
+	exact := c.QueryParam("exact") == "true"
+
+	cacheToUse := cache.SwitchCache(c)
+	key := fmt.Sprintf("%v:%v:%v", echo.MIMEApplicationJSON, "inkbunny:username_autosuggest", username)
+	if exact {
+		key = fmt.Sprintf("%v:%v", key, "?exact=true")
+	}
+
+	item, err := cacheToUse.Get(key)
+	if err == nil {
+		return c.Blob(http.StatusOK, item.MimeType, item.Blob)
+	}
+	if !errors.Is(err, redis.Nil) {
+		return c.JSON(http.StatusNotFound, crashy.ErrorResponse{ErrorString: "an error occurred while retrieving the username", Debug: err})
+	}
+
+	usernames, err := api.GetUserID(username)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
+	}
+
+	var users []api.Autocomplete
+	if exact {
+		for i, user := range usernames.Results {
+			if strings.EqualFold(user.Value, user.SearchTerm) {
+				users = append(users, usernames.Results[i])
+				break
+			}
+		}
+	}
+
+	bin, err := json.Marshal(users)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
+	}
+
+	_ = cacheToUse.Set(key, &cache.Item{
+		Blob:       bin,
+		LastAccess: time.Now().UTC(),
+		MimeType:   echo.MIMEApplicationJSON,
+	})
+
+	return c.JSON(http.StatusOK, users)
 }

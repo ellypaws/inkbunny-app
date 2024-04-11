@@ -69,7 +69,7 @@ func (r *Redis) Get(key string) (*Item, error) {
 	if !strings.HasPrefix(key, echo.MIMEApplicationJSON) {
 		val, err := (*redis.Client)(r).Get(ctx, key).Bytes()
 		if errors.Is(err, redis.Nil) {
-			return nil, fmt.Errorf("key %s not found", key)
+			return nil, fmt.Errorf("key %s not found %w", key, err)
 		}
 		if err != nil {
 			return nil, err
@@ -93,7 +93,7 @@ func (r *Redis) Get(key string) (*Item, error) {
 
 	val, err := (*redis.Client)(r).JSONGet(ctx, key, "$").Result()
 	if errors.Is(err, redis.Nil) || len(val) == 0 {
-		return nil, fmt.Errorf("key %s not found", key)
+		return nil, fmt.Errorf("key %s not found %w", key, redis.Nil)
 	}
 
 	if err != nil {
@@ -107,7 +107,7 @@ func (r *Redis) Get(key string) (*Item, error) {
 	}
 
 	if len(items) == 0 {
-		return nil, fmt.Errorf("empty item %s", key)
+		return nil, fmt.Errorf("empty item %s %w", key, redis.Nil)
 	}
 
 	var item Item = Item{

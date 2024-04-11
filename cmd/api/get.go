@@ -180,7 +180,9 @@ func GetInkbunnySearch(c echo.Context) error {
 	var bind = struct {
 		*api.SubmissionSearchRequest
 		SessionID  *string `query:"sid"`
-		SearchTerm *string `query:"text"`
+		SearchTerm *string `json:"text,omitempty" query:"text"`
+		UserID     *string `json:"user_id,omitempty" query:"user_id"`
+		Username   *string `json:"username,omitempty" query:"username"`
 	}{
 		SubmissionSearchRequest: &request,
 	}
@@ -203,6 +205,14 @@ func GetInkbunnySearch(c echo.Context) error {
 
 	if bind.SearchTerm != nil {
 		request.Text = *bind.SearchTerm
+	}
+
+	if bind.UserID != nil {
+		request.UserID = *bind.UserID
+	}
+
+	if bind.Username != nil {
+		request.Username = *bind.Username
 	}
 
 	user := &api.Credentials{Sid: request.SID}

@@ -970,6 +970,8 @@ func GetUsernameHandler(c echo.Context) error {
 				break
 			}
 		}
+	} else {
+		users = usernames.Results
 	}
 
 	bin, err := json.Marshal(users)

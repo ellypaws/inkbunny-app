@@ -10,6 +10,7 @@ import (
 
 var deleteHandlers = pathHandler{
 	"/ticket/:id":       handler{deleteTicket, staffMiddleware},
+	"/artist":           handler{deleteArtist, staffMiddleware},
 	"/artist/:username": handler{deleteArtist, staffMiddleware},
 }
 
@@ -37,11 +38,18 @@ func deleteArtist(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, crashy.Wrap(err))
 	}
 
+	if username := c.Param("username"); username != "" {
+		artists = append(artists, db.Artist{Username: username})
+	}
+
 	if len(artists) == 0 {
 		return c.JSON(http.StatusBadRequest, crashy.ErrorResponse{ErrorString: "missing artists"})
 	}
 
 	for _, artist := range artists {
+		if artist.Username == "" {
+			return c.JSON(http.StatusBadRequest, crashy.ErrorResponse{ErrorString: "missing username", Debug: artists})
+		}
 		if err := database.DeleteArtist(artist.Username); err != nil {
 			return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
 		}

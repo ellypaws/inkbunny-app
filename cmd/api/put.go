@@ -9,8 +9,9 @@ import (
 )
 
 var putHandlers = pathHandler{
-	"/ticket": handler{newTicket, staffMiddleware},
-	"/artist": handler{newArtist, staffMiddleware},
+	"/ticket":  handler{newTicket, staffMiddleware},
+	"/artist":  handler{newArtist, staffMiddleware},
+	"/auditor": handler{newAuditor, staffMiddleware},
 }
 
 func newTicket(c echo.Context) error {
@@ -67,4 +68,37 @@ func newArtist(c echo.Context) error {
 	}
 
 	return c.JSON(http.StatusOK, artists)
+}
+
+func newAuditor(c echo.Context) error {
+	var auditors []db.Auditor
+	if err := c.Bind(&auditors); err != nil {
+		return err
+	}
+
+	if err := db.Error(database); err != nil {
+		return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
+	}
+
+	if len(auditors) == 0 {
+		return c.JSON(http.StatusLengthRequired, crashy.ErrorResponse{ErrorString: "no auditors to upsert"})
+	}
+
+	known := database.AllAuditors()
+	for _, auditor := range auditors {
+		if auditor.Username == "" {
+			return c.JSON(http.StatusBadRequest, crashy.ErrorResponse{ErrorString: "missing username", Debug: auditors})
+		}
+		for _, k := range known {
+			if k.Username == auditor.Username {
+				return c.JSON(http.StatusConflict, crashy.ErrorResponse{ErrorString: "auditor already exists", Debug: auditors})
+			}
+		}
+		err := database.InsertAuditor(auditor)
+		if err != nil {
+			return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
+		}
+	}
+
+	return c.JSON(http.StatusOK, auditors)
 }

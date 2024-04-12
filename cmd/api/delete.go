@@ -12,6 +12,7 @@ var deleteHandlers = pathHandler{
 	"/ticket/:id":       handler{deleteTicket, staffMiddleware},
 	"/artist":           handler{deleteArtist, staffMiddleware},
 	"/artist/:username": handler{deleteArtist, staffMiddleware},
+	"/auditor":          handler{deleteAuditor, staffMiddleware},
 }
 
 func deleteTicket(c echo.Context) error {
@@ -56,4 +57,26 @@ func deleteArtist(c echo.Context) error {
 	}
 
 	return c.JSON(http.StatusOK, artists)
+}
+
+func deleteAuditor(c echo.Context) error {
+	var auditors []db.Auditor
+	if err := c.Bind(&auditors); err != nil {
+		return c.JSON(http.StatusBadRequest, crashy.Wrap(err))
+	}
+
+	if len(auditors) == 0 {
+		return c.JSON(http.StatusBadRequest, crashy.ErrorResponse{ErrorString: "missing auditors"})
+	}
+
+	for _, auditor := range auditors {
+		if auditor.Username == "" {
+			return c.JSON(http.StatusBadRequest, crashy.ErrorResponse{ErrorString: "missing username", Debug: auditors})
+		}
+		if err := database.DeleteAuditor(auditor.UserID); err != nil {
+			return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
+		}
+	}
+
+	return c.JSON(http.StatusOK, auditors)
 }

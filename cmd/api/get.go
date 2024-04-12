@@ -1053,13 +1053,13 @@ func GetArtistsHandler(c echo.Context) error {
 
 	type artistAvatarID struct {
 		db.Artist
-		Icon string `json:"icon"`
-		ID   *int64 `json:"id,omitempty"`
+		Icon *string `json:"icon,omitempty"`
+		ID   *int64  `json:"id,omitempty"`
 	}
 
 	var artistsWithIcon []artistAvatarID
 
-	var add = func(artist db.Artist, icon string) []artistAvatarID {
+	var add = func(artist db.Artist, icon *string) []artistAvatarID {
 		return append(artistsWithIcon,
 			artistAvatarID{
 				Artist: artist,
@@ -1071,6 +1071,7 @@ func GetArtistsHandler(c echo.Context) error {
 	cacheToUse := cache.SwitchCache(c)
 	for _, artist := range artists {
 		if artist.UserID == nil {
+			artistsWithIcon = add(artist, nil)
 			continue
 		}
 
@@ -1086,7 +1087,7 @@ func GetArtistsHandler(c echo.Context) error {
 			if len(users) == 0 {
 				continue
 			}
-			artistsWithIcon = add(artist, users[0].Icon)
+			artistsWithIcon = add(artist, &users[0].Icon)
 			continue
 		}
 
@@ -1105,7 +1106,7 @@ func GetArtistsHandler(c echo.Context) error {
 		for i, user := range usernames.Results {
 			if strings.EqualFold(user.Value, user.SearchTerm) {
 				users = append(users, usernames.Results[i])
-				artistsWithIcon = add(artist, user.Icon)
+				artistsWithIcon = add(artist, &user.Icon)
 				break
 			}
 		}

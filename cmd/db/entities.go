@@ -387,6 +387,6 @@ type Involved struct {
 }
 
 type Artist struct {
-	Username string  `json:"username" query:"username"`
-	UserID   *string `json:"user_id,omitempty" query:"user_id"`
+	Username string `json:"username" query:"username"`
+	UserID   *int64 `json:"user_id,omitempty" query:"user_id"`
 }

@@ -9,8 +9,8 @@ import (
 )
 
 var putHandlers = pathHandler{
-	"/tickets": handler{newTicket, staffMiddleware},
-	"/artist":  handler{newArtist, staffMiddleware},
+	"/ticket": handler{newTicket, staffMiddleware},
+	"/artist": handler{newArtist, staffMiddleware},
 }
 
 func newTicket(c echo.Context) error {

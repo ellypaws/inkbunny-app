@@ -8,8 +8,8 @@ import (
 )
 
 var patchHandlers = pathHandler{
-	"/tickets/upsert": handler{updateTicket, staffMiddleware},
-	"/artist":         handler{upsertArtist, staffMiddleware},
+	"/ticket": handler{updateTicket, staffMiddleware},
+	"/artist": handler{upsertArtist, staffMiddleware},
 }
 
 func updateTicket(c echo.Context) error {

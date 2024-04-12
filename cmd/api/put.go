@@ -52,6 +52,9 @@ func newArtist(c echo.Context) error {
 
 	known := database.AllArtists()
 	for _, artist := range artists {
+		if artist.Username == "" {
+			return c.JSON(http.StatusBadRequest, crashy.ErrorResponse{ErrorString: "missing username", Debug: artist})
+		}
 		for _, k := range known {
 			if k.Username == artist.Username {
 				return c.JSON(http.StatusConflict, crashy.ErrorResponse{ErrorString: "artist already exists", Debug: artist})

@@ -48,6 +48,9 @@ func upsertArtist(c echo.Context) error {
 	}
 
 	for _, artist := range artists {
+		if artist.Username == "" {
+			return c.JSON(http.StatusBadRequest, crashy.ErrorResponse{ErrorString: "missing username", Debug: artist})
+		}
 		err := database.UpsertArtist(artist)
 		if err != nil {
 			return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))

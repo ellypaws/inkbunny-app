@@ -997,9 +997,9 @@ func GetUsernameHandler(c echo.Context) error {
 	exact := c.QueryParam("exact") == "true"
 
 	cacheToUse := cache.SwitchCache(c)
-	key := fmt.Sprintf("%v:%v:%v", echo.MIMEApplicationJSON, "inkbunny:username_autosuggest", username)
+	key := fmt.Sprintf("%v:inkbunny:username_autosuggest:%v", echo.MIMEApplicationJSON, username)
 	if exact {
-		key = fmt.Sprintf("%v:%v", key, "?exact=true")
+		key = fmt.Sprintf("%v:inkbunny:username_autosuggest:exact:%v", echo.MIMEApplicationJSON, username)
 	}
 
 	item, err := cacheToUse.Get(key)
@@ -1042,6 +1042,85 @@ func GetUsernameHandler(c echo.Context) error {
 }
 
 // GetArtistsHandler returns a list of known artists
+// Set query "avatar" to "true" to include the avatar URL
 func GetArtistsHandler(c echo.Context) error {
-	return c.JSON(http.StatusOK, database.AllArtists())
+	artists := database.AllArtists()
+
+	if c.QueryParam("avatar") != "true" {
+		return c.JSON(http.StatusOK, artists)
+	}
+
+	type artistAvatarID struct {
+		db.Artist
+		Icon string `json:"icon"`
+		ID   *int64 `json:"id,omitempty"`
+	}
+
+	var artistsWithIcon []artistAvatarID
+
+	var add = func(artist db.Artist, icon string) []artistAvatarID {
+		return append(artistsWithIcon,
+			artistAvatarID{
+				Artist: artist,
+				Icon:   icon,
+				ID:     artist.UserID,
+			})
+	}
+
+	cacheToUse := cache.SwitchCache(c)
+	for _, artist := range artists {
+		if artist.UserID == nil {
+			continue
+		}
+
+		key := fmt.Sprintf("%v:inkbunny:username_autosuggest:exact:%v", echo.MIMEApplicationJSON, artist.Username)
+
+		item, err := cacheToUse.Get(key)
+		if err == nil {
+			c.Logger().Debugf("Cache hit for %s", key)
+			var users []api.Autocomplete
+			if err := json.Unmarshal(item.Blob, &users); err != nil {
+				return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
+			}
+			if len(users) == 0 {
+				continue
+			}
+			artistsWithIcon = add(artist, users[0].Icon)
+			continue
+		}
+
+		if !errors.Is(err, redis.Nil) {
+			return c.JSON(http.StatusNotFound, crashy.ErrorResponse{ErrorString: "an error occurred while retrieving the username", Debug: err})
+		}
+
+		c.Logger().Debugf("Cache miss for %s retrieving username...", key)
+		usernames, err := api.GetUserID(artist.Username)
+		if err != nil {
+			return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
+		}
+
+		var users []api.Autocomplete
+
+		for i, user := range usernames.Results {
+			if strings.EqualFold(user.Value, user.SearchTerm) {
+				users = append(users, usernames.Results[i])
+				artistsWithIcon = add(artist, user.Icon)
+				break
+			}
+		}
+
+		bin, err := json.Marshal(users)
+		if err != nil {
+			return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
+		}
+
+		_ = cacheToUse.Set(key, &cache.Item{
+			Blob:       bin,
+			LastAccess: time.Now().UTC(),
+			MimeType:   echo.MIMEApplicationJSON,
+		})
+		c.Logger().Infof("Cached %s %s %dKiB", key, echo.MIMEApplicationJSON, len(bin)/units.KiB)
+	}
+
+	return c.JSON(http.StatusOK, artistsWithIcon)
 }

@@ -73,8 +73,14 @@ type Fetch struct {
 }
 
 func Retrieve(c echo.Context, cache Cache, fetch Fetch) (*Item, func(c echo.Context) error) {
+	if fetch.MimeType == "" {
+		c.Logger().Warnf("no mime type provided for %s", fetch.URL)
+		fetch.MimeType = MimeTypeFromURL(fetch.URL)
+	}
+
 	if !strings.HasPrefix(fetch.Key, fetch.MimeType) {
-		fetch.Key = fmt.Sprintf("%v:%v", fetch.MimeType, fetch.URL)
+		c.Logger().Warnf("key %s does not start with %s", fetch.Key, fetch.MimeType)
+		fetch.Key = fmt.Sprintf("%s:%s", fetch.MimeType, fetch.URL)
 	}
 
 	item, err := cache.Get(fetch.Key)
@@ -94,7 +100,7 @@ func Retrieve(c echo.Context, cache Cache, fetch Fetch) (*Item, func(c echo.Cont
 	queue.mu.Lock()
 	if ongoing, found := queue.ongoing[fetch.Key]; found {
 		queue.mu.Unlock()
-		c.Logger().Debugf("Still receiving %s", fetch.URL)
+		c.Logger().Warnf("Still receiving %s", fetch.URL)
 		item := <-ongoing
 		item, err := cache.Get(fetch.Key)
 		if err != nil {
@@ -134,6 +140,10 @@ func Retrieve(c echo.Context, cache Cache, fetch Fetch) (*Item, func(c echo.Cont
 
 	if mimeType == "" {
 		mimeType = MimeTypeFromURL(fetch.URL)
+	}
+
+	if mimeType != fetch.MimeType {
+		c.Logger().Warnf(`mismatched mime types expected: "%s" got: "%s"`, fetch.MimeType, mimeType)
 	}
 
 	item = &Item{

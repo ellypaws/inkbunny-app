@@ -623,6 +623,17 @@ func processObjectMetadata(submission *db.Submission) {
 				submission.Metadata.ArtistUsed = append(submission.Metadata.ArtistUsed, artist)
 			}
 		}
+		privateTools := []string{
+			"midjourney",
+			"novelai",
+		}
+		for _, tool := range privateTools {
+			if strings.Contains(meta, tool) {
+				submission.Metadata.PrivateTool = true
+				submission.Metadata.Generator = tool
+				break
+			}
+		}
 	}
 }
 

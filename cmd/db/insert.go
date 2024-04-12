@@ -300,14 +300,14 @@ func InkbunnySubmissionToDBSubmission(submission api.Submission) Submission {
 		Keywords:    submission.Keywords,
 	}
 
-	SetSubmissionMeta(&dbSubmission)
-
 	for _, f := range submission.Files {
 		dbSubmission.Files = append(dbSubmission.Files, File{
 			File:    f,
 			Caption: nil,
 		})
 	}
+
+	SetSubmissionMeta(&dbSubmission)
 
 	return dbSubmission
 }
@@ -371,12 +371,15 @@ func SetSubmissionMeta(submission *Submission) {
 	for _, file := range submission.Files {
 		if strings.HasPrefix(file.File.MimeType, "image") {
 			images++
+			continue
 		}
 		if file.File.MimeType == "text/plain" {
 			submission.Metadata.HasTxt = true
+			continue
 		}
 		if file.File.MimeType == "application/json" {
 			submission.Metadata.HasJSON = true
+			continue
 		}
 	}
 	if images > 1 {

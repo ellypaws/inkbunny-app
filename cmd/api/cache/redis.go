@@ -9,6 +9,7 @@ import (
 	"github.com/redis/go-redis/v9"
 	"log"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -57,10 +58,22 @@ func RedisClient() *Redis {
 
 func NewRedisClient() *Redis {
 	client := redis.NewClient(&redis.Options{
-		Addr:     addr,
-		Username: "default",
-		Password: "",
-		DB:       0,
+		Addr: addr,
+		Username: func() string {
+			u := os.Getenv("REDIS_USERNAME")
+			if u != "" {
+				return u
+			}
+			return "default"
+		}(),
+		Password: os.Getenv("REDIS_PASSWORD"),
+		DB: func() int {
+			d := os.Getenv("REDIS_DB")
+			if i, err := strconv.Atoi(d); err == nil {
+				return i
+			}
+			return 0
+		}(),
 	})
 	return (*Redis)(client)
 }

@@ -408,7 +408,7 @@ func interrogate(c echo.Context) error {
 		return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
 	}
 
-	return c.Blob(http.StatusOK, "application/json", response)
+	return c.JSONBlob(http.StatusOK, response)
 }
 
 func interrogateImage(c echo.Context) error {
@@ -470,7 +470,7 @@ func interrogateImage(c echo.Context) error {
 		return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
 	}
 
-	return c.Blob(http.StatusOK, "application/json", response)
+	return c.JSONBlob(http.StatusOK, response)
 }
 
 func compare(a, b [2]int) int {

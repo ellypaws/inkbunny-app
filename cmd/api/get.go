@@ -35,12 +35,12 @@ var getHandlers = pathHandler{
 	"/image":                    handler{GetImageHandler, staticMiddleware},
 	"/review/:id":               handler{GetReviewHandler, append(staffMiddleware, withRedis...)},
 	"/heuristics/:id":           handler{GetHeuristicsHandler, append(loggedInMiddleware, withRedis...)},
-	"/tickets/audits":           handler{GetAuditHandler, staffMiddleware},
-	"/tickets/get":              handler{GetTicketsHandler, staffMiddleware},
+	"/audits":                   handler{GetAuditHandler, staffMiddleware},
+	"/tickets":                  handler{GetTicketsHandler, staffMiddleware},
 	"/auditors":                 handler{GetAllAuditorsJHandler, staffMiddleware},
 	"/robots.txt":               handler{robots, staticMiddleware},
 	"/username/:username":       handler{GetUsernameHandler, append(loggedInMiddleware, withRedis...)},
-	"/artists/get":              handler{GetArtistsHandler, append(loggedInMiddleware, withRedis...)},
+	"/artists":                  handler{GetArtistsHandler, append(loggedInMiddleware, withRedis...)},
 }
 
 func robots(c echo.Context) error {

@@ -69,6 +69,8 @@ func main() {
 	registerAs(e.POST, postHandlers)
 	registerAs(e.HEAD, headHandlers)
 	registerAs(e.DELETE, deleteHandlers)
+	registerAs(e.PUT, putHandlers)
+	registerAs(e.PATCH, patchHandlers)
 
 	e.Logger.SetLevel(logger.DEBUG)
 	e.Logger.SetHeader(`${time_rfc3339} ${level}	${short_file}:${line}	`)

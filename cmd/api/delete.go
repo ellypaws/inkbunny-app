@@ -9,8 +9,8 @@ import (
 )
 
 var deleteHandlers = pathHandler{
-	"/ticket/delete/:id":       handler{deleteTicket, staffMiddleware},
-	"/artist/delete/:username": handler{deleteArtist, staffMiddleware},
+	"/ticket/:id":       handler{deleteTicket, staffMiddleware},
+	"/artist/:username": handler{deleteArtist, staffMiddleware},
 }
 
 func deleteTicket(c echo.Context) error {

@@ -32,54 +32,8 @@ var postHandlers = pathHandler{
 	"/review/:id":         handler{GetReviewHandler, append(staffMiddleware, withRedis...)},
 	"/heuristics/:id":     handler{GetHeuristicsHandler, append(loggedInMiddleware, withRedis...)},
 	"/sd/:path":           handler{HandlePath, nil},
-	"/tickets/new":        handler{newTicket, staffMiddleware},
-	"/tickets/upsert":     handler{updateTicket, staffMiddleware},
-	"/artists/upsert":     handler{upsertArtist, staffMiddleware},
+	"/artists":            handler{upsertArtist, staffMiddleware},
 	"/inkbunny/search":    handler{GetInkbunnySearch, append(loggedInMiddleware, withCache...)},
-}
-
-func newTicket(c echo.Context) error {
-	var ticket db.Ticket = db.Ticket{
-		DateOpened: time.Now().UTC(),
-		Priority:   "low",
-		Closed:     false,
-	}
-	if err := c.Bind(&ticket); err != nil {
-		return err
-	}
-
-	if err := db.Error(database); err != nil {
-		return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
-	}
-
-	id, err := database.InsertTicket(ticket)
-	if err != nil {
-		return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
-	}
-
-	ticket.ID = id
-	return c.JSON(http.StatusOK, ticket)
-}
-
-func updateTicket(c echo.Context) error {
-	var ticket db.Ticket
-	if err := c.Bind(&ticket); err != nil {
-		return err
-	}
-
-	if err := db.Error(database); err != nil {
-		return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
-	}
-
-	id, err := database.UpsertTicket(ticket)
-	if err != nil {
-		return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
-	}
-
-	if ticket.ID != id {
-		return c.JSON(http.StatusInternalServerError, crashy.ErrorResponse{ErrorString: "got the wrong ticket back from the database", Debug: ticket})
-	}
-	return c.JSON(http.StatusOK, ticket)
 }
 
 // Deprecated: use registerAs((*echo.Echo).POST, postHandlers) instead
@@ -496,28 +450,4 @@ func resizeImage(src image.Image, max [2]int) string {
 		return ""
 	}
 	return base64.StdEncoding.EncodeToString(writer.Bytes())
-}
-
-func upsertArtist(c echo.Context) error {
-	var artists []db.Artist
-	if err := c.Bind(&artists); err != nil {
-		return err
-	}
-
-	if err := db.Error(database); err != nil {
-		return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
-	}
-
-	if len(artists) == 0 {
-		return c.JSON(http.StatusLengthRequired, crashy.ErrorResponse{ErrorString: "no artists to upsert"})
-	}
-
-	for _, artist := range artists {
-		err := database.UpsertArtist(artist)
-		if err != nil {
-			return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
-		}
-	}
-
-	return c.JSON(http.StatusOK, artists)
 }

@@ -32,14 +32,20 @@ func deleteTicket(c echo.Context) error {
 }
 
 func deleteArtist(c echo.Context) error {
-	username := c.Param("username")
-	if username == "" {
-		return c.JSON(http.StatusBadRequest, crashy.ErrorResponse{ErrorString: "missing username"})
+	var artists []db.Artist
+	if err := c.Bind(&artists); err != nil {
+		return c.JSON(http.StatusBadRequest, crashy.Wrap(err))
 	}
 
-	if err := database.DeleteArtist(username); err != nil {
-		return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
+	if len(artists) == 0 {
+		return c.JSON(http.StatusBadRequest, crashy.ErrorResponse{ErrorString: "missing artists"})
 	}
 
-	return c.JSON(http.StatusOK, db.Artist{Username: username})
+	for _, artist := range artists {
+		if err := database.DeleteArtist(artist.Username); err != nil {
+			return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
+		}
+	}
+
+	return c.JSON(http.StatusOK, artists)
 }

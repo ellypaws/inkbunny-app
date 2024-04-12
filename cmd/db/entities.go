@@ -285,22 +285,37 @@ type Submission struct {
 }
 
 type Metadata struct {
-	Generated       bool     `json:"generated"`
-	Assisted        bool     `json:"assisted"`
-	Img2Img         bool     `json:"img2img"` // includes inpaint
-	HasJSON         bool     `json:"has_json"`
-	HasTxt          bool     `json:"has_txt"`
-	StableDiffusion bool     `json:"stable_diffusion"`
-	ComfyUI         bool     `json:"comfy_ui"`
-	MultipleFiles   bool     `json:"multiple_files"`
-	TaggedHuman     bool     `json:"tagged_human"`
-	DetectedHuman   bool     `json:"detected_human"`
-	HumanConfidence float64  `json:"human_confidence"`
-	AITitle         bool     `json:"ai_title"`
-	AIDescription   bool     `json:"ai_description"`
-	AIKeywords      []string `json:"ai_keywords,omitempty"`
-	AIAccount       bool     `json:"ai_account"`
-	AISubmission    bool     `json:"ai_submission"`
+	Generated bool `json:"generated"`
+	Assisted  bool `json:"assisted"`
+	Img2Img   bool `json:"img2img"` // includes inpaint
+
+	HasJSON bool `json:"has_json"`
+	HasTxt  bool `json:"has_txt"`
+
+	StableDiffusion bool `json:"stable_diffusion"`
+	ComfyUI         bool `json:"comfy_ui"`
+	MultipleFiles   bool `json:"multiple_files"`
+
+	TaggedHuman     bool    `json:"tagged_human"`
+	DetectedHuman   bool    `json:"detected_human"`
+	HumanConfidence float64 `json:"human_confidence"`
+
+	AITitle       bool     `json:"ai_title"`
+	AIDescription bool     `json:"ai_description"`
+	AIKeywords    []string `json:"ai_keywords,omitempty"`
+	AIAccount     bool     `json:"ai_account"`
+	AISubmission  bool     `json:"ai_submission"`
+
+	MissingPrompt bool `json:"missing_prompt"` // FlagMissingPrompt
+	MissingTags   bool `json:"missing_tags"`   // FlagMissingTags
+	MissingModel  bool `json:"missing_model"`  // FlagMissingModel
+	ArtistUsed    bool `json:"artist_used"`    // FlagArtistUsed
+	PrivateModel  bool `json:"private_model"`  // FlagPrivateModel
+	PrivateLora   bool `json:"private_lora"`   // FlagPrivateLora
+	PrivateTool   bool `json:"private_tool"`   // FlagPrivateTool
+	SoldArt       bool `json:"sold_art"`       // FlagSoldArt
+
+	Generator string `json:"generator,omitempty"`
 
 	*utils.Params `json:"params,omitempty"`
 

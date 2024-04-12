@@ -184,7 +184,7 @@ func GetInkbunnySearch(c echo.Context) error {
 		SearchTerm *string `json:"text,omitempty" query:"text"`
 		UserID     *string `json:"user_id,omitempty" query:"user_id"`
 		Username   *string `json:"username,omitempty" query:"username"`
-		Type       *string `json:"types,omitempty" query:"types"`
+		Types      *string `json:"types,omitempty" query:"types"`
 	}{
 		SubmissionSearchRequest: &request,
 	}
@@ -508,6 +508,10 @@ func GetReviewHandler(c echo.Context) error {
 			Submission: &submission,
 		}
 
+		if submission.Metadata.Objects != nil {
+			processObjectMetadata(&submission)
+		}
+
 		if c.QueryParam("full") == "true" || c.QueryParam("multiple") == "true" {
 			submissions[i].Inkbunny = &sub
 			submissions[i].Ticket = &db.Ticket{
@@ -608,6 +612,17 @@ func GetReviewHandler(c echo.Context) error {
 				}(),
 			},
 		})
+	}
+}
+
+func processObjectMetadata(submission *db.Submission) {
+	for _, obj := range submission.Metadata.Objects {
+		for _, artist := range database.AllArtists() {
+			if strings.Contains(obj.Prompt, artist.Username) {
+				submission.Metadata.ArtistUsed = true
+				break
+			}
+		}
 	}
 }
 

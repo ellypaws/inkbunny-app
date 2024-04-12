@@ -384,16 +384,6 @@ func SetSubmissionMeta(submission *Submission) {
 	}
 	if submission.Metadata.Objects != nil {
 		submission.Metadata.AISubmission = true
-		for _, obj := range submission.Metadata.Objects {
-			artistNames := []string{
-				"ai", "artificial intelligence", "neural network", "deep learning",
-			}
-			for _, artist := range artistNames {
-				if strings.Contains(obj.Prompt, artist) {
-					submission.Metadata.ArtistUsed = true
-				}
-			}
-		}
 	}
 	if submission.Metadata.Params != nil && len(*submission.Metadata.Params) > 0 {
 		submission.Metadata.AISubmission = true

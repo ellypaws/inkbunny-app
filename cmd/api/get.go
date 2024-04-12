@@ -217,10 +217,10 @@ func GetInkbunnySearch(c echo.Context) error {
 		request.Username = *bind.Username
 	}
 
-	if bind.Type != nil {
-		*bind.Type = strings.TrimPrefix(*bind.Type, "[")
-		*bind.Type = strings.TrimSuffix(*bind.Type, "]")
-		for _, t := range strings.Split(*bind.Type, ",") {
+	if bind.Types != nil {
+		*bind.Types = strings.Trim(*bind.Types, "[]")
+		*bind.Types = strings.ReplaceAll(*bind.Types, `"`, "")
+		for _, t := range strings.Split(*bind.Types, ",") {
 			i, err := strconv.Atoi(t)
 			if err != nil {
 				return c.JSON(http.StatusBadRequest, crashy.ErrorResponse{

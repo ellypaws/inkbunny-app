@@ -617,10 +617,10 @@ func GetReviewHandler(c echo.Context) error {
 
 func processObjectMetadata(submission *db.Submission) {
 	for _, obj := range submission.Metadata.Objects {
+		meta := strings.ToLower(obj.Prompt + obj.NegativePrompt)
 		for _, artist := range database.AllArtists() {
-			if strings.Contains(obj.Prompt, artist.Username) {
-				submission.Metadata.ArtistUsed = true
-				break
+			if strings.Contains(meta, artist.Username) {
+				submission.Metadata.ArtistUsed = append(submission.Metadata.ArtistUsed, artist)
 			}
 		}
 	}

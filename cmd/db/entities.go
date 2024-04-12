@@ -306,14 +306,14 @@ type Metadata struct {
 	AIAccount     bool     `json:"ai_account"`
 	AISubmission  bool     `json:"ai_submission"`
 
-	MissingPrompt bool `json:"missing_prompt"` // FlagMissingPrompt
-	MissingTags   bool `json:"missing_tags"`   // FlagMissingTags
-	MissingModel  bool `json:"missing_model"`  // FlagMissingModel
-	ArtistUsed    bool `json:"artist_used"`    // FlagArtistUsed
-	PrivateModel  bool `json:"private_model"`  // FlagPrivateModel
-	PrivateLora   bool `json:"private_lora"`   // FlagPrivateLora
-	PrivateTool   bool `json:"private_tool"`   // FlagPrivateTool
-	SoldArt       bool `json:"sold_art"`       // FlagSoldArt
+	MissingPrompt bool     `json:"missing_prompt"`         // FlagMissingPrompt
+	MissingTags   bool     `json:"missing_tags"`           // FlagMissingTags
+	MissingModel  bool     `json:"missing_model"`          // FlagMissingModel
+	ArtistUsed    []Artist `json:"artists_used,omitempty"` // FlagArtistUsed
+	PrivateModel  bool     `json:"private_model"`          // FlagPrivateModel
+	PrivateLora   bool     `json:"private_lora"`           // FlagPrivateLora
+	PrivateTool   bool     `json:"private_tool"`           // FlagPrivateTool
+	SoldArt       bool     `json:"sold_art"`               // FlagSoldArt
 
 	Generator string `json:"generator,omitempty"`
 

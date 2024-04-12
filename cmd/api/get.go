@@ -509,10 +509,6 @@ func GetReviewHandler(c echo.Context) error {
 			Submission: &submission,
 		}
 
-		if submission.Metadata.Objects != nil {
-			processObjectMetadata(&submission)
-		}
-
 		if c.QueryParam("full") == "true" || c.QueryParam("multiple") == "true" {
 			submissions[i].Inkbunny = &sub
 			submissions[i].Ticket = &db.Ticket{
@@ -708,6 +704,10 @@ func processSubmission(c echo.Context, eachSubmission *sync.WaitGroup, mutex *sy
 		go parseFiles(c, &fileWaitGroup, sub)
 	}
 	fileWaitGroup.Wait()
+
+	if sub.Metadata.Objects != nil {
+		processObjectMetadata(sub)
+	}
 
 	mutex.Lock()
 	defer mutex.Unlock()

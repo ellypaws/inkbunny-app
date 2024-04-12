@@ -35,6 +35,7 @@ var postHandlers = pathHandler{
 	"/tickets/new":        handler{newTicket, staffMiddleware},
 	"/tickets/upsert":     handler{updateTicket, staffMiddleware},
 	"/artists/upsert":     handler{upsertArtist, staffMiddleware},
+	"/inkbunny/search":    handler{GetInkbunnySearch, append(loggedInMiddleware, withCache...)},
 }
 
 func newTicket(c echo.Context) error {

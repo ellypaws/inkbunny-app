@@ -527,12 +527,14 @@ func (db Sqlite) UpsertTicket(ticket Ticket) (int64, error) {
 		return 0, fmt.Errorf("error: %vserting ticket: %w", process, err)
 	}
 
-	id, err := res.LastInsertId()
-	if err != nil && id != ticket.ID {
-		return 0, fmt.Errorf("error: last insert id does not match ticket id: %w", err)
+	if isInsert {
+		id, err := res.LastInsertId()
+		if err != nil && id != ticket.ID {
+			return 0, fmt.Errorf("error: last insert id %v does not match ticket id: %v: %w", id, ticket.ID, err)
+		}
 	}
 
-	return id, err
+	return ticket.ID, nil
 }
 
 func (db Sqlite) DeleteTicket(id int64) error {

@@ -499,8 +499,8 @@ func resizeImage(src image.Image, max [2]int) string {
 }
 
 func upsertArtist(c echo.Context) error {
-	var artist db.Artist
-	if err := c.Bind(&artist); err != nil {
+	var artists []db.Artist
+	if err := c.Bind(&artists); err != nil {
 		return err
 	}
 
@@ -508,10 +508,16 @@ func upsertArtist(c echo.Context) error {
 		return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
 	}
 
-	err := database.UpsertArtist(artist)
-	if err != nil {
-		return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
+	if len(artists) == 0 {
+		return c.JSON(http.StatusLengthRequired, crashy.ErrorResponse{ErrorString: "no artists to upsert"})
 	}
 
-	return c.JSON(http.StatusOK, artist)
+	for _, artist := range artists {
+		err := database.UpsertArtist(artist)
+		if err != nil {
+			return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
+		}
+	}
+
+	return c.JSON(http.StatusOK, artists)
 }

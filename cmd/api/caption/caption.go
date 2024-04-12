@@ -9,6 +9,7 @@ import (
 	e "github.com/ellypaws/inkbunny-sd/entities"
 	sd "github.com/ellypaws/inkbunny-sd/stable_diffusion"
 	"github.com/labstack/echo/v4"
+	units "github.com/labstack/gommon/bytes"
 	"strings"
 	"sync"
 	"time"
@@ -98,6 +99,8 @@ func ProcessCaption(c echo.Context, wg *sync.WaitGroup, sub *db.Submission, i in
 	})
 	if err != nil {
 		c.Logger().Errorf("error caching caption: %v", err)
+	} else {
+		c.Logger().Infof("Cached %s %s %dKiB", key, echo.MIMEApplicationJSON, len(blob)/units.KiB)
 	}
 
 	sub.Files[i].Caption = &t.Caption

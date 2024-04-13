@@ -8,8 +8,9 @@ import (
 )
 
 var patchHandlers = pathHandler{
-	"/ticket": handler{updateTicket, staffMiddleware},
-	"/artist": handler{upsertArtist, staffMiddleware},
+	"/ticket":  handler{updateTicket, staffMiddleware},
+	"/artist":  handler{upsertArtist, staffMiddleware},
+	"/auditor": handler{upsertAuditor, staffMiddleware},
 }
 
 func updateTicket(c echo.Context) error {
@@ -62,4 +63,44 @@ func upsertArtist(c echo.Context) error {
 	}
 
 	return c.JSON(http.StatusOK, artists)
+}
+
+func upsertAuditor(c echo.Context) error {
+	var auditors []db.Auditor
+	if err := c.Bind(&auditors); err != nil {
+		return c.JSON(http.StatusBadRequest, crashy.Wrap(err))
+	}
+
+	if err := db.Error(database); err != nil {
+		return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
+	}
+
+	if len(auditors) == 0 {
+		return c.JSON(http.StatusLengthRequired, crashy.ErrorResponse{ErrorString: "no auditors to upsert"})
+	}
+
+	stored := database.AllAuditors()
+	for _, auditor := range auditors {
+		if auditor.Username == "" {
+			return c.JSON(http.StatusBadRequest, crashy.ErrorResponse{ErrorString: "missing username", Debug: auditors})
+		}
+
+		var valid bool
+		for _, known := range stored {
+			if auditor.Username == known.Username {
+				valid = true
+				break
+			}
+		}
+		if !valid {
+			return c.JSON(http.StatusConflict, crashy.ErrorResponse{ErrorString: "auditor not found", Debug: auditors})
+		}
+
+		err := database.InsertAuditor(auditor)
+		if err != nil {
+			return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
+		}
+	}
+
+	return c.JSON(http.StatusOK, auditors)
 }

@@ -38,7 +38,7 @@ func LoggedInMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
 		}
 
 		if !database.ValidSID(api.Credentials{Sid: sid}) {
-
+			return c.JSON(http.StatusUnauthorized, crashy.ErrorResponse{ErrorString: "invalid sid"})
 		}
 
 		id, err := database.GetUserIDFromSID(sid)

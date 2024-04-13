@@ -146,6 +146,11 @@ func Retrieve(c echo.Context, cache Cache, fetch Fetch) (*Item, func(c echo.Cont
 		c.Logger().Warnf(`mismatched mime types expected: "%s" got: "%s"`, fetch.MimeType, mimeType)
 	}
 
+	if bytes.HasPrefix(blob, []byte("ERROR")) {
+		c.Logger().Errorf("error downloading %s: %s", fetch.URL, blob)
+		return nil, errFunc(http.StatusInternalServerError, crashy.ErrorResponse{ErrorString: fmt.Sprintf("error downloading %s: %s", fetch.URL, blob)})
+	}
+
 	item = &Item{
 		Blob:       blob,
 		LastAccess: time.Now().UTC(),

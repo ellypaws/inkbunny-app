@@ -32,7 +32,7 @@ var getHandlers = pathHandler{
 	"/inkbunny/submission":      handler{GetInkbunnySubmission, withCache},
 	"/inkbunny/submission/:ids": handler{GetInkbunnySubmission, withCache},
 	"/inkbunny/search":          handler{GetInkbunnySearch, append(loggedInMiddleware, withCache...)},
-	"/image":                    handler{GetImageHandler, staticMiddleware},
+	"/image":                    handler{GetImageHandler, append(staticMiddleware, SIDMiddleware)},
 	"/review/:id":               handler{GetReviewHandler, append(staffMiddleware, withRedis...)},
 	"/heuristics/:id":           handler{GetHeuristicsHandler, append(loggedInMiddleware, withRedis...)},
 	"/audits":                   handler{GetAuditHandler, staffMiddleware},

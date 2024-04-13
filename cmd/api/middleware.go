@@ -54,6 +54,36 @@ func LoggedInMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
 
 var loggedInMiddleware = []echo.MiddlewareFunc{LoggedInMiddleware}
 
+func SIDMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
+	return func(c echo.Context) error {
+		sid, ok := c.Get("sid").(string)
+		if !ok || sid == "" {
+			xsid := c.Request().Header.Get("X-SID")
+			if xsid != "" {
+				sid = xsid
+			}
+		}
+		if sid == "" {
+			sidCookie, err := c.Cookie("sid")
+			if err == nil && sidCookie.Value != "" {
+				sid = sidCookie.Value
+			}
+		}
+		if sid == "" {
+			sid = c.QueryParam("sid")
+		}
+
+		c.Set("sid", sid)
+		id, err := database.GetUserIDFromSID(sid)
+		if err == nil {
+			c.Set("id", id)
+		}
+		return next(c)
+	}
+}
+
+var sidMiddleware = []echo.MiddlewareFunc{SIDMiddleware}
+
 func RequireAuditor(next echo.HandlerFunc) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		_, id, err := GetSIDandID(c)

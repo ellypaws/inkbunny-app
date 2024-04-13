@@ -31,13 +31,28 @@ func GetImageHandler(c echo.Context) error {
 	hostname := parse.Hostname()
 	valid := strings.HasSuffix(hostname, ".ib.metapix.net") || hostname == "inkbunny.net"
 	if !valid {
-		return c.String(http.StatusBadRequest, "URL must be from inkbunny.net")
+		return c.JSON(http.StatusBadRequest, crashy.ErrorResponse{
+			ErrorString: "URL must be from inkbunny.net or *.ib.metapix.net",
+			Debug:       hostname,
+		})
 	}
 
+	if strings.Contains(imageURL, "private_files") {
+		if sid, ok := c.Get("sid").(string); ok && sid != "" {
+			q := parse.Query()
+			c.Logger().Debugf("Setting sid: %s for private file %s", sid, parse)
+			q.Set("sid", sid)
+			parse.RawQuery = q.Encode()
+		} else {
+			return c.JSON(http.StatusUnauthorized, crashy.ErrorResponse{ErrorString: "Private files require a session ID"})
+		}
+	}
+
+	mimeType := cache.MimeTypeFromURL(imageURL)
 	cacheItem, errorFunc := cache.Retrieve(c, cache.SwitchCache(c), cache.Fetch{
-		Key:      imageURL,
-		URL:      imageURL,
-		MimeType: cache.MimeTypeFromURL(imageURL),
+		Key:      fmt.Sprintf("%s:%s", mimeType, parse),
+		URL:      parse.String(),
+		MimeType: mimeType,
 	})
 	if errorFunc != nil {
 		return errorFunc(c)

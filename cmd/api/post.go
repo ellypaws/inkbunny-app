@@ -22,7 +22,7 @@ import (
 
 var postHandlers = pathHandler{
 	"/login":              handler{login, nil},
-	"/guest":              handler{login, nil},
+	"/guest":              handler{guest, nil},
 	"/logout":             handler{logout, loggedInMiddleware},
 	"/validate":           handler{validate, loggedInMiddleware},
 	"/llm":                handler{inference, nil},

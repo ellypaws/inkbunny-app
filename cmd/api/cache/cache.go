@@ -13,6 +13,7 @@ import (
 	"math"
 	"mime"
 	"net/http"
+	"net/url"
 	"strings"
 	"sync"
 	"time"
@@ -73,9 +74,30 @@ type Fetch struct {
 }
 
 func Retrieve(c echo.Context, cache Cache, fetch Fetch) (*Item, func(c echo.Context) error) {
+	parse, err := url.Parse(fetch.URL)
+	if err != nil {
+		c.Logger().Errorf("Failed to parse url: %s", err)
+		return nil, errFunc(http.StatusInternalServerError, crashy.Wrap(err))
+	}
+
 	if fetch.MimeType == "" {
 		c.Logger().Warnf("no mime type provided for %s", fetch.URL)
 		fetch.MimeType = MimeTypeFromURL(fetch.URL)
+	}
+
+	if strings.Contains(fetch.URL, "private_files") {
+		if sid, ok := c.Get("sid").(string); ok && sid != "" {
+			q := parse.Query()
+			if !q.Has("sid") {
+				c.Logger().Warnf("Setting sid: %s for private file %s", sid, parse)
+				q.Set("sid", sid)
+			}
+			parse.RawQuery = q.Encode()
+			fetch.Key = fmt.Sprintf("%s:%s", fetch.MimeType, parse)
+			fetch.URL = parse.String()
+		} else {
+			return nil, errFunc(http.StatusUnauthorized, crashy.ErrorResponse{ErrorString: "Private files require a session ID"})
+		}
 	}
 
 	if !strings.HasPrefix(fetch.Key, fetch.MimeType) {
@@ -85,7 +107,7 @@ func Retrieve(c echo.Context, cache Cache, fetch Fetch) (*Item, func(c echo.Cont
 
 	item, err := cache.Get(fetch.Key)
 	if err == nil {
-		c.Logger().Infof("Retrieved %s %s %dKiB", fetch.URL, item.MimeType, len(item.Blob)/units.KiB)
+		c.Logger().Infof("Retrieved %s %dKiB", fetch.Key, len(item.Blob)/units.KiB)
 		c.Response().Header().Set("Cache-Control", "public, max-age=86400")
 		return item, nil
 	}
@@ -107,7 +129,7 @@ func Retrieve(c echo.Context, cache Cache, fetch Fetch) (*Item, func(c echo.Cont
 			c.Logger().Errorf("could not get %s from cache %T: %v", fetch.Key, cache, err)
 			return nil, errFunc(http.StatusInternalServerError, err)
 		}
-		c.Logger().Infof("Retrieved %s %s %dKiB", fetch.URL, item.MimeType, len(item.Blob)/units.KiB)
+		c.Logger().Infof("Retrieved %s %s %dKiB", fetch.Key, item.MimeType, len(item.Blob)/units.KiB)
 		c.Response().Header().Set("Cache-Control", "public, max-age=86400") // 24 hours
 		return item, nil
 	}
@@ -161,7 +183,7 @@ func Retrieve(c echo.Context, cache Cache, fetch Fetch) (*Item, func(c echo.Cont
 	if err != nil {
 		c.Logger().Errorf("could not set %s in cache %T: %v", fetch.URL, cache, err)
 	}
-	c.Logger().Infof("Cached %s %s %dKiB", fetch.Key, item.MimeType, len(item.Blob)/units.KiB)
+	c.Logger().Infof("Cached %s %dKiB", fetch.Key, len(item.Blob)/units.KiB)
 
 	queue.mu.Lock()
 	close(done)

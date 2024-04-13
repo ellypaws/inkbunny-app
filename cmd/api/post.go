@@ -22,6 +22,7 @@ import (
 
 var postHandlers = pathHandler{
 	"/login":              handler{login, nil},
+	"/guest":              handler{login, nil},
 	"/logout":             handler{logout, loggedInMiddleware},
 	"/validate":           handler{validate, loggedInMiddleware},
 	"/llm":                handler{inference, nil},
@@ -83,6 +84,58 @@ func login(c echo.Context) error {
 		SameSite: http.SameSiteDefaultMode,
 		MaxAge:   twoYears,
 	})
+
+	return c.JSON(http.StatusOK, user)
+}
+
+func guest(c echo.Context) error {
+	user := &api.Credentials{
+		Username: "guest",
+	}
+	user, err := user.Login()
+	if err != nil {
+		return c.JSON(http.StatusUnauthorized, crashy.Wrap(err))
+	}
+
+	if err := db.Error(database); err != nil {
+		return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
+	}
+
+	err = database.InsertSIDHash(db.HashCredentials(*user))
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
+	}
+
+	const twoYears = 2 * 365 * 24 * 60 * 60
+
+	c.SetCookie(&http.Cookie{
+		Name:     "sid",
+		Value:    user.Sid,
+		Expires:  time.Now().UTC().Add(24 * time.Hour),
+		Secure:   true,
+		SameSite: http.SameSiteStrictMode,
+		MaxAge:   twoYears,
+	})
+
+	c.SetCookie(&http.Cookie{
+		Name:     "username",
+		Value:    user.Username,
+		Expires:  time.Now().UTC().Add(24 * time.Hour),
+		Secure:   true,
+		SameSite: http.SameSiteDefaultMode,
+		MaxAge:   twoYears,
+	})
+
+	err = user.ChangeRating(api.Ratings{
+		General:        true,
+		Nudity:         true,
+		MildViolence:   true,
+		Sexual:         true,
+		StrongViolence: true,
+	})
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
+	}
 
 	return c.JSON(http.StatusOK, user)
 }

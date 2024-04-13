@@ -295,7 +295,7 @@ func Error(db *Sqlite) error {
 	return db.PingContext(ctx)
 }
 
-func (db *Sqlite) Wait() {
+func (db Sqlite) Wait() {
 	var timeout int
 	res := db.QueryRow(`PRAGMA busy_timeout;`)
 	err := res.Scan(&timeout)

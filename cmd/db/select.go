@@ -632,7 +632,6 @@ func (db Sqlite) GetRole(auditorID int64) (Role, error) {
 // GetKnownModels returns a map of model hashes to a submissions of known model names
 func (db Sqlite) GetKnownModels() (ModelHashes, error) {
 	var modelHashes ModelHashes
-	var hashes []byte
 
 	rows, err := db.QueryContext(db.context, selectModels)
 	if err != nil {
@@ -645,12 +644,13 @@ func (db Sqlite) GetKnownModels() (ModelHashes, error) {
 			modelHashes = make(ModelHashes)
 		}
 		var hash string
-		err = rows.Scan(&hash, &hashes)
+		var bin []byte
+		err = rows.Scan(&hash, &bin)
 		if err != nil {
 			return modelHashes, err
 		}
 		var models []string
-		err = json.Unmarshal(hashes, &models)
+		err = json.Unmarshal(bin, &models)
 		modelHashes[hash] = models
 	}
 

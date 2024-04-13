@@ -815,7 +815,7 @@ func processParams(c echo.Context, wg *sync.WaitGroup, sub *db.Submission) {
 	cacheToUse := cache.SwitchCache(c)
 
 	b, errFunc := cache.Retrieve(c, cacheToUse, cache.Fetch{
-		Key:      textFile.File.FileName,
+		Key:      fmt.Sprintf("%s:%s", textFile.File.MimeType, textFile.File.FileURLFull),
 		URL:      textFile.File.FileURLFull,
 		MimeType: textFile.File.MimeType,
 	})

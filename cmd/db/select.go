@@ -564,7 +564,7 @@ func (db Sqlite) GetAuditorFromHash(hash string) (Auditor, error) {
 
 func (db Sqlite) GetUserIDFromSID(sid string) (int64, error) {
 	var id int64
-	err := db.QueryRowContext(db.context, SelectAuditorIDFromHash, hash(sid)).Scan(&id)
+	err := db.QueryRowContext(db.context, SelectAuditorIDFromHash, Hash(sid)).Scan(&id)
 	return id, err
 }
 
@@ -600,7 +600,7 @@ func (db Sqlite) ValidSID(user api.Credentials) bool {
 	if user.Sid == "" {
 		return false
 	}
-	rows, err := db.QueryContext(db.context, selectSIDsFromHash, hash(user.Sid))
+	rows, err := db.QueryContext(db.context, selectSIDsFromHash, Hash(user.Sid))
 	if err != nil {
 		return false
 	}

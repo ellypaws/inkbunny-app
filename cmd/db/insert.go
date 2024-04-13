@@ -677,7 +677,7 @@ func (db Sqlite) InsertSIDHash(sid SIDHash) error {
 }
 
 func (db Sqlite) RemoveSIDHash(sid SIDHash) error {
-	if sid.Hash == hash("") {
+	if sid.Hash == Hash("") {
 		return fmt.Errorf("error: sid hash cannot be empty")
 	}
 	res, err := db.ExecContext(db.context, deleteSIDHash, sid.Hash)
@@ -696,7 +696,7 @@ func (db Sqlite) RemoveSIDHash(sid SIDHash) error {
 }
 
 func (db Sqlite) LogoutAll(sid SIDHash) error {
-	if sid.Hash == hash("") {
+	if sid.Hash == Hash("") {
 		return fmt.Errorf("error: sid hash cannot be empty")
 	}
 	id, err := db.GetUserIDFromSID(sid.Hash)
@@ -709,12 +709,12 @@ func (db Sqlite) LogoutAll(sid SIDHash) error {
 
 func HashCredentials(user api.Credentials) SIDHash {
 	return SIDHash{
-		Hash:      hash(user.Sid),
+		Hash:      Hash(user.Sid),
 		AuditorID: int64(user.UserID.Int()),
 	}
 }
 
-func hash(s any) hashedSID {
+func Hash(s any) hashedSID {
 	h := sha256.New()
 	h.Write([]byte(fmt.Sprintf("%v", s)))
 	return hashedSID(fmt.Sprintf("%x", h.Sum(nil)))

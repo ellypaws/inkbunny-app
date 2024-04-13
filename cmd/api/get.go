@@ -703,7 +703,7 @@ func processSubmission(c echo.Context, eachSubmission *sync.WaitGroup, mutex *sy
 	var fileWaitGroup sync.WaitGroup
 	if len(sub.Files) > 0 {
 		fileWaitGroup.Add(1)
-		c.Logger().Infof("processing files for %v", sub.ID)
+		c.Logger().Infof("processing files for %s %s", sub.URL, sub.Title)
 		go parseFiles(c, &fileWaitGroup, sub)
 	}
 	fileWaitGroup.Wait()

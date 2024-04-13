@@ -634,16 +634,6 @@ func processObjectMetadata(c echo.Context, submission *db.Submission) {
 				break
 			}
 		}
-
-		for hash, model := range obj.LoraHashes {
-			database.Wait()
-			err := database.UpsertModel(db.ModelHashes{
-				hash: []string{model},
-			})
-			if err != nil {
-				c.Logger().Errorf("error inserting model %s: %s", hash, err)
-			}
-		}
 	}
 }
 
@@ -724,6 +714,19 @@ func processSubmission(c echo.Context, eachSubmission *sync.WaitGroup, mutex *sy
 
 	mutex.Lock()
 	defer mutex.Unlock()
+
+	for _, obj := range sub.Metadata.Objects {
+		for hash, model := range obj.LoraHashes {
+			database.Wait()
+			err := database.UpsertModel(db.ModelHashes{
+				hash: []string{model},
+			})
+			if err != nil {
+				c.Logger().Errorf("error inserting model %s: %s", hash, err)
+			}
+		}
+	}
+
 	if c.QueryParam("stream") == "true" {
 		enc := json.NewEncoder(c.Response())
 		if err := enc.Encode(sub); err != nil {

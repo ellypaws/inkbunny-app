@@ -24,6 +24,9 @@ const (
 	ON CONFLICT(auditor_id) DO UPDATE SET username=excluded.username, role=excluded.role, audit_count=excluded.audit_count;
 	`
 
+	// editAuditorRole statement for Auditor
+	editAuditorRole = `UPDATE auditors SET role = ? WHERE auditor_id = ?;`
+
 	// deleteAuditor statement for Auditor
 	deleteAuditor = `DELETE FROM auditors WHERE auditor_id = ?;`
 
@@ -160,6 +163,11 @@ func (db Sqlite) InsertAuditor(auditor Auditor) error {
 		auditor.UserID, auditor.Username, auditor.Role.String(), auditor.AuditCount,
 	)
 
+	return err
+}
+
+func (db Sqlite) EditAuditorRole(auditorID int64, role Role) error {
+	_, err := db.ExecContext(db.context, editAuditorRole, role.String(), auditorID)
 	return err
 }
 

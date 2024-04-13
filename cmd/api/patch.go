@@ -96,7 +96,7 @@ func upsertAuditor(c echo.Context) error {
 			return c.JSON(http.StatusConflict, crashy.ErrorResponse{ErrorString: "auditor not found", Debug: auditors})
 		}
 
-		err := database.InsertAuditor(auditor)
+		err := database.EditAuditorRole(auditor.UserID, auditor.Role)
 		if err != nil {
 			return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
 		}

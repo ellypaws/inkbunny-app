@@ -618,7 +618,7 @@ func processObjectMetadata(c echo.Context, submission *db.Submission) {
 	for _, obj := range submission.Metadata.Objects {
 		meta := strings.ToLower(obj.Prompt + obj.NegativePrompt)
 		for _, artist := range database.AllArtists() {
-			if strings.Contains(meta, artist.Username) {
+			if strings.Contains(meta, strings.ToLower(artist.Username)) {
 				submission.Metadata.ArtistUsed = append(submission.Metadata.ArtistUsed, artist)
 			}
 		}

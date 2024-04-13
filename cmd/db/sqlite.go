@@ -19,6 +19,7 @@ const (
 	getCurrentMigration string = `PRAGMA user_version;`
 	setCurrentMigration string = `PRAGMA user_version = ?;`
 	setForeignKeyCheck  string = `PRAGMA foreign_keys = ON;`
+	setBusyTimeOut      string = `PRAGMA busy_timeout = 128;`
 )
 
 type Sqlite struct {
@@ -179,6 +180,11 @@ func New(ctx context.Context) (*Sqlite, error) {
 		return nil, errors.New("failed to enable foreign key checks")
 	}
 
+	_, err = db.Exec(setBusyTimeOut)
+	if err != nil {
+		return nil, errors.New("failed to set busy timeout")
+	}
+
 	err = migrate(ctx, db)
 	if err != nil {
 		return nil, err
@@ -287,4 +293,25 @@ func Error(db *Sqlite) error {
 	ctx, cancel := context.WithTimeout(db.Context(), timeout)
 	defer cancel()
 	return db.PingContext(ctx)
+}
+
+func (db *Sqlite) Wait() {
+	var timeout int
+	res := db.QueryRow(`PRAGMA busy_timeout;`)
+	err := res.Scan(&timeout)
+	if err != nil {
+		log.Printf("failed to get busy_timeout: %v\n", err)
+	}
+
+	sleep := 500 * time.Millisecond
+	if timeout > 0 {
+		sleep = time.Duration(timeout) * time.Millisecond
+	}
+
+	for {
+		if err := db.Ping(); err == nil {
+			return
+		}
+		time.Sleep(sleep)
+	}
 }

@@ -42,6 +42,8 @@ var getHandlers = pathHandler{
 	"/username/:username":       handler{GetUsernameHandler, append(loggedInMiddleware, withRedis...)},
 	"/avatar/:username":         handler{GetAvatarHandler, staticMiddleware},
 	"/artists":                  handler{GetArtistsHandler, append(loggedInMiddleware, withRedis...)},
+	"/models":                   handler{GetModelsHandler, withCache},
+	"/models/:hash":             handler{GetModelsHandler, withCache},
 }
 
 func robots(c echo.Context) error {
@@ -612,7 +614,7 @@ func GetReviewHandler(c echo.Context) error {
 	}
 }
 
-func processObjectMetadata(submission *db.Submission) {
+func processObjectMetadata(c echo.Context, submission *db.Submission) {
 	for _, obj := range submission.Metadata.Objects {
 		meta := strings.ToLower(obj.Prompt + obj.NegativePrompt)
 		for _, artist := range database.AllArtists() {
@@ -624,11 +626,22 @@ func processObjectMetadata(submission *db.Submission) {
 			"midjourney",
 			"novelai",
 		}
+
 		for _, tool := range privateTools {
 			if strings.Contains(meta, tool) {
 				submission.Metadata.PrivateTool = true
 				submission.Metadata.Generator = tool
 				break
+			}
+		}
+
+		for hash, model := range obj.LoraHashes {
+			database.Wait()
+			err := database.UpsertModel(db.ModelHashes{
+				hash: []string{model},
+			})
+			if err != nil {
+				c.Logger().Errorf("error inserting model %s: %s", hash, err)
 			}
 		}
 	}
@@ -706,7 +719,7 @@ func processSubmission(c echo.Context, eachSubmission *sync.WaitGroup, mutex *sy
 	fileWaitGroup.Wait()
 
 	if sub.Metadata.Objects != nil {
-		processObjectMetadata(sub)
+		processObjectMetadata(c, sub)
 	}
 
 	mutex.Lock()
@@ -1125,4 +1138,27 @@ func GetArtistsHandler(c echo.Context) error {
 	}
 
 	return c.JSON(http.StatusOK, artistsWithIcon)
+}
+
+// GetModelsHandler returns a list of known models
+func GetModelsHandler(c echo.Context) error {
+	models, err := database.GetKnownModels()
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
+	}
+
+	hash := c.Param("hash")
+	if hash == "" {
+		return c.JSON(http.StatusOK, models)
+	}
+
+	if hash == "all" {
+		return c.JSON(http.StatusOK, models)
+	}
+
+	if m, ok := models[hash]; ok {
+		return c.JSON(http.StatusOK, db.ModelHashes{hash: m})
+	} else {
+		return c.JSON(http.StatusNotFound, crashy.ErrorResponse{ErrorString: "no models found"})
+	}
 }

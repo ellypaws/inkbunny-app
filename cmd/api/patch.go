@@ -5,12 +5,14 @@ import (
 	"github.com/ellypaws/inkbunny-app/cmd/db"
 	"github.com/labstack/echo/v4"
 	"net/http"
+	"slices"
 )
 
 var patchHandlers = pathHandler{
 	"/ticket":  handler{updateTicket, staffMiddleware},
 	"/artist":  handler{upsertArtist, staffMiddleware},
 	"/auditor": handler{upsertAuditor, staffMiddleware},
+	"/models":  handler{upsertModel, staffMiddleware},
 }
 
 func updateTicket(c echo.Context) error {
@@ -103,4 +105,53 @@ func upsertAuditor(c echo.Context) error {
 	}
 
 	return c.JSON(http.StatusOK, auditors)
+}
+
+func upsertModel(c echo.Context) error {
+	var modelHashes db.ModelHashes
+	if err := c.Bind(&modelHashes); err != nil {
+		return c.JSON(http.StatusBadRequest, crashy.Wrap(err))
+	}
+
+	if err := db.Error(database); err != nil {
+		return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
+	}
+
+	if len(modelHashes) == 0 {
+		return c.JSON(http.StatusLengthRequired, crashy.ErrorResponse{ErrorString: "no models to upsert"})
+	}
+
+	stored, err := database.GetKnownModels()
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
+	}
+
+	for hash, models := range modelHashes {
+		known, ok := stored[hash]
+		if !ok {
+			stored[hash] = models
+			continue
+		}
+
+		for _, model := range models {
+			if model == "" {
+				return c.JSON(http.StatusBadRequest, crashy.ErrorResponse{
+					ErrorString: "missing model name",
+					Debug:       model,
+				})
+			}
+			if slices.Contains(known, model) {
+				continue
+			}
+			known = append(known, model)
+		}
+		stored[hash] = known
+	}
+
+	err = database.InsertModel(stored)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
+	}
+
+	return c.JSON(http.StatusOK, modelHashes)
 }

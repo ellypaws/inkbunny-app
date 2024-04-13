@@ -89,6 +89,24 @@ func login(c echo.Context) error {
 }
 
 func guest(c echo.Context) error {
+	sid, ok := c.Get("sid").(string)
+	if !ok || sid == "" {
+		xsid := c.Request().Header.Get("X-SID")
+		if xsid != "" {
+			sid = xsid
+		}
+	}
+	if sid == "" {
+		sidCookie, err := c.Cookie("sid")
+		if err == nil && sidCookie.Value != "" {
+			sid = sidCookie.Value
+		}
+	}
+
+	if database.ValidSID(api.Credentials{Sid: sid}) {
+		return c.JSON(http.StatusOK, crashy.ErrorResponse{ErrorString: "already logged in"})
+	}
+
 	user := &api.Credentials{
 		Username: "guest",
 	}

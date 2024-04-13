@@ -58,11 +58,12 @@ func ProcessCaption(c echo.Context, wg *sync.WaitGroup, sub *db.Submission, i in
 
 	c.Logger().Debugf("Cache miss for %s retrieving image...", key)
 
-	item, errorFunc := cache.Retrieve(c, cacheToUse, cache.Fetch{
-		Key:      f.FileName,
-		URL:      f.FileURLScreen,
-		MimeType: f.MimeType,
-	})
+	item, errorFunc := cache.Retrieve(c, cacheToUse,
+		cache.Fetch{
+			Key:      key,
+			URL:      f.FileURLScreen,
+			MimeType: f.MimeType,
+		})
 	if errorFunc != nil {
 		return
 	}
@@ -100,7 +101,7 @@ func ProcessCaption(c echo.Context, wg *sync.WaitGroup, sub *db.Submission, i in
 	if err != nil {
 		c.Logger().Errorf("error caching caption: %v", err)
 	} else {
-		c.Logger().Infof("Cached %s %s %dKiB", key, echo.MIMEApplicationJSON, len(blob)/units.KiB)
+		c.Logger().Infof("Cached %s %dKiB", key, len(blob)/units.KiB)
 	}
 
 	sub.Files[i].Caption = &t.Caption

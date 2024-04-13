@@ -22,6 +22,10 @@ func updateTicket(c echo.Context) error {
 		return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
 	}
 
+	if ticket.DateOpened.IsZero() {
+		return c.JSON(http.StatusBadRequest, crashy.ErrorResponse{ErrorString: "missing date opened"})
+	}
+
 	id, err := database.UpsertTicket(ticket)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))

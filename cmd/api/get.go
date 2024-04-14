@@ -39,6 +39,7 @@ var getHandlers = pathHandler{
 	"/tickets":                  handler{GetTicketsHandler, staffMiddleware},
 	"/auditors":                 handler{GetAllAuditorsJHandler, staffMiddleware},
 	"/robots.txt":               handler{robots, staticMiddleware},
+	"/favicon.ico":              handler{favicon, staticMiddleware},
 	"/username/:username":       handler{GetUsernameHandler, append(loggedInMiddleware, withRedis...)},
 	"/avatar/:username":         handler{GetAvatarHandler, staticMiddleware},
 	"/artists":                  handler{GetArtistsHandler, append(loggedInMiddleware, withRedis...)},

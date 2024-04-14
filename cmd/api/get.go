@@ -51,6 +51,10 @@ func robots(c echo.Context) error {
 	return c.File("public/robots.txt")
 }
 
+func favicon(c echo.Context) error {
+	return c.File("public/16930_inkbunny_inkbunnylogo_trans_rev_outline.ico")
+}
+
 // Deprecated: use registerAs((*echo.Echo).GET, getHandlers) instead
 func registerGetRoutes(e *echo.Echo) {
 	registerAs(e.GET, getHandlers)

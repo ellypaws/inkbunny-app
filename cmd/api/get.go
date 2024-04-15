@@ -1301,6 +1301,9 @@ func queryHost(c echo.Context, cacheToUse cache.Cache, hash string) (db.ModelHas
 
 func RetrieveHash(c echo.Context, cacheToUse cache.Cache, lora entities.Lora) (string, error) {
 	if h := lora.Metadata.SshsModelHash; h != nil && *h != "" {
+		if len(*h) > 12 {
+			return (*h)[:12], nil
+		}
 		return *h, nil
 	}
 
@@ -1331,6 +1334,9 @@ func RetrieveHash(c echo.Context, cacheToUse cache.Cache, lora entities.Lora) (s
 			c.Logger().Infof("Cached %s %s %dKiB", key, echo.MIMETextPlain, len(autoV3)/units.KiB)
 		}
 
+		if len(autoV3) > 12 {
+			return autoV3[:12], nil
+		}
 		return autoV3, nil
 	}
 }

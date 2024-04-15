@@ -151,6 +151,9 @@ const (
 	// selectModels statement for ModelHashes
 	selectModels = `SELECT hash, models FROM models;`
 
+	// selectModelFromHash statement for ModelHashes
+	selectModelFromHash = `SELECT models FROM models WHERE hash = ?;`
+
 	// selectArtists statement for ArtistHashes
 	selectArtists = `SELECT username, user_id FROM artists;`
 )
@@ -658,20 +661,19 @@ func (db Sqlite) GetKnownModels() (ModelHashes, error) {
 }
 
 func (db Sqlite) ModelNamesFromHash(hash string) []string {
-	models, err := db.GetKnownModels()
+	var bin []byte
+	err := db.QueryRowContext(db.context, selectModelFromHash, hash).Scan(&bin)
 	if err != nil {
 		return nil
 	}
 
-	if models == nil {
+	var models []string
+	err = json.Unmarshal(bin, &models)
+	if err != nil {
 		return nil
 	}
 
-	if names, ok := models[hash]; ok {
-		return names
-	}
-
-	return nil
+	return models
 }
 
 func (db Sqlite) AllAuditors() []Auditor {

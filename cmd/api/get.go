@@ -1312,32 +1312,30 @@ func RetrieveHash(c echo.Context, cacheToUse cache.Cache, lora entities.Lora) (s
 	item, err := cacheToUse.Get(key)
 	if err == nil {
 		c.Logger().Infof("Cache hit for %s", key)
+		if len(item.Blob) > 12 {
+			return string(item.Blob)[:12], nil
+		}
 		return string(item.Blob), nil
 	} else {
 		c.Logger().Warnf("Cache miss for %s, calculating hash...", key)
-		autoV3, err := sd.GetLoraHash(lora)
+		hash, err := sd.LoraSafetensorHash(lora.Path)
 		if err != nil {
-			if !errors.Is(err, sd.ErrNotSafeTensor) {
-				c.Logger().Errorf("error calculating hash for %s: %v", lora.Name, err)
-				return "", err
-			}
+			c.Logger().Errorf("error calculating hash for %s: %v", lora.Name, err)
+			return "", err
 		}
 
 		err = cacheToUse.Set(key, &cache.Item{
-			Blob:       []byte(autoV3),
+			Blob:       []byte(hash.AutoV3Full),
 			LastAccess: time.Now().UTC(),
 			MimeType:   echo.MIMETextPlain,
 		}, cache.Indefinite)
 		if err != nil {
 			c.Logger().Errorf("error caching hash %s: %v", key, err)
 		} else {
-			c.Logger().Infof("Cached %s %s %dKiB", key, echo.MIMETextPlain, len(autoV3)/units.KiB)
+			c.Logger().Infof("Cached %s %s %dB", key, echo.MIMETextPlain, len(hash.AutoV3Full))
 		}
 
-		if len(autoV3) > 12 {
-			return autoV3[:12], nil
-		}
-		return autoV3, nil
+		return hash.AutoV3, nil
 	}
 }
 

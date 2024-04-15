@@ -696,10 +696,22 @@ func generate(c echo.Context) error {
 			}
 			return c.Blob(http.StatusOK, "image/png", bin)
 		}
+		if responses == nil {
+			responses = make(map[string]sd.TextToImageResponse)
+		}
+
+		responses[key] = sd.TextToImageResponse{
+			Images:     response.Images,
+			Seeds:      response.Seeds,
+			Subseeds:   response.Subseeds,
+			Parameters: response.Parameters,
+			Info:       response.Info,
+		}
 	}
 
 	if len(responses) == 0 {
 		return c.JSON(http.StatusNotFound, crashy.ErrorResponse{ErrorString: "no responses were generated"})
 	}
+
 	return c.JSON(http.StatusOK, responses)
 }

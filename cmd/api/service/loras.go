@@ -9,6 +9,7 @@ import (
 	sd "github.com/ellypaws/inkbunny-sd/stable_diffusion"
 	"github.com/labstack/echo/v4"
 	"path/filepath"
+	"strings"
 	"time"
 )
 
@@ -77,7 +78,7 @@ func QueryHost(c echo.Context, cacheToUse cache.Cache, host *sd.Host, database *
 			names = append(names, lora.Alias)
 		}
 		if lora.Path != "" {
-			names = append(names, filepath.Base(lora.Path))
+			names = append(names, filepath.Base(strings.ReplaceAll(lora.Path, "\\", "/")))
 		}
 		h := db.ModelHashes{autoV3: names}
 
@@ -104,7 +105,7 @@ func RetrieveHash(c echo.Context, cacheToUse cache.Cache, lora entities.Lora) (s
 		return *h, nil
 	}
 
-	key := fmt.Sprintf("%v:hash:%v", echo.MIMETextPlain, filepath.Base(lora.Path))
+	key := fmt.Sprintf("%v:hash:%v", echo.MIMETextPlain, filepath.Base(strings.ReplaceAll(lora.Path, "\\", "/")))
 
 	item, err := cacheToUse.Get(key)
 	if err == nil {

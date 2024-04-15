@@ -17,6 +17,7 @@ import (
 	"github.com/go-errors/errors"
 	"github.com/labstack/echo/v4"
 	units "github.com/labstack/gommon/bytes"
+	logger "github.com/labstack/gommon/log"
 	"image"
 	"io"
 	"net/http"
@@ -621,7 +622,39 @@ func generate(c echo.Context) error {
 			}
 			if match == nil {
 				c.Logger().Warnf("lora %s isn't downloaded: %s", name, hash)
+				level := c.Logger().Level()
+				c.Logger().SetLevel(logger.INFO)
 				_, _, _ = service.QueryCivitAI(c, cacheToUse, hash)
+				c.Logger().SetLevel(level)
+			} else {
+				c.Logger().Debugf("Found lora %s: %s", name, hash)
+			}
+		}
+
+		if request.OverrideSettings.SDModelCheckpoint != nil {
+			checkpoints, err := host.GetCheckpoints()
+			if err != nil {
+				return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
+			}
+
+			var found bool
+			for _, checkpoint := range checkpoints {
+				if checkpoint.Title == *request.OverrideSettings.SDModelCheckpoint {
+					found = true
+				}
+			}
+			if !found {
+				c.Logger().Warnf("Model checkpoint %s not found", *request.OverrideSettings.SDModelCheckpoint)
+				level := c.Logger().Level()
+				c.Logger().SetLevel(logger.INFO)
+				_, _, err := service.QueryCivitAI(c, cacheToUse, request.OverrideSettings.SDCheckpointHash[:10])
+				if err != nil {
+					return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
+				}
+				c.Logger().SetLevel(level)
+				//return c.JSON(http.StatusNotFound, civ)
+			} else {
+				c.Logger().Infof("Found model checkpoint %s", *request.OverrideSettings.SDModelCheckpoint)
 			}
 		}
 

@@ -1151,6 +1151,7 @@ func GetArtistsHandler(c echo.Context) error {
 }
 
 // GetModelsHandler returns a list of known models
+// Set query "civitai" to "true" to return civitai.CivitAIModel
 func GetModelsHandler(c echo.Context) error {
 	hash := c.Param("hash")
 	if hash == "" {
@@ -1170,8 +1171,12 @@ func GetModelsHandler(c echo.Context) error {
 		hash = hash[:12]
 	}
 
-	if models := database.ModelNamesFromHash(hash); models != nil {
-		return c.JSON(http.StatusOK, db.ModelHashes{hash: models})
+	full := c.QueryParam("civitai") == "true"
+
+	if !full {
+		if models := database.ModelNamesFromHash(hash); models != nil {
+			return c.JSON(http.StatusOK, db.ModelHashes{hash: models})
+		}
 	}
 
 	cacheToUse := cache.SwitchCache(c)
@@ -1232,7 +1237,8 @@ func GetModelsHandler(c echo.Context) error {
 			continue
 		}
 
-		h := db.ModelHashes{autov3: []string{lora.Name}}
+		fullName := strings.Split(lora.Path, "/")
+		h := db.ModelHashes{autov3: []string{lora.Name, lora.Alias, fullName[len(fullName)-1]}}
 		if err := database.UpsertModel(h); err != nil {
 			return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
 		}
@@ -1242,19 +1248,24 @@ func GetModelsHandler(c echo.Context) error {
 	}
 
 	if len(match) == 0 {
-		return c.JSON(http.StatusNotFound, crashy.ErrorResponse{ErrorString: "model not found"})
+		c.Logger().Warnf("model %s not found in known models, querying CivitAI...", hash)
 	}
 
 	key := fmt.Sprintf("%s:civitai:%s", echo.MIMEApplicationJSON, hash)
 	item, err = cacheToUse.Get(key)
 	if err == nil {
 		c.Logger().Infof("Cache hit for %s", key)
-		return c.Blob(http.StatusOK, item.MimeType, item.Blob)
+		if full {
+			return c.Blob(http.StatusOK, item.MimeType, item.Blob)
+		}
 	}
 
 	model, err := civitai.DefaultHost.GetByHash(hash)
 	if err != nil {
 		c.Logger().Warnf("model %s not found in CivitAI", hash)
+		if full {
+			return c.JSON(http.StatusNotFound, crashy.ErrorResponse{ErrorString: "model not found"})
+		}
 	} else {
 		// TODO: Not yet implemented. This is where we download the model if found in CivitAI.
 		err = sd.DownloadModel(hash)
@@ -1264,12 +1275,49 @@ func GetModelsHandler(c echo.Context) error {
 			return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
 		}
 
-		err = cacheToUse.Set(key, &cache.Item{
+		if err = cacheToUse.Set(key, &cache.Item{
 			Blob:       bin,
 			LastAccess: time.Now().UTC(),
 			MimeType:   echo.MIMEApplicationJSON,
-		})
-		return c.JSON(http.StatusOK, model)
+		}); err != nil {
+			c.Logger().Errorf("error caching CivitAI model %s: %v", hash, err)
+		} else {
+			c.Logger().Infof("Cached %s %s %dKiB", key, echo.MIMEApplicationJSON, len(bin)/units.KiB)
+		}
+
+		var name string
+		for _, file := range model.Files {
+			var hashToCheck string
+			switch len(hash) {
+			case 10:
+				hashToCheck = file.Hashes.AutoV2
+			case 12:
+				hashToCheck = file.Hashes.AutoV3
+			}
+			if hash == hashToCheck {
+				name = file.Name
+				if !file.Primary {
+					c.Logger().Warnf("model %s has a non-primary file: %s", model.Name, file.Name)
+				}
+				c.Logger().Infof("download url is %s", file.DownloadURL)
+				break
+			}
+		}
+
+		if name == "" {
+			msg := fmt.Sprintf("hash %s not found in model %s", hash, model.Name)
+			c.Logger().Error(msg)
+			return c.JSON(http.StatusInternalServerError, crashy.ErrorResponse{ErrorString: msg, Debug: model})
+		}
+
+		if err = database.UpsertModel(db.ModelHashes{hash: []string{model.Name, name}}); err != nil {
+			c.Logger().Errorf("error inserting model %s: %s", hash, err)
+			return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
+		}
+
+		if full {
+			return c.JSON(http.StatusOK, model)
+		}
 	}
 
 	return c.JSON(http.StatusOK, match)

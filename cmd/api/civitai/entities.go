@@ -57,11 +57,21 @@ type File struct {
 }
 
 type Hashes struct {
+	// Deprecated: Old AutoV1 hash where it only hashes a part of the file.
 	AutoV1 string `json:"AutoV1"`
+
+	// AutoV2 is the short hash usually used for checkpoints.
+	// Only use the first 10 bytes for short hash.
 	AutoV2 string `json:"AutoV2"`
+	// Full SHA256 hash of the full file without skipping headers.
 	Sha256 string `json:"SHA256"`
+
 	Crc32  string `json:"CRC32"`
 	Blake3 string `json:"BLAKE3"`
+
+	// AutoV3 is usually the correct hash to use for loras.
+	// This is SHA256 with the headers skipped.
+	// Only use the first 12 bytes for short hash.
 	AutoV3 string `json:"AutoV3"`
 }
 

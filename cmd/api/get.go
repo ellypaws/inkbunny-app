@@ -1239,7 +1239,9 @@ func GetModelsHandler(c echo.Context) error {
 		}
 
 		names := []string{lora.Name}
-		if lora.Alias != "None" && lora.Alias != "" {
+		if lora.Alias != lora.Name &&
+			lora.Alias != "None" &&
+			lora.Alias != "" {
 			names = append(names, lora.Alias)
 		}
 		if lora.Path != "" {

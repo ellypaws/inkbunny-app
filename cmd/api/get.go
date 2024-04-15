@@ -1184,9 +1184,13 @@ func GetModelsHandler(c echo.Context) error {
 			return c.JSON(http.StatusOK, db.ModelHashes{hash: models})
 		}
 
-		match, err := queryHost(c, cacheToUse, hash)
-		if err != nil {
-			return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
+		var match db.ModelHashes
+		if len(hash) == 12 {
+			var err error
+			match, err = queryHost(c, cacheToUse, hash)
+			if err != nil {
+				return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
+			}
 		}
 
 		if len(match) == 0 {
@@ -1250,21 +1254,18 @@ func queryHost(c echo.Context, cacheToUse cache.Cache, hash string) (db.ModelHas
 			lora.Metadata.SshsModelHash = nil
 		}
 
-		autov3, err := sd.GetLoraHash(lora)
+		autoV3, err := RetrieveHash(c, cacheToUse, lora)
 		if err != nil {
-			if !errors.Is(err, sd.ErrNotSafeTensor) {
-				c.Logger().Errorf("error calculating hash for %s: %v", lora.Name, err)
-				return nil, err
-			}
+			return nil, err
 		}
 
-		if autov3 == "" {
+		if autoV3 == "" {
 			c.Logger().Warnf("model %s does not have a hash, skipping...", lora.Name)
 			continue
 		}
 
 		if !recache {
-			if hash != autov3 {
+			if hash != autoV3 {
 				continue
 			}
 		}
@@ -1278,20 +1279,53 @@ func queryHost(c echo.Context, cacheToUse cache.Cache, hash string) (db.ModelHas
 		if lora.Path != "" {
 			names = append(names, filepath.Base(lora.Path))
 		}
-		h := db.ModelHashes{autov3: names}
+		h := db.ModelHashes{autoV3: names}
 
-		if hash == autov3 {
+		if hash == autoV3 {
 			match = h
 			if !recache {
 				break
 			}
 		}
-		if err := database.UpsertModel(db.ModelHashes{autov3: names}); err != nil {
+		if err := database.UpsertModel(db.ModelHashes{autoV3: names}); err != nil {
 			return nil, err
 		}
 	}
 
 	return match, nil
+}
+
+func RetrieveHash(c echo.Context, cacheToUse cache.Cache, lora entities.Lora) (string, error) {
+	key := fmt.Sprintf("%v:hash:%v", echo.MIMETextPlain, filepath.Base(lora.Path))
+
+	var autoV3 string
+	item, err := cacheToUse.Get(key)
+	if err == nil {
+		c.Logger().Infof("Cache hit for %s", key)
+		autoV3 = string(item.Blob)
+	} else {
+		c.Logger().Warnf("Cache miss for %s, calculating hash...", key)
+		autoV3, err = sd.GetLoraHash(lora)
+		if err != nil {
+			if !errors.Is(err, sd.ErrNotSafeTensor) {
+				c.Logger().Errorf("error calculating hash for %s: %v", lora.Name, err)
+				return "", err
+			}
+		}
+
+		err = cacheToUse.Set(key, &cache.Item{
+			Blob:       []byte(autoV3),
+			LastAccess: time.Now().UTC(),
+			MimeType:   echo.MIMETextPlain,
+		})
+		if err != nil {
+			c.Logger().Errorf("error caching hash %s: %v", key, err)
+		} else {
+			c.Logger().Infof("Cached %s %s %dKiB", key, echo.MIMETextPlain, len(autoV3)/units.KiB)
+		}
+	}
+
+	return autoV3, nil
 }
 
 func queryCivitAI(c echo.Context, cacheToUse cache.Cache, hash string) (db.ModelHashes, func(c echo.Context) error) {

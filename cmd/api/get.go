@@ -1153,6 +1153,12 @@ func GetArtistsHandler(c echo.Context) error {
 
 // GetModelsHandler returns a list of known models
 // Set query "civitai" to "true" to return civitai.CivitAIModel
+// Set query "recache" to "true" to force a recache (slow)
+// Recache is only true if civitai is not true as that would skip querying host
+//
+// The order of operations is:
+//
+//	Database -> Redis:Host -> Host -> Redis:CivitAI -> CivitAI
 func GetModelsHandler(c echo.Context) error {
 	hash := c.Param("hash")
 	if hash == "" {
@@ -1233,6 +1239,8 @@ func queryHost(c echo.Context, cacheToUse cache.Cache, hash string) (db.ModelHas
 		}
 	}
 
+	recache := c.QueryParam("recache") == "true"
+
 	var match db.ModelHashes
 	for _, lora := range knownModels {
 		if h := lora.Metadata.SshsModelHash; h == nil {
@@ -1255,6 +1263,12 @@ func queryHost(c echo.Context, cacheToUse cache.Cache, hash string) (db.ModelHas
 			continue
 		}
 
+		if !recache {
+			if hash != autov3 {
+				continue
+			}
+		}
+
 		names := []string{lora.Name}
 		if lora.Alias != lora.Name &&
 			lora.Alias != "None" &&
@@ -1265,11 +1279,15 @@ func queryHost(c echo.Context, cacheToUse cache.Cache, hash string) (db.ModelHas
 			names = append(names, filepath.Base(lora.Path))
 		}
 		h := db.ModelHashes{autov3: names}
-		if err := database.UpsertModel(db.ModelHashes{autov3: names}); err != nil {
-			return nil, err
-		}
+
 		if hash == autov3 {
 			match = h
+			if !recache {
+				break
+			}
+		}
+		if err := database.UpsertModel(db.ModelHashes{autov3: names}); err != nil {
+			return nil, err
 		}
 	}
 

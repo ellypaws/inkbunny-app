@@ -10,6 +10,7 @@ import (
 	"github.com/ellypaws/inkbunny-sd/stable_diffusion"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/gommon/bytes"
+	"strings"
 	"time"
 )
 
@@ -65,7 +66,7 @@ func QueryCivitAI(c echo.Context, cacheToUse cache.Cache, hash string) (db.Model
 		case 12:
 			hashToCheck = file.Hashes.AutoV3
 		}
-		if hash == hashToCheck {
+		if strings.EqualFold(hash, hashToCheck) {
 			name = file.Name
 			if !file.Primary {
 				c.Logger().Warnf("model %s has a non-primary file: %s", model.Name, file.Name)

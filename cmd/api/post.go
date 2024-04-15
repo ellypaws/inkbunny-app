@@ -664,12 +664,20 @@ func generate(c echo.Context) error {
 			return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
 		}
 
-		if len(response.Images) == 0 {
+		generation := sd.TextToImageResponse{
+			Images:     response.Images,
+			Seeds:      response.Seeds,
+			Subseeds:   response.Subseeds,
+			Parameters: response.Parameters,
+			Info:       response.Info,
+		}
+
+		if len(generation.Images) == 0 {
 			return c.JSON(http.StatusNotFound, crashy.ErrorResponse{ErrorString: "no images were generated"})
 		}
 
 		c.Logger().Infof("Finished %s", key)
-		bin, err := response.Marshal()
+		bin, err := generation.Marshal()
 		if err != nil {
 			return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
 		}
@@ -687,7 +695,7 @@ func generate(c echo.Context) error {
 		}
 
 		if i := c.QueryParam("image"); i == "true" {
-			if len(response.Images) == 0 {
+			if len(generation.Images) == 0 {
 				return c.JSON(http.StatusNotFound, crashy.ErrorResponse{ErrorString: "no images were generated"})
 			}
 			bin, err := base64.StdEncoding.DecodeString(response.Images[0])
@@ -696,17 +704,11 @@ func generate(c echo.Context) error {
 			}
 			return c.Blob(http.StatusOK, "image/png", bin)
 		}
+
 		if responses == nil {
 			responses = make(map[string]sd.TextToImageResponse)
 		}
-
-		responses[key] = sd.TextToImageResponse{
-			Images:     response.Images,
-			Seeds:      response.Seeds,
-			Subseeds:   response.Subseeds,
-			Parameters: response.Parameters,
-			Info:       response.Info,
-		}
+		responses[key] = generation
 	}
 
 	if len(responses) == 0 {

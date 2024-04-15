@@ -1180,8 +1180,14 @@ func GetModelsHandler(c echo.Context) error {
 
 	cacheToUse := cache.SwitchCache(c)
 	if c.QueryParam("civitai") != "true" {
-		if models := database.ModelNamesFromHash(hash); models != nil {
-			return c.JSON(http.StatusOK, db.ModelHashes{hash: models})
+		if c.QueryParam("recache") != "true" {
+			if models := database.ModelNamesFromHash(hash); models != nil {
+				return c.JSON(http.StatusOK, db.ModelHashes{hash: models})
+			} else {
+				c.Logger().Warnf("model %s not found, attempting to find", hash)
+			}
+		} else {
+			c.Logger().Infof("recache was set to true for %s", hash)
 		}
 
 		var match db.ModelHashes
@@ -1209,8 +1215,6 @@ func GetModelsHandler(c echo.Context) error {
 }
 
 func queryHost(c echo.Context, cacheToUse cache.Cache, hash string) (db.ModelHashes, error) {
-	c.Logger().Warnf("model %s not found, attempting to find", hash)
-
 	var knownModels []entities.Lora
 	knownLorasKey := fmt.Sprintf("%v:loras", echo.MIMEApplicationJSON)
 	item, err := cacheToUse.Get(knownLorasKey)
@@ -1298,14 +1302,13 @@ func queryHost(c echo.Context, cacheToUse cache.Cache, hash string) (db.ModelHas
 func RetrieveHash(c echo.Context, cacheToUse cache.Cache, lora entities.Lora) (string, error) {
 	key := fmt.Sprintf("%v:hash:%v", echo.MIMETextPlain, filepath.Base(lora.Path))
 
-	var autoV3 string
 	item, err := cacheToUse.Get(key)
 	if err == nil {
 		c.Logger().Infof("Cache hit for %s", key)
-		autoV3 = string(item.Blob)
+		return string(item.Blob), nil
 	} else {
 		c.Logger().Warnf("Cache miss for %s, calculating hash...", key)
-		autoV3, err = sd.GetLoraHash(lora)
+		autoV3, err := sd.GetLoraHash(lora)
 		if err != nil {
 			if !errors.Is(err, sd.ErrNotSafeTensor) {
 				c.Logger().Errorf("error calculating hash for %s: %v", lora.Name, err)
@@ -1323,9 +1326,9 @@ func RetrieveHash(c echo.Context, cacheToUse cache.Cache, lora entities.Lora) (s
 		} else {
 			c.Logger().Infof("Cached %s %s %dKiB", key, echo.MIMETextPlain, len(autoV3)/units.KiB)
 		}
-	}
 
-	return autoV3, nil
+		return autoV3, nil
+	}
 }
 
 func queryCivitAI(c echo.Context, cacheToUse cache.Cache, hash string) (db.ModelHashes, func(c echo.Context) error) {

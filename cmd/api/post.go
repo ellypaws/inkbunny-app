@@ -3,8 +3,11 @@ package main
 import (
 	"bytes"
 	"encoding/base64"
+	"fmt"
 	"github.com/disintegration/imaging"
+	"github.com/ellypaws/inkbunny-app/api/cache"
 	. "github.com/ellypaws/inkbunny-app/api/entities"
+	"github.com/ellypaws/inkbunny-app/api/service"
 	"github.com/ellypaws/inkbunny-app/cmd/crashy"
 	"github.com/ellypaws/inkbunny-app/cmd/db"
 	sd "github.com/ellypaws/inkbunny-sd/entities"
@@ -13,6 +16,7 @@ import (
 	"github.com/ellypaws/inkbunny/api"
 	"github.com/go-errors/errors"
 	"github.com/labstack/echo/v4"
+	units "github.com/labstack/gommon/bytes"
 	"image"
 	"io"
 	"net/http"
@@ -36,6 +40,7 @@ var postHandlers = pathHandler{
 	"/sd/:path":           handler{HandlePath, nil},
 	"/artists":            handler{upsertArtist, staffMiddleware},
 	"/inkbunny/search":    handler{GetInkbunnySearch, append(loggedInMiddleware, withCache...)},
+	"/generate":           handler{generate, append(loggedInMiddleware, withRedis...)},
 }
 
 // Deprecated: use registerAs((*echo.Echo).POST, postHandlers) instead
@@ -550,4 +555,118 @@ func heuristics(c echo.Context) error {
 	}
 
 	return c.JSON(http.StatusBadRequest, crashy.ErrorResponse{ErrorString: "parameters or description is required", Debug: request})
+}
+
+// Set query "image" to "true" to return just the (first) image
+// Set query "regenerate" to "true" to regenerate the image
+func generate(c echo.Context) error {
+	var object map[string]sd.TextToImageRequest
+	if err := c.Bind(&object); err != nil {
+		return err
+	}
+
+	if !host.Alive() {
+		return c.JSON(http.StatusServiceUnavailable, crashy.ErrorResponse{ErrorString: "host is not available"})
+	}
+
+	var responses map[string]sd.TextToImageResponse
+	cacheToUse := cache.SwitchCache(c)
+	for key, request := range object {
+		if request.Prompt == "" {
+			c.Logger().Warnf("prompt is empty for %s", key)
+		}
+		if request.OverrideSettings.SDModelCheckpoint == nil {
+			c.Logger().Warnf("model checkpoint is empty for %s", key)
+		}
+
+		key = fmt.Sprintf("%s:generation:%s", echo.MIMEApplicationJSON, key)
+		regenerate := c.QueryParam("regenerate") == "true"
+
+		var item *cache.Item
+		if !regenerate {
+			var err error
+			item, err = cacheToUse.Get(key)
+			if err == nil {
+				response, err := sd.UnmarshalTextToImageResponse(item.Blob)
+				if err != nil {
+					c.Logger().Errorf("error unmarshaling response: %v", err)
+					return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
+				}
+				c.Logger().Debugf("Cache hit for %s", key)
+
+				if i := c.QueryParam("image"); i == "true" {
+					if len(response.Images) == 0 {
+						return c.JSON(http.StatusNotFound, crashy.ErrorResponse{ErrorString: "no images were generated"})
+					}
+					bin, err := base64.StdEncoding.DecodeString(response.Images[0])
+					if err != nil {
+						return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
+					}
+					return c.Blob(http.StatusOK, "image/png", bin)
+				}
+				if responses == nil {
+					responses = make(map[string]sd.TextToImageResponse)
+				}
+				responses[key] = response
+				continue
+			}
+		} else {
+			c.Logger().Infof("Regenerating %s", key)
+		}
+
+		for hash, name := range request.LoraHashes {
+			match, err := service.QueryHost(c, cacheToUse, host, database, hash)
+			if err != nil {
+				c.Logger().Warnf("error querying host: %v", err)
+			}
+			if match == nil {
+				c.Logger().Warnf("lora %s isn't downloaded: %s", name, hash)
+				_, _, _ = service.QueryCivitAI(c, cacheToUse, hash)
+			}
+		}
+
+		c.Logger().Infof("Generating %s...", key)
+		response, err := host.TextToImageRequest(&request)
+		if err != nil {
+			return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
+		}
+
+		if len(response.Images) == 0 {
+			return c.JSON(http.StatusNotFound, crashy.ErrorResponse{ErrorString: "no images were generated"})
+		}
+
+		c.Logger().Infof("Finished %s", key)
+		bin, err := response.Marshal()
+		if err != nil {
+			return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
+		}
+
+		err = cacheToUse.Set(key, &cache.Item{
+			Blob:       bin,
+			LastAccess: time.Now(),
+			MimeType:   echo.MIMEApplicationJSON,
+			HitCount:   1,
+		}, cache.Week)
+		if err != nil {
+			c.Logger().Errorf("error caching generation: %v", err)
+		} else {
+			c.Logger().Infof("Cached %s %dKiB", key, len(bin)/units.KiB)
+		}
+
+		if i := c.QueryParam("image"); i == "true" {
+			if len(response.Images) == 0 {
+				return c.JSON(http.StatusNotFound, crashy.ErrorResponse{ErrorString: "no images were generated"})
+			}
+			bin, err := base64.StdEncoding.DecodeString(response.Images[0])
+			if err != nil {
+				return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
+			}
+			return c.Blob(http.StatusOK, "image/png", bin)
+		}
+	}
+
+	if len(responses) == 0 {
+		return c.JSON(http.StatusNotFound, crashy.ErrorResponse{ErrorString: "no responses were generated"})
+	}
+	return c.JSON(http.StatusOK, responses)
 }

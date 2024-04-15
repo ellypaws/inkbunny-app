@@ -21,7 +21,7 @@ import (
 
 type Cache interface {
 	Get(key string) (*Item, error)
-	Set(key string, item *Item) error
+	Set(key string, item *Item, duration time.Duration) error
 }
 
 type Item struct {
@@ -72,6 +72,15 @@ type Fetch struct {
 	URL      string
 	MimeType string
 }
+
+const (
+	Indefinite = 0
+	Now        = time.Nanosecond
+	Day        = 24 * time.Hour
+	Week       = 7 * Day
+	Month      = 30 * Day
+	Year       = 365 * Day
+)
 
 func Retrieve(c echo.Context, cache Cache, fetch Fetch) (*Item, func(c echo.Context) error) {
 	parse, err := url.Parse(fetch.URL)
@@ -179,7 +188,7 @@ func Retrieve(c echo.Context, cache Cache, fetch Fetch) (*Item, func(c echo.Cont
 		MimeType:   mimeType,
 	}
 
-	err = cache.Set(fmt.Sprintf("%v:%v", mimeType, fetch.URL), item)
+	err = cache.Set(fmt.Sprintf("%v:%v", mimeType, fetch.URL), item, Day)
 	if err != nil {
 		c.Logger().Errorf("could not set %s in cache %T: %v", fetch.URL, cache, err)
 	}

@@ -160,7 +160,7 @@ func GetAvatarHandler(c echo.Context) error {
 		Blob:       bin,
 		LastAccess: time.Now().UTC(),
 		MimeType:   echo.MIMEApplicationJSON,
-	})
+	}, cache.Month)
 
 	item, errFunc := cache.Retrieve(c, cacheToUse, cache.Fetch{
 		URL:      fmt.Sprintf("https://jp.ib.metapix.net/usericons/small/%v", users[0].Icon),

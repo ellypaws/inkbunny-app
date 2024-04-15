@@ -147,7 +147,7 @@ type JSONItem struct {
 	HitCount   int       `json:"hit_count,omitempty"`
 }
 
-func (r *Redis) Set(key string, item *Item) error {
+func (r *Redis) Set(key string, item *Item, duration time.Duration) error {
 	if !strings.HasPrefix(key, item.MimeType) {
 		key = fmt.Sprintf("%s:%s", item.MimeType, key)
 	}
@@ -157,12 +157,12 @@ func (r *Redis) Set(key string, item *Item) error {
 		if cmd.Err() != nil {
 			return fmt.Errorf("failed to set item: %w", cmd.Err())
 		}
-		(*redis.Client)(r).ExpireAt(ctx, key, time.Now().UTC().AddDate(1, 0, 0))
+		(*redis.Client)(r).ExpireAt(ctx, key, time.Now().UTC().Add(duration))
 
 		return nil
 	}
 
-	cmd := (*redis.Client)(r).Set(ctx, key, item.Blob, 24*time.Hour)
+	cmd := (*redis.Client)(r).Set(ctx, key, item.Blob, duration)
 	if cmd.Err() != nil {
 		return fmt.Errorf("failed to set item: %w", cmd.Err())
 	}

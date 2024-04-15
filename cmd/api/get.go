@@ -471,7 +471,7 @@ func GetReviewHandler(c echo.Context) error {
 			Blob:       bin,
 			LastAccess: time.Now().UTC(),
 			MimeType:   echo.MIMEApplicationJSON,
-		})
+		}, cache.Week)
 		if err != nil {
 			c.Logger().Errorf("error caching submission details: %v", err)
 		} else {
@@ -1061,7 +1061,7 @@ func GetUsernameHandler(c echo.Context) error {
 		Blob:       bin,
 		LastAccess: time.Now().UTC(),
 		MimeType:   echo.MIMEApplicationJSON,
-	})
+	}, cache.Year)
 
 	return c.JSON(http.StatusOK, users)
 }
@@ -1144,7 +1144,7 @@ func GetArtistsHandler(c echo.Context) error {
 			Blob:       bin,
 			LastAccess: time.Now().UTC(),
 			MimeType:   echo.MIMEApplicationJSON,
-		})
+		}, cache.Year)
 		c.Logger().Infof("Cached %s %s %dKiB", key, echo.MIMEApplicationJSON, len(bin)/units.KiB)
 	}
 
@@ -1240,7 +1240,7 @@ func queryHost(c echo.Context, cacheToUse cache.Cache, hash string) (db.ModelHas
 			Blob:       bin,
 			LastAccess: time.Now().UTC(),
 			MimeType:   echo.MIMEApplicationJSON,
-		})
+		}, cache.Day)
 		if err != nil {
 			c.Logger().Errorf("error caching known models: %v", err)
 			return nil, err
@@ -1327,7 +1327,7 @@ func RetrieveHash(c echo.Context, cacheToUse cache.Cache, lora entities.Lora) (s
 			Blob:       []byte(autoV3),
 			LastAccess: time.Now().UTC(),
 			MimeType:   echo.MIMETextPlain,
-		})
+		}, cache.Indefinite)
 		if err != nil {
 			c.Logger().Errorf("error caching hash %s: %v", key, err)
 		} else {
@@ -1379,7 +1379,7 @@ func queryCivitAI(c echo.Context, cacheToUse cache.Cache, hash string) (db.Model
 			Blob:       bin,
 			LastAccess: time.Now().UTC(),
 			MimeType:   echo.MIMEApplicationJSON,
-		}); err != nil {
+		}, cache.Month); err != nil {
 			c.Logger().Errorf("error caching CivitAI model %s: %v", hash, err)
 		} else {
 			c.Logger().Infof("Cached %s %s %dKiB", key, echo.MIMEApplicationJSON, len(bin)/units.KiB)

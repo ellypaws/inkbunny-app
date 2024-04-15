@@ -46,10 +46,12 @@ func (l *LocalCache) Get(key string) (*Item, error) {
 	return nil, redis.Nil
 }
 
-func (l *LocalCache) Set(key string, item *Item) error {
+func (l *LocalCache) Set(key string, item *Item, duration time.Duration) error {
 	if !strings.HasPrefix(key, item.MimeType) {
 		key = fmt.Sprintf("%s:%s", item.MimeType, key)
 	}
+
+	item.LastAccess = time.Now().UTC().Add(-duration)
 
 	l.mu.Lock()
 	defer l.mu.Unlock()

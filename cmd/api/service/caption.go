@@ -97,7 +97,7 @@ func ProcessCaption(c echo.Context, wg *sync.WaitGroup, sub *db.Submission, i in
 		Blob:       blob,
 		LastAccess: time.Now().UTC(),
 		MimeType:   echo.MIMEApplicationJSON,
-	})
+	}, cache.Indefinite)
 	if err != nil {
 		c.Logger().Errorf("error caching caption: %v", err)
 	} else {

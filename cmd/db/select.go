@@ -657,6 +657,10 @@ func (db Sqlite) GetKnownModels() (ModelHashes, error) {
 		modelHashes[hash] = models
 	}
 
+	if modelHashes == nil {
+		return modelHashes, errors.New("error: no models found")
+	}
+
 	return modelHashes, nil
 }
 

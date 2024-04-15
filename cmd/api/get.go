@@ -21,7 +21,7 @@ import (
 	units "github.com/labstack/gommon/bytes"
 	"github.com/redis/go-redis/v9"
 	"net/http"
-	"path"
+	"path/filepath"
 	"slices"
 	"strconv"
 	"strings"
@@ -1238,8 +1238,15 @@ func GetModelsHandler(c echo.Context) error {
 			continue
 		}
 
-		h := db.ModelHashes{autov3: []string{lora.Name, lora.Alias, path.Base(lora.Path)}}
-		if err := database.UpsertModel(h); err != nil {
+		names := []string{lora.Name}
+		if lora.Alias != "None" && lora.Alias != "" {
+			names = append(names, lora.Alias)
+		}
+		if lora.Path != "" {
+			names = append(names, filepath.Base(lora.Path))
+		}
+		h := db.ModelHashes{autov3: names}
+		if err := database.UpsertModel(db.ModelHashes{autov3: names}); err != nil {
 			return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
 		}
 		if hash == autov3 {

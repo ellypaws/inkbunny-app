@@ -9,6 +9,7 @@ import (
 	"github.com/ellypaws/inkbunny-app/api/cache"
 	"github.com/ellypaws/inkbunny-app/api/caption"
 	. "github.com/ellypaws/inkbunny-app/api/entities"
+	"github.com/ellypaws/inkbunny-app/api/service"
 	"github.com/ellypaws/inkbunny-app/cmd/app"
 	"github.com/ellypaws/inkbunny-app/cmd/crashy"
 	"github.com/ellypaws/inkbunny-app/cmd/db"
@@ -790,7 +791,7 @@ func parseFiles(c echo.Context, wg *sync.WaitGroup, sub *db.Submission) {
 	}
 	for i := range sub.Files {
 		wg.Add(1)
-		go caption.ProcessCaption(c, wg, sub, i, host)
+		go service.ProcessCaption(c, wg, sub, i, host)
 	}
 }
 

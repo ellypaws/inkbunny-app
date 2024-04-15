@@ -748,11 +748,19 @@ func (db Sqlite) UpsertModel(models ModelHashes) error {
 
 	for hash, model := range models {
 		stored := db.ModelNamesFromHash(hash)
-		for _, newModels := range model {
-			if slices.Contains(stored, newModels) {
+		var appended bool
+		for _, newModel := range model {
+			if newModel == "" {
 				continue
 			}
-			stored = append(stored, newModels)
+			if slices.Contains(stored, newModel) {
+				continue
+			}
+			stored = append(stored, newModel)
+			appended = true
+		}
+		if !appended {
+			continue
 		}
 
 		marshal, err := json.Marshal(stored)

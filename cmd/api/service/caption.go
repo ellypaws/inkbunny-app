@@ -47,7 +47,7 @@ func ProcessCaption(c echo.Context, wg *sync.WaitGroup, sub *db.Submission, i in
 			c.Logger().Errorf("error unmarshaling caption: %v", err)
 			return
 		}
-		c.Logger().Infof("Cache hit for %s", key)
+		c.Logger().Debugf("Cache hit for %s", key)
 		sub.Files[i].Caption = result
 		return
 	}

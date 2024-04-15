@@ -455,7 +455,7 @@ func GetReviewHandler(c echo.Context) error {
 	item, errFunc := cacheToUse.Get(key)
 	if errFunc == nil {
 		if err := json.Unmarshal(item.Blob, &submissionDetails); err == nil {
-			c.Logger().Infof("Cache hit for %s", key)
+			c.Logger().Debugf("Cache hit for %s", key)
 		}
 	} else {
 		c.Logger().Infof("Cache miss for %s retrieving submission...", key)
@@ -1219,7 +1219,7 @@ func queryHost(c echo.Context, cacheToUse cache.Cache, hash string) (db.ModelHas
 	knownLorasKey := fmt.Sprintf("%v:loras", echo.MIMEApplicationJSON)
 	item, err := cacheToUse.Get(knownLorasKey)
 	if err == nil {
-		c.Logger().Infof("Cache hit for %s", knownLorasKey)
+		c.Logger().Debugf("Cache hit for %s", knownLorasKey)
 		if err := json.Unmarshal(item.Blob, &knownModels); err != nil {
 			return nil, err
 		}
@@ -1309,7 +1309,7 @@ func RetrieveHash(c echo.Context, cacheToUse cache.Cache, lora entities.Lora) (s
 
 	item, err := cacheToUse.Get(key)
 	if err == nil {
-		c.Logger().Infof("Cache hit for %s", key)
+		c.Logger().Debugf("Cache hit for %s", key)
 		if len(item.Blob) > 12 {
 			return string(item.Blob)[:12], nil
 		}
@@ -1345,11 +1345,7 @@ func queryCivitAI(c echo.Context, cacheToUse cache.Cache, hash string) (db.Model
 
 	item, err := cacheToUse.Get(key)
 	if err == nil {
-		c.Logger().Infof("Cache hit for %s", key)
-		if full {
-			return nil, func(c echo.Context) error { return c.Blob(http.StatusOK, item.MimeType, item.Blob) }
-		}
-
+		c.Logger().Debugf("Cache hit for %s", key)
 		if err := json.Unmarshal(item.Blob, &model); err != nil {
 			return nil, cache.ErrFunc(http.StatusInternalServerError, err)
 		}

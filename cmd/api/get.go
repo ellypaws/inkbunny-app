@@ -1300,6 +1300,10 @@ func queryHost(c echo.Context, cacheToUse cache.Cache, hash string) (db.ModelHas
 }
 
 func RetrieveHash(c echo.Context, cacheToUse cache.Cache, lora entities.Lora) (string, error) {
+	if h := lora.Metadata.SshsModelHash; h != nil && *h != "" {
+		return *h, nil
+	}
+
 	key := fmt.Sprintf("%v:hash:%v", echo.MIMETextPlain, filepath.Base(lora.Path))
 
 	item, err := cacheToUse.Get(key)

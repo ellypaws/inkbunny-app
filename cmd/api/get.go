@@ -1260,7 +1260,7 @@ func queryHost(c echo.Context, cacheToUse cache.Cache, hash string) (db.ModelHas
 
 		autoV3, err := RetrieveHash(c, cacheToUse, lora)
 		if err != nil {
-			return nil, err
+			continue
 		}
 
 		if autoV3 == "" {

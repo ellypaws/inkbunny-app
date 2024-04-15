@@ -1172,16 +1172,33 @@ func GetModelsHandler(c echo.Context) error {
 		hash = hash[:12]
 	}
 
-	full := c.QueryParam("civitai") == "true"
-
-	if !full {
+	cacheToUse := cache.SwitchCache(c)
+	if c.QueryParam("civitai") != "true" {
 		if models := database.ModelNamesFromHash(hash); models != nil {
 			return c.JSON(http.StatusOK, db.ModelHashes{hash: models})
 		}
+
+		match, err := queryHost(c, cacheToUse, hash)
+		if err != nil {
+			return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
+		}
+
+		if len(match) == 0 {
+			c.Logger().Warnf("model %s not found in known models, querying CivitAI...", hash)
+		} else {
+			return c.JSON(http.StatusOK, match)
+		}
 	}
 
-	cacheToUse := cache.SwitchCache(c)
+	match, err := queryCivitAI(c, cacheToUse, hash)
+	if err != nil {
+		return err(c)
+	}
 
+	return c.JSON(http.StatusOK, match)
+}
+
+func queryHost(c echo.Context, cacheToUse cache.Cache, hash string) (db.ModelHashes, error) {
 	c.Logger().Warnf("model %s not found, attempting to find", hash)
 
 	var knownModels []entities.Lora
@@ -1190,19 +1207,19 @@ func GetModelsHandler(c echo.Context) error {
 	if err == nil {
 		c.Logger().Infof("Cache hit for %s", knownLorasKey)
 		if err := json.Unmarshal(item.Blob, &knownModels); err != nil {
-			return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
+			return nil, err
 		}
 	} else {
 		c.Logger().Warnf("Cache miss for %s, retrieving known models...", knownLorasKey)
 
 		knownModels, err = host.GetLoras()
 		if err != nil {
-			return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
+			return nil, err
 		}
 
 		bin, err := json.Marshal(knownModels)
 		if err != nil {
-			return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
+			return nil, err
 		}
 
 		err = cacheToUse.Set(knownLorasKey, &cache.Item{
@@ -1212,7 +1229,7 @@ func GetModelsHandler(c echo.Context) error {
 		})
 		if err != nil {
 			c.Logger().Errorf("error caching known models: %v", err)
-			return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
+			return nil, err
 		}
 	}
 
@@ -1229,7 +1246,7 @@ func GetModelsHandler(c echo.Context) error {
 		if err != nil {
 			if !errors.Is(err, sd.ErrNotSafeTensor) {
 				c.Logger().Errorf("error calculating hash for %s: %v", lora.Name, err)
-				return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
+				return nil, err
 			}
 		}
 
@@ -1249,39 +1266,48 @@ func GetModelsHandler(c echo.Context) error {
 		}
 		h := db.ModelHashes{autov3: names}
 		if err := database.UpsertModel(db.ModelHashes{autov3: names}); err != nil {
-			return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
+			return nil, err
 		}
 		if hash == autov3 {
 			match = h
 		}
 	}
 
-	if len(match) == 0 {
-		c.Logger().Warnf("model %s not found in known models, querying CivitAI...", hash)
-	}
+	return match, nil
+}
 
+func queryCivitAI(c echo.Context, cacheToUse cache.Cache, hash string) (db.ModelHashes, func(c echo.Context) error) {
 	key := fmt.Sprintf("%s:civitai:%s", echo.MIMEApplicationJSON, hash)
-	item, err = cacheToUse.Get(key)
+	full := c.QueryParam("civitai") == "true"
+
+	var model *civitai.CivitAIModel
+
+	item, err := cacheToUse.Get(key)
 	if err == nil {
 		c.Logger().Infof("Cache hit for %s", key)
 		if full {
-			return c.Blob(http.StatusOK, item.MimeType, item.Blob)
+			return nil, func(c echo.Context) error { return c.Blob(http.StatusOK, item.MimeType, item.Blob) }
 		}
+
+		if err := json.Unmarshal(item.Blob, &model); err != nil {
+			return nil, cache.ErrFunc(http.StatusInternalServerError, err)
+		}
+
 	}
 
-	model, err := civitai.DefaultHost.GetByHash(hash)
-	if err != nil {
-		c.Logger().Warnf("model %s not found in CivitAI", hash)
-		if full {
-			return c.JSON(http.StatusNotFound, crashy.ErrorResponse{ErrorString: "model not found"})
+	if model == nil {
+		model, err = civitai.DefaultHost.GetByHash(hash)
+		if err != nil {
+			c.Logger().Errorf("model %s not found in CivitAI", hash)
+			return nil, cache.ErrFunc(http.StatusNotFound, crashy.ErrorResponse{ErrorString: "model not found"})
 		}
-	} else {
+
 		// TODO: Not yet implemented. This is where we download the model if found in CivitAI.
 		err = sd.DownloadModel(hash)
 
 		bin, err := json.Marshal(model)
 		if err != nil {
-			return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
+			return nil, cache.ErrFunc(http.StatusInternalServerError, err)
 		}
 
 		if err = cacheToUse.Set(key, &cache.Item{
@@ -1293,41 +1319,41 @@ func GetModelsHandler(c echo.Context) error {
 		} else {
 			c.Logger().Infof("Cached %s %s %dKiB", key, echo.MIMEApplicationJSON, len(bin)/units.KiB)
 		}
+	}
 
-		var name string
-		for _, file := range model.Files {
-			var hashToCheck string
-			switch len(hash) {
-			case 10:
-				hashToCheck = file.Hashes.AutoV2
-			case 12:
-				hashToCheck = file.Hashes.AutoV3
+	var name string
+	for _, file := range model.Files {
+		var hashToCheck string
+		switch len(hash) {
+		case 10:
+			hashToCheck = file.Hashes.AutoV2
+		case 12:
+			hashToCheck = file.Hashes.AutoV3
+		}
+		if hash == hashToCheck {
+			name = file.Name
+			if !file.Primary {
+				c.Logger().Warnf("model %s has a non-primary file: %s", model.Name, file.Name)
 			}
-			if hash == hashToCheck {
-				name = file.Name
-				if !file.Primary {
-					c.Logger().Warnf("model %s has a non-primary file: %s", model.Name, file.Name)
-				}
-				c.Logger().Infof("download url is %s", file.DownloadURL)
-				break
-			}
-		}
-
-		if name == "" {
-			msg := fmt.Sprintf("hash %s not found in model %s", hash, model.Name)
-			c.Logger().Error(msg)
-			return c.JSON(http.StatusInternalServerError, crashy.ErrorResponse{ErrorString: msg, Debug: model})
-		}
-
-		if err = database.UpsertModel(db.ModelHashes{hash: []string{model.Name, name}}); err != nil {
-			c.Logger().Errorf("error inserting model %s: %s", hash, err)
-			return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
-		}
-
-		if full {
-			return c.JSON(http.StatusOK, model)
+			c.Logger().Infof("download url is %s", file.DownloadURL)
+			break
 		}
 	}
 
-	return c.JSON(http.StatusOK, match)
+	if name == "" {
+		msg := fmt.Sprintf("hash %s not found in model %s", hash, model.Name)
+		c.Logger().Error(msg)
+		return nil, cache.ErrFunc(http.StatusNotFound, crashy.ErrorResponse{ErrorString: msg, Debug: model})
+	}
+
+	if err = database.UpsertModel(db.ModelHashes{hash: []string{model.Name, name}}); err != nil {
+		c.Logger().Errorf("error inserting model %s: %s", hash, err)
+		return nil, cache.ErrFunc(http.StatusInternalServerError, err)
+	}
+
+	if full {
+		return nil, func(c echo.Context) error { return c.JSON(http.StatusOK, model) }
+	}
+
+	return db.ModelHashes{hash: nil}, nil
 }

@@ -77,7 +77,7 @@ func Retrieve(c echo.Context, cache Cache, fetch Fetch) (*Item, func(c echo.Cont
 	parse, err := url.Parse(fetch.URL)
 	if err != nil {
 		c.Logger().Errorf("Failed to parse url: %s", err)
-		return nil, errFunc(http.StatusInternalServerError, crashy.Wrap(err))
+		return nil, ErrFunc(http.StatusInternalServerError, crashy.Wrap(err))
 	}
 
 	if fetch.MimeType == "" {
@@ -96,7 +96,7 @@ func Retrieve(c echo.Context, cache Cache, fetch Fetch) (*Item, func(c echo.Cont
 			fetch.Key = fmt.Sprintf("%s:%s", fetch.MimeType, parse)
 			fetch.URL = parse.String()
 		} else {
-			return nil, errFunc(http.StatusUnauthorized, crashy.ErrorResponse{ErrorString: "Private files require a session ID"})
+			return nil, ErrFunc(http.StatusUnauthorized, crashy.ErrorResponse{ErrorString: "Private files require a session ID"})
 		}
 	}
 
@@ -114,7 +114,7 @@ func Retrieve(c echo.Context, cache Cache, fetch Fetch) (*Item, func(c echo.Cont
 
 	if !errors.Is(err, redis.Nil) && fetch.URL == "" {
 		c.Logger().Errorf("could not get %s from cache %T", fetch.Key, cache)
-		return nil, errFunc(http.StatusInternalServerError, err)
+		return nil, ErrFunc(http.StatusInternalServerError, err)
 	}
 
 	c.Logger().Debugf("Cache miss for %s retrieving image...", fetch.Key)
@@ -127,7 +127,7 @@ func Retrieve(c echo.Context, cache Cache, fetch Fetch) (*Item, func(c echo.Cont
 		item, err := cache.Get(fetch.Key)
 		if err != nil {
 			c.Logger().Errorf("could not get %s from cache %T: %v", fetch.Key, cache, err)
-			return nil, errFunc(http.StatusInternalServerError, err)
+			return nil, ErrFunc(http.StatusInternalServerError, err)
 		}
 		c.Logger().Infof("Retrieved %s %s %dKiB", fetch.Key, item.MimeType, len(item.Blob)/units.KiB)
 		c.Response().Header().Set("Cache-Control", "public, max-age=86400") // 24 hours
@@ -142,20 +142,20 @@ func Retrieve(c echo.Context, cache Cache, fetch Fetch) (*Item, func(c echo.Cont
 	resp, err := http.Get(fetch.URL)
 	if err != nil {
 		c.Logger().Errorf("failed to fetch resource %v, %v", fetch.URL, err)
-		return nil, errFunc(http.StatusInternalServerError, crashy.ErrorResponse{ErrorString: fmt.Sprintf("failed to fetch resource %v", fetch.URL), Debug: err})
+		return nil, ErrFunc(http.StatusInternalServerError, crashy.ErrorResponse{ErrorString: fmt.Sprintf("failed to fetch resource %v", fetch.URL), Debug: err})
 	}
 
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
 		c.Logger().Errorf("unexpected status code %d", resp.StatusCode)
-		return nil, errFunc(http.StatusInternalServerError, crashy.ErrorResponse{ErrorString: fmt.Sprintf("unexpected status code %d", resp.StatusCode)})
+		return nil, ErrFunc(http.StatusInternalServerError, crashy.ErrorResponse{ErrorString: fmt.Sprintf("unexpected status code %d", resp.StatusCode)})
 	}
 
 	blob, err := io.ReadAll(resp.Body)
 	if err != nil {
 		c.Logger().Errorf("could not read body %v", err)
-		return nil, errFunc(http.StatusInternalServerError, crashy.Wrap(err))
+		return nil, ErrFunc(http.StatusInternalServerError, crashy.Wrap(err))
 	}
 
 	mimeType := resp.Header.Get("Content-Type")
@@ -170,7 +170,7 @@ func Retrieve(c echo.Context, cache Cache, fetch Fetch) (*Item, func(c echo.Cont
 
 	if bytes.HasPrefix(blob, []byte("ERROR")) {
 		c.Logger().Errorf("error downloading %s: %s", fetch.URL, blob)
-		return nil, errFunc(http.StatusInternalServerError, crashy.ErrorResponse{ErrorString: fmt.Sprintf("error downloading %s: %s", fetch.URL, blob)})
+		return nil, ErrFunc(http.StatusInternalServerError, crashy.ErrorResponse{ErrorString: fmt.Sprintf("error downloading %s: %s", fetch.URL, blob)})
 	}
 
 	item = &Item{
@@ -204,7 +204,7 @@ func KeyWithMimeType(url string) string {
 	return fmt.Sprintf("%s:%s", MimeTypeFromURL(url), url)
 }
 
-func errFunc(r int, err error) func(c echo.Context) error {
+func ErrFunc(r int, err error) func(c echo.Context) error {
 	return func(c echo.Context) error {
 		return c.JSON(r, crashy.Wrap(err))
 	}

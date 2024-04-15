@@ -146,8 +146,8 @@ const (
 )
 
 type Stats struct {
-	DownloadCount int64 `json:"downloadCount"`
-	RatingCount   int64 `json:"ratingCount"`
-	Rating        int64 `json:"rating"`
-	ThumbsUpCount int64 `json:"thumbsUpCount"`
+	DownloadCount int64   `json:"downloadCount"`
+	RatingCount   int64   `json:"ratingCount"`
+	Rating        float64 `json:"rating"`
+	ThumbsUpCount int64   `json:"thumbsUpCount"`
 }

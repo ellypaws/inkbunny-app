@@ -1251,9 +1251,7 @@ func queryHost(c echo.Context, cacheToUse cache.Cache, hash string) (db.ModelHas
 
 	var match db.ModelHashes
 	for _, lora := range knownModels {
-		if h := lora.Metadata.SshsModelHash; h == nil {
-			c.Logger().Warnf("model %s does not have a hash, calculating...", lora.Name)
-		} else if *h == "" {
+		if h := lora.Metadata.SshsModelHash; h != nil && *h == "" {
 			c.Logger().Warnf("model %s contained an empty hash, calculating...", lora.Name)
 			lora.Metadata.SshsModelHash = nil
 		}

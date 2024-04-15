@@ -11,7 +11,7 @@ require (
 	github.com/disintegration/imaging v1.6.2
 	github.com/ellypaws/inkbunny-app/api/library v0.0.0
 	github.com/ellypaws/inkbunny-app/cmd v0.0.0
-	github.com/ellypaws/inkbunny-sd v0.0.0-20240413140044-10290d136096
+	github.com/ellypaws/inkbunny-sd v0.0.0-20240414232612-cc1c70a633eb
 	github.com/ellypaws/inkbunny/api v0.0.0-20240411110242-d491ced97f23
 	github.com/gitsight/go-echo-cache v1.0.1
 	github.com/go-errors/errors v1.5.1

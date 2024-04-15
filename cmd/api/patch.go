@@ -121,7 +121,7 @@ func upsertModel(c echo.Context) error {
 		return c.JSON(http.StatusLengthRequired, crashy.ErrorResponse{ErrorString: "no models to upsert"})
 	}
 
-	stored, err := database.GetKnownModels()
+	stored, err := database.AllModels()
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
 	}

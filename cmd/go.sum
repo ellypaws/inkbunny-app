@@ -2,8 +2,8 @@ github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/dustin/go-humanize v1.0.1 h1:GzkhY7T5VNhEkwH0PVJgjz+fX1rhBrR7pRT3mDkpeCY=
 github.com/dustin/go-humanize v1.0.1/go.mod h1:Mu1zIs6XwVuF/gI1OepvI0qD18qycQx+mFykh5fBlto=
-github.com/ellypaws/inkbunny-sd v0.0.0-20240413140044-10290d136096 h1:iDaTd+z7dnWuKSF+ye1ZkQioa2cW5J6U1PCh+c/h2DQ=
-github.com/ellypaws/inkbunny-sd v0.0.0-20240413140044-10290d136096/go.mod h1:+Cxh4p1PM5qn4w5dEaXaGCZ4gK3AD3SGYnWcNX3Tafs=
+github.com/ellypaws/inkbunny-sd v0.0.0-20240414232612-cc1c70a633eb h1:FkNAwCmLBL2U0pdJZNMzY26g8gcDcks0yaglAL3TWuU=
+github.com/ellypaws/inkbunny-sd v0.0.0-20240414232612-cc1c70a633eb/go.mod h1:+Cxh4p1PM5qn4w5dEaXaGCZ4gK3AD3SGYnWcNX3Tafs=
 github.com/ellypaws/inkbunny/api v0.0.0-20240411110242-d491ced97f23 h1:zA39bgGdGZYxLbACqM8oH2eb8oUUYj83qDds9jRdUwc=
 github.com/ellypaws/inkbunny/api v0.0.0-20240411110242-d491ced97f23/go.mod h1:wdWqyRSEoSVdu5FnUGv44PvqdLfKQfgaXvDQpZFJs3A=
 github.com/go-errors/errors v1.5.1 h1:ZwEMSLRCapFLflTpT7NKaAc7ukJ8ZPEjzlxt8rPN8bk=

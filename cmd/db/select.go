@@ -632,8 +632,8 @@ func (db Sqlite) GetRole(auditorID int64) (Role, error) {
 	return RoleLevel(role), err
 }
 
-// GetKnownModels returns a map of model hashes to a submissions of known model names
-func (db Sqlite) GetKnownModels() (ModelHashes, error) {
+// AllModels returns a map of model hashes to a submissions of known model names
+func (db Sqlite) AllModels() (ModelHashes, error) {
 	var modelHashes ModelHashes
 
 	rows, err := db.QueryContext(db.context, selectModels)

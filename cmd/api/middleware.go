@@ -187,7 +187,7 @@ var withOriginalResponseWriter = []echo.MiddlewareFunc{LoggedInMiddleware, Requi
 
 var staticMiddleware = []echo.MiddlewareFunc{Static, RedisMiddleware, CacheMiddleware}
 
-var withRedis = []echo.MiddlewareFunc{OriginalResponseWriter, RedisMiddleware, CacheMiddleware}
+var withRedis = []echo.MiddlewareFunc{OriginalResponseWriter, SetCacheHeaders, RedisMiddleware, CacheMiddleware}
 
 func RedisMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
 	return func(c echo.Context) error {

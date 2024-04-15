@@ -7,13 +7,14 @@ import (
 	"errors"
 	"fmt"
 	"github.com/ellypaws/inkbunny-app/api/cache"
-	"github.com/ellypaws/inkbunny-app/api/caption"
+	"github.com/ellypaws/inkbunny-app/api/civitai"
 	. "github.com/ellypaws/inkbunny-app/api/entities"
 	"github.com/ellypaws/inkbunny-app/api/service"
 	"github.com/ellypaws/inkbunny-app/cmd/app"
 	"github.com/ellypaws/inkbunny-app/cmd/crashy"
 	"github.com/ellypaws/inkbunny-app/cmd/db"
 	"github.com/ellypaws/inkbunny-sd/entities"
+	sd "github.com/ellypaws/inkbunny-sd/stable_diffusion"
 	"github.com/ellypaws/inkbunny-sd/utils"
 	"github.com/ellypaws/inkbunny/api"
 	"github.com/labstack/echo/v4"
@@ -45,7 +46,7 @@ var getHandlers = pathHandler{
 	"/avatar/:username":         handler{GetAvatarHandler, staticMiddleware},
 	"/artists":                  handler{GetArtistsHandler, append(loggedInMiddleware, withRedis...)},
 	"/models":                   handler{GetModelsHandler, withCache},
-	"/models/:hash":             handler{GetModelsHandler, withCache},
+	"/models/:hash":             handler{GetModelsHandler, withRedis},
 }
 
 func robots(c echo.Context) error {
@@ -1151,23 +1152,125 @@ func GetArtistsHandler(c echo.Context) error {
 
 // GetModelsHandler returns a list of known models
 func GetModelsHandler(c echo.Context) error {
-	models, err := database.GetKnownModels()
-	if err != nil {
-		return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
-	}
-
 	hash := c.Param("hash")
 	if hash == "" {
-		return c.JSON(http.StatusOK, models)
+		return c.JSON(http.StatusBadRequest, crashy.ErrorResponse{ErrorString: "missing model hash"})
 	}
 
 	if hash == "all" {
+		models, err := database.AllModels()
+		if err != nil {
+			return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
+		}
 		return c.JSON(http.StatusOK, models)
 	}
 
-	if m, ok := models[hash]; ok {
-		return c.JSON(http.StatusOK, db.ModelHashes{hash: m})
-	} else {
-		return c.JSON(http.StatusNotFound, crashy.ErrorResponse{ErrorString: "no models found"})
+	if len(hash) > 12 {
+		c.Logger().Warnf("hash %s is the full SHA256", hash)
+		hash = hash[:12]
 	}
+
+	if models := database.ModelNamesFromHash(hash); models != nil {
+		return c.JSON(http.StatusOK, db.ModelHashes{hash: models})
+	}
+
+	cacheToUse := cache.SwitchCache(c)
+
+	c.Logger().Warnf("model %s not found, attempting to find", hash)
+
+	var knownModels []entities.Lora
+	knownLorasKey := fmt.Sprintf("%v:loras", echo.MIMEApplicationJSON)
+	item, err := cacheToUse.Get(knownLorasKey)
+	if err == nil {
+		c.Logger().Infof("Cache hit for %s", knownLorasKey)
+		if err := json.Unmarshal(item.Blob, &knownModels); err != nil {
+			return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
+		}
+	} else {
+		c.Logger().Warnf("Cache miss for %s, retrieving known models...", knownLorasKey)
+
+		knownModels, err = host.GetLoras()
+		if err != nil {
+			return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
+		}
+
+		bin, err := json.Marshal(knownModels)
+		if err != nil {
+			return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
+		}
+
+		err = cacheToUse.Set(knownLorasKey, &cache.Item{
+			Blob:       bin,
+			LastAccess: time.Now().UTC(),
+			MimeType:   echo.MIMEApplicationJSON,
+		})
+		if err != nil {
+			c.Logger().Errorf("error caching known models: %v", err)
+			return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
+		}
+	}
+
+	var match db.ModelHashes
+	for _, lora := range knownModels {
+		if h := lora.Metadata.SshsModelHash; h == nil {
+			c.Logger().Warnf("model %s does not have a hash, calculating...", lora.Name)
+		} else if *h == "" {
+			c.Logger().Warnf("model %s contained an empty hash, calculating...", lora.Name)
+			lora.Metadata.SshsModelHash = nil
+		}
+
+		autov3, err := sd.GetLoraHash(lora)
+		if err != nil {
+			if !errors.Is(err, sd.ErrNotSafeTensor) {
+				return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
+			}
+			c.Logger().Warnf("model %s is a safetensors: %v", lora.Name, err)
+		}
+
+		if autov3 == "" {
+			c.Logger().Warnf("model %s does not have a hash, skipping...", lora.Name)
+			continue
+		}
+
+		h := db.ModelHashes{autov3: []string{lora.Name}}
+		if err := database.UpsertModel(h); err != nil {
+			return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
+		}
+		if hash == autov3 {
+			match = h
+		}
+	}
+
+	if len(match) == 0 {
+		return c.JSON(http.StatusNotFound, crashy.ErrorResponse{ErrorString: "model not found"})
+	}
+
+	key := fmt.Sprintf("%s:civitai:%s", echo.MIMEApplicationJSON, hash)
+	item, err = cacheToUse.Get(key)
+	if err == nil {
+		c.Logger().Infof("Cache hit for %s", key)
+		return c.Blob(http.StatusOK, item.MimeType, item.Blob)
+	}
+
+	model, err := civitai.DefaultHost.GetByHash(hash)
+	if err != nil {
+		c.Logger().Warnf("model %s not found in CivitAI", hash)
+	} else {
+		// TODO: Not yet implemented. This is where we download the model if found in CivitAI.
+		err = sd.DownloadModel(hash)
+
+		bin, err := json.Marshal(model)
+		if err != nil {
+			return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
+		}
+
+		err = cacheToUse.Set(key, &cache.Item{
+			Blob:       bin,
+			LastAccess: time.Now().UTC(),
+			MimeType:   echo.MIMEApplicationJSON,
+		})
+		return c.JSON(http.StatusOK, model)
+	}
+
+	return c.JSON(http.StatusOK, match)
 }

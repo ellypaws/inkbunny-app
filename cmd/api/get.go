@@ -21,6 +21,7 @@ import (
 	units "github.com/labstack/gommon/bytes"
 	"github.com/redis/go-redis/v9"
 	"net/http"
+	"path"
 	"slices"
 	"strconv"
 	"strings"
@@ -1237,8 +1238,7 @@ func GetModelsHandler(c echo.Context) error {
 			continue
 		}
 
-		fullName := strings.Split(lora.Path, "/")
-		h := db.ModelHashes{autov3: []string{lora.Name, lora.Alias, fullName[len(fullName)-1]}}
+		h := db.ModelHashes{autov3: []string{lora.Name, lora.Alias, path.Base(lora.Path)}}
 		if err := database.UpsertModel(h); err != nil {
 			return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
 		}

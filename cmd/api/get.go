@@ -1227,9 +1227,9 @@ func GetModelsHandler(c echo.Context) error {
 		autov3, err := sd.GetLoraHash(lora)
 		if err != nil {
 			if !errors.Is(err, sd.ErrNotSafeTensor) {
+				c.Logger().Errorf("error calculating hash for %s: %v", lora.Name, err)
 				return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
 			}
-			c.Logger().Warnf("model %s is a safetensors: %v", lora.Name, err)
 		}
 
 		if autov3 == "" {

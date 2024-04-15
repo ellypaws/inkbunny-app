@@ -31,6 +31,7 @@ var postHandlers = pathHandler{
 	"/interrogate":        handler{interrogate, nil},
 	"/interrogate/upload": handler{interrogateImage, nil},
 	"/review/:id":         handler{GetReviewHandler, append(staffMiddleware, withRedis...)},
+	"/heuristics":         handler{heuristics, nil},
 	"/heuristics/:id":     handler{GetHeuristicsHandler, append(loggedInMiddleware, withRedis...)},
 	"/sd/:path":           handler{HandlePath, nil},
 	"/artists":            handler{upsertArtist, staffMiddleware},
@@ -521,4 +522,32 @@ func resizeImage(src image.Image, max [2]int) string {
 		return ""
 	}
 	return base64.StdEncoding.EncodeToString(writer.Bytes())
+}
+
+func heuristics(c echo.Context) error {
+	var request struct {
+		Parameters  string `json:"parameters"`
+		Description string `json:"description"`
+	}
+	if err := c.Bind(&request); err != nil {
+		return err
+	}
+
+	if request.Parameters != "" {
+		object, err := utils.ParameterHeuristics(request.Parameters)
+		if err != nil {
+			return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
+		}
+		return c.JSON(http.StatusOK, object)
+	}
+
+	if request.Description != "" {
+		object, err := utils.DescriptionHeuristics(request.Description)
+		if err != nil {
+			return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
+		}
+		return c.JSON(http.StatusOK, object)
+	}
+
+	return c.JSON(http.StatusBadRequest, crashy.ErrorResponse{ErrorString: "parameters or description is required", Debug: request})
 }

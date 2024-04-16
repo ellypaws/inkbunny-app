@@ -560,6 +560,7 @@ func heuristics(c echo.Context) error {
 
 // Set query "image" to "true" to return just the (first) image
 // Set query "regenerate" to "true" to regenerate the image
+// Set query "simple" to "true" to return slices
 func generate(c echo.Context) error {
 	var object map[string]sd.TextToImageRequest
 	if err := c.Bind(&object); err != nil {
@@ -715,5 +716,23 @@ func generate(c echo.Context) error {
 		return c.JSON(http.StatusNotFound, crashy.ErrorResponse{ErrorString: "no responses were generated"})
 	}
 
+	if c.QueryParam("simple") == "true" {
+		type out struct {
+			Key    *string `json:"key"`
+			Prompt *string `json:"prompt"`
+			Image  *string `json:"image"`
+		}
+
+		var slices []out
+		for key, response := range responses {
+			for i := range response.Images {
+				slices = append(slices, out{
+					Key:    &key,
+					Image:  &response.Images[i],
+					Prompt: &response.Info.Prompt,
+				})
+			}
+		}
+	}
 	return c.JSON(http.StatusOK, responses)
 }

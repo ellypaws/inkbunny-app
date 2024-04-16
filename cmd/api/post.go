@@ -41,7 +41,7 @@ var postHandlers = pathHandler{
 	"/sd/:path":           handler{HandlePath, nil},
 	"/artists":            handler{upsertArtist, staffMiddleware},
 	"/inkbunny/search":    handler{GetInkbunnySearch, append(loggedInMiddleware, withCache...)},
-	"/generate":           handler{generate, append(loggedInMiddleware, withRedis...)},
+	"/generate":           handler{generate, append(staffMiddleware, withRedis...)},
 }
 
 // Deprecated: use registerAs((*echo.Echo).POST, postHandlers) instead

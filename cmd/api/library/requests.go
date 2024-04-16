@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/labstack/echo/v4"
 	"image"
 	"image/jpeg"
 	"io"
@@ -131,8 +132,8 @@ func (r *Request) Do() ([]byte, error) {
 		return nil, err
 	}
 
-	request.Header.Set("Content-Type", "application/json; charset=UTF-8")
-	request.Header.Set("Accept", "application/json")
+	request.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSONCharsetUTF8)
+	request.Header.Set(echo.HeaderAccept, echo.MIMEApplicationJSON)
 
 	for _, opt := range r.opts {
 		opt(request.Header)
@@ -252,7 +253,7 @@ func WithImage(img *image.Image) func(*Request) {
 
 		r.Data = body
 		r.opts = append(r.opts, func(h http.Header) {
-			h.Set("Content-Type", writer.FormDataContentType())
+			h.Set(echo.HeaderContentType, writer.FormDataContentType())
 		})
 	}
 }
@@ -299,7 +300,7 @@ func WithImageAndFields(img *image.Image, fields map[string]string) func(*Reques
 		// Set the request body and content type.
 		r.Data = body
 		r.opts = append(r.opts, func(h http.Header) {
-			h.Set("Content-Type", writer.FormDataContentType())
+			h.Set(echo.HeaderContentType, writer.FormDataContentType())
 		})
 	}
 }

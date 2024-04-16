@@ -167,7 +167,7 @@ func Retrieve(c echo.Context, cache Cache, fetch Fetch) (*Item, func(c echo.Cont
 		return nil, ErrFunc(http.StatusInternalServerError, crashy.Wrap(err))
 	}
 
-	mimeType := resp.Header.Get("Content-Type")
+	mimeType := resp.Header.Get(echo.HeaderContentType)
 
 	if mimeType == "" {
 		mimeType = MimeTypeFromURL(fetch.URL)

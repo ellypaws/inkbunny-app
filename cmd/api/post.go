@@ -596,7 +596,7 @@ func generate(c echo.Context) error {
 				}
 				c.Logger().Debugf("Cache hit for %s", key)
 
-				if i := c.QueryParam("image"); i == "true" {
+				if c.QueryParam("image") == "true" {
 					if len(response.Images) == 0 {
 						return c.JSON(http.StatusNotFound, crashy.ErrorResponse{ErrorString: "no images were generated"})
 					}

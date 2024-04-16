@@ -733,6 +733,7 @@ func generate(c echo.Context) error {
 				})
 			}
 		}
+		return c.JSON(http.StatusOK, slices)
 	}
 	return c.JSON(http.StatusOK, responses)
 }

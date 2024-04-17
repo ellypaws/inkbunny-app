@@ -659,6 +659,18 @@ func submissionMessage(sub *db.Submission) string {
 		}
 	}
 
+	if len(sub.Metadata.ArtistUsed) > 0 {
+		sb.WriteString("\n")
+		sb.WriteString("The prompt may have used these artists: ")
+		for i, artist := range sub.Metadata.ArtistUsed {
+			if i > 0 {
+				sb.WriteString(", ")
+			}
+			sb.WriteString("ib!")
+			sb.WriteString(artist.Username)
+		}
+	}
+
 	if sub.Metadata.HasJSON {
 		sb.WriteString("\n")
 		sb.WriteString("The submission has a JSON file")

@@ -401,8 +401,18 @@ func SetSubmissionMeta(submission *Submission) {
 	if images > 1 {
 		submission.Metadata.MultipleFiles = true
 	}
+	submission.Metadata.MissingPrompt = true
+	submission.Metadata.MissingModel = true
 	if submission.Metadata.Objects != nil {
 		submission.Metadata.AISubmission = true
+		for _, obj := range submission.Metadata.Objects {
+			if obj.Prompt != "" {
+				submission.Metadata.MissingPrompt = false
+			}
+			if obj.OverrideSettings.SDModelCheckpoint != nil || obj.OverrideSettings.SDCheckpointHash != "" {
+				submission.Metadata.MissingModel = false
+			}
+		}
 	}
 	if submission.Metadata.Params != nil && len(*submission.Metadata.Params) > 0 {
 		submission.Metadata.AISubmission = true
@@ -420,6 +430,9 @@ func SetSubmissionMeta(submission *Submission) {
 		submission.Metadata.ComfyUI = true
 		submission.Metadata.AIDescription = true
 		submission.Metadata.AISubmission = true
+	}
+	if submission.Metadata.AISubmission && len(submission.Metadata.AIKeywords) == 0 {
+		submission.Metadata.MissingTags = true
 	}
 }
 

@@ -399,7 +399,7 @@ func SetSubmissionMeta(submission *Submission) {
 		}
 	}
 	if images > 1 {
-		submission.Metadata.MultipleFiles = true
+		submission.Metadata.MultipleImages = true
 	}
 	submission.Metadata.MissingPrompt = true
 	submission.Metadata.MissingModel = true

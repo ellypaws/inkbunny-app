@@ -294,7 +294,7 @@ type Metadata struct {
 
 	StableDiffusion bool `json:"stable_diffusion"`
 	ComfyUI         bool `json:"comfy_ui"`
-	MultipleFiles   bool `json:"multiple_files"`
+	MultipleImages  bool `json:"multiple_images"`
 
 	TaggedHuman     bool    `json:"tagged_human"`
 	DetectedHuman   bool    `json:"detected_human"`

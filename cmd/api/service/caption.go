@@ -12,7 +12,6 @@ import (
 	units "github.com/labstack/gommon/bytes"
 	"strings"
 	"sync"
-	"time"
 )
 
 var defaultThreshold = 0.3
@@ -94,9 +93,8 @@ func ProcessCaption(c echo.Context, wg *sync.WaitGroup, sub *db.Submission, i in
 	}
 
 	err = cacheToUse.Set(key, &cache.Item{
-		Blob:       blob,
-		LastAccess: time.Now().UTC(),
-		MimeType:   echo.MIMEApplicationJSON,
+		Blob:     blob,
+		MimeType: echo.MIMEApplicationJSON,
 	}, cache.Indefinite)
 	if err != nil {
 		c.Logger().Errorf("error caching caption: %v", err)

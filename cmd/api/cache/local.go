@@ -51,7 +51,7 @@ func (l *LocalCache) Set(key string, item *Item, duration time.Duration) error {
 		key = fmt.Sprintf("%s:%s", item.MimeType, key)
 	}
 
-	item.LastAccess = time.Now().UTC().Add(-duration)
+	item.lastAccess = time.Now().UTC().Add(-duration)
 
 	l.mu.Lock()
 	defer l.mu.Unlock()
@@ -87,7 +87,7 @@ func (l *LocalCache) Evict() {
 	now := time.Now()
 	for k, v := range l.items {
 		// Check if an item is past its expiration time
-		if now.After(v.LastAccess) {
+		if now.After(v.lastAccess) {
 			delete(l.items, k)
 			l.currentSize -= int64(len(v.Blob))
 		}
@@ -98,7 +98,7 @@ func (l *LocalCache) Evict() {
 		var oldestKey string
 		var oldestItem *Item
 		for k, v := range l.items {
-			if oldestItem == nil || v.LastAccess.Before(oldestItem.LastAccess) {
+			if oldestItem == nil || v.lastAccess.Before(oldestItem.lastAccess) {
 				oldestKey = k
 				oldestItem = v
 			}

@@ -10,7 +10,6 @@ import (
 	"github.com/labstack/echo/v4"
 	"path/filepath"
 	"strings"
-	"time"
 )
 
 func QueryHost(c echo.Context, cacheToUse cache.Cache, host *sd.Host, database *db.Sqlite, hash string) (db.ModelHashes, error) {
@@ -36,9 +35,8 @@ func QueryHost(c echo.Context, cacheToUse cache.Cache, host *sd.Host, database *
 		}
 
 		err = cacheToUse.Set(knownLorasKey, &cache.Item{
-			Blob:       bin,
-			LastAccess: time.Now().UTC(),
-			MimeType:   echo.MIMEApplicationJSON,
+			Blob:     bin,
+			MimeType: echo.MIMEApplicationJSON,
 		}, cache.Day)
 		if err != nil {
 			c.Logger().Errorf("error caching known models: %v", err)
@@ -123,9 +121,8 @@ func RetrieveHash(c echo.Context, cacheToUse cache.Cache, lora entities.Lora) (s
 		}
 
 		err = cacheToUse.Set(key, &cache.Item{
-			Blob:       []byte(hash.AutoV3Full),
-			LastAccess: time.Now().UTC(),
-			MimeType:   echo.MIMETextPlain,
+			Blob:     []byte(hash.AutoV3Full),
+			MimeType: echo.MIMETextPlain,
 		}, cache.Indefinite)
 		if err != nil {
 			c.Logger().Errorf("error caching hash %s: %v", key, err)

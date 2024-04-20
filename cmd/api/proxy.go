@@ -13,7 +13,6 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
-	"time"
 )
 
 // GetImageHandler handles image apis, caching them as needed.
@@ -157,9 +156,8 @@ func GetAvatarHandler(c echo.Context) error {
 	}
 
 	_ = cacheToUse.Set(key, &cache.Item{
-		Blob:       bin,
-		LastAccess: time.Now().UTC(),
-		MimeType:   echo.MIMEApplicationJSON,
+		Blob:     bin,
+		MimeType: echo.MIMEApplicationJSON,
 	}, cache.Month)
 
 	item, errFunc := cache.Retrieve(c, cacheToUse, cache.Fetch{

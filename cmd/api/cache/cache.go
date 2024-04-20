@@ -25,10 +25,10 @@ type Cache interface {
 }
 
 type Item struct {
-	Blob       []byte    `json:"blob,omitempty"`
-	LastAccess time.Time `json:"last_access"`
-	MimeType   string    `json:"mime_type,omitempty"`
-	HitCount   int       `json:"hit_count,omitempty"`
+	Blob       []byte `json:"blob,omitempty"`
+	MimeType   string `json:"mime_type,omitempty"`
+	hitCount   int
+	lastAccess time.Time
 }
 
 func (item *Item) MarshalBinary() ([]byte, error) {
@@ -55,9 +55,9 @@ func (item *Item) UnmarshalBinary(b []byte) error {
 }
 
 func (item *Item) Accessed() {
-	backoff := int64(min(math.Pow(2, float64(item.HitCount-1)), 24*time.Hour.Seconds()))
-	item.LastAccess = time.Now().Add(time.Duration(backoff) * time.Second)
-	item.HitCount += 1
+	backoff := int64(min(math.Pow(2, float64(item.hitCount-1)), 24*time.Hour.Seconds()))
+	item.lastAccess = time.Now().Add(time.Duration(backoff) * time.Second)
+	item.hitCount += 1
 }
 
 type q struct {
@@ -183,9 +183,8 @@ func Retrieve(c echo.Context, cache Cache, fetch Fetch) (*Item, func(c echo.Cont
 	}
 
 	item = &Item{
-		Blob:       blob,
-		LastAccess: time.Now().UTC(),
-		MimeType:   mimeType,
+		Blob:     blob,
+		MimeType: mimeType,
 	}
 
 	err = cache.Set(fmt.Sprintf("%v:%v", mimeType, fetch.URL), item, Day)

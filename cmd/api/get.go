@@ -474,9 +474,8 @@ func GetReviewHandler(c echo.Context) error {
 			c.Logger().Errorf("error marshaling submission details: %v", err)
 		}
 		err = cacheToUse.Set(key, &cache.Item{
-			Blob:       bin,
-			LastAccess: time.Now().UTC(),
-			MimeType:   echo.MIMEApplicationJSON,
+			Blob:     bin,
+			MimeType: echo.MIMEApplicationJSON,
 		}, cache.Week)
 		if err != nil {
 			c.Logger().Errorf("error caching submission details: %v", err)
@@ -1115,9 +1114,8 @@ func GetUsernameHandler(c echo.Context) error {
 	}
 
 	_ = cacheToUse.Set(key, &cache.Item{
-		Blob:       bin,
-		LastAccess: time.Now().UTC(),
-		MimeType:   echo.MIMEApplicationJSON,
+		Blob:     bin,
+		MimeType: echo.MIMEApplicationJSON,
 	}, cache.Year)
 
 	return c.JSON(http.StatusOK, users)
@@ -1198,9 +1196,8 @@ func GetArtistsHandler(c echo.Context) error {
 		}
 
 		_ = cacheToUse.Set(key, &cache.Item{
-			Blob:       bin,
-			LastAccess: time.Now().UTC(),
-			MimeType:   echo.MIMEApplicationJSON,
+			Blob:     bin,
+			MimeType: echo.MIMEApplicationJSON,
 		}, cache.Year)
 		c.Logger().Infof("Cached %s %s %dKiB", key, echo.MIMEApplicationJSON, len(bin)/units.KiB)
 	}

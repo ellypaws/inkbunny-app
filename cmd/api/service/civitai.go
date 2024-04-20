@@ -11,7 +11,6 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/gommon/bytes"
 	"strings"
-	"time"
 )
 
 func QueryCivitAI(c echo.Context, cacheToUse cache.Cache, hash string) (db.ModelHashes, *civitai.CivitAIModel, error) {
@@ -47,9 +46,8 @@ func QueryCivitAI(c echo.Context, cacheToUse cache.Cache, hash string) (db.Model
 		}
 
 		if err = cacheToUse.Set(key, &cache.Item{
-			Blob:       bin,
-			LastAccess: time.Now().UTC(),
-			MimeType:   echo.MIMEApplicationJSON,
+			Blob:     bin,
+			MimeType: echo.MIMEApplicationJSON,
 		}, cache.Month); err != nil {
 			c.Logger().Errorf("error caching CivitAI model %s: %v", hash, err)
 		} else {

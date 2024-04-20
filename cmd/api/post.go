@@ -684,10 +684,8 @@ func generate(c echo.Context) error {
 		}
 
 		err = cacheToUse.Set(key, &cache.Item{
-			Blob:       bin,
-			LastAccess: time.Now(),
-			MimeType:   echo.MIMEApplicationJSON,
-			HitCount:   1,
+			Blob:     bin,
+			MimeType: echo.MIMEApplicationJSON,
 		}, cache.Week)
 		if err != nil {
 			c.Logger().Errorf("error caching generation: %v", err)

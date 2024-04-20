@@ -98,9 +98,9 @@ func (r *Redis) Get(key string) (*Item, error) {
 			mimeType = echo.MIMEOctetStream
 		}
 		return &Item{
-			LastAccess: time.Now().UTC(),
 			MimeType:   mimeType,
 			Blob:       val,
+			lastAccess: time.Now().UTC(),
 		}, nil
 	}
 
@@ -124,8 +124,8 @@ func (r *Redis) Get(key string) (*Item, error) {
 	}
 
 	var item Item = Item{
-		LastAccess: time.Now().UTC(),
 		MimeType:   echo.MIMEApplicationJSON,
+		lastAccess: time.Now().UTC(),
 	}
 
 	switch len(items) {

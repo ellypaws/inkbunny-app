@@ -620,8 +620,12 @@ func GetReviewHandler(c echo.Context) error {
 	}
 }
 
-func processObjectMetadata(c echo.Context, submission *db.Submission) {
+func processObjectMetadata(submission *db.Submission) {
+	submission.Metadata.MissingPrompt = true
+	submission.Metadata.MissingModel = true
+
 	for _, obj := range submission.Metadata.Objects {
+		submission.Metadata.AISubmission = true
 		meta := strings.ToLower(obj.Prompt + obj.NegativePrompt)
 		for _, artist := range database.AllArtists() {
 			re, err := regexp.Compile(fmt.Sprintf(`\b%s\b`, strings.ToLower(artist.Username)))
@@ -632,6 +636,7 @@ func processObjectMetadata(c echo.Context, submission *db.Submission) {
 				submission.Metadata.ArtistUsed = append(submission.Metadata.ArtistUsed, artist)
 			}
 		}
+
 		privateTools := []string{
 			"midjourney",
 			"novelai",
@@ -643,6 +648,14 @@ func processObjectMetadata(c echo.Context, submission *db.Submission) {
 				submission.Metadata.Generator = tool
 				break
 			}
+		}
+
+		if obj.Prompt != "" {
+			submission.Metadata.MissingPrompt = false
+		}
+
+		if obj.OverrideSettings.SDModelCheckpoint != nil || obj.OverrideSettings.SDCheckpointHash != "" {
+			submission.Metadata.MissingModel = false
 		}
 	}
 }
@@ -686,6 +699,11 @@ func submissionMessage(sub *db.Submission) string {
 		sb.WriteString("The submission has a text file")
 	}
 
+	if sub.Metadata.MissingPrompt {
+		sb.WriteString("\n")
+		sb.WriteString("The submission is missing the prompt")
+	}
+
 	if len(sub.Metadata.AIKeywords) > 0 {
 		sb.WriteString("\n")
 		sb.WriteString("The submission has the following AI keywords: ")
@@ -700,9 +718,9 @@ func submissionMessage(sub *db.Submission) string {
 			sb.WriteString("The submission is potentially missing parameters")
 		}
 	} else {
-		if sub.Metadata.Params != nil {
+		if sub.Metadata.AISubmission {
 			sb.WriteString("\n")
-			sb.WriteString("Parameters were detected but no AI keywords were found")
+			sb.WriteString("The submission was detected to have AI content, but was not tagged as such")
 		}
 	}
 
@@ -729,10 +747,6 @@ func processSubmission(c echo.Context, eachSubmission *sync.WaitGroup, mutex *sy
 		go parseFiles(c, &fileWaitGroup, sub)
 	}
 	fileWaitGroup.Wait()
-
-	if sub.Metadata.Objects != nil {
-		processObjectMetadata(c, sub)
-	}
 
 	mutex.Lock()
 	defer mutex.Unlock()
@@ -892,9 +906,10 @@ func processParams(c echo.Context, wg *sync.WaitGroup, sub *db.Submission) {
 		c.Logger().Debugf("processing description heuristics for %v", sub.URL)
 		heuristics, err := utils.DescriptionHeuristics(sub.Description)
 		if err == nil {
-			sub.Metadata.Objects = map[string]entities.TextToImageRequest{"description_heuristics": heuristics}
+			sub.Metadata.Objects = map[string]entities.TextToImageRequest{sub.Title: heuristics}
 		}
 	}
+	processObjectMetadata(sub)
 }
 
 func parseObjects(c echo.Context, sub *db.Submission) {

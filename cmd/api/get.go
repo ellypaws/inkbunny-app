@@ -525,7 +525,6 @@ func GetReviewHandler(c echo.Context) error {
 		go processSubmission(c, &eachSubmission, &dbMutex, &submission)
 
 		user := api.UsernameID{UserID: sub.UserID, Username: sub.Username}
-		labels := db.TicketLabels(submission)
 
 		submissions[i] = details{
 			URL:        submission.URL,
@@ -550,7 +549,7 @@ func GetReviewHandler(c echo.Context) error {
 				Subject:    fmt.Sprintf("Review for %v", submission.URL),
 				DateOpened: time.Now().UTC(),
 				Status:     "triage",
-				Labels:     labels,
+				Labels:     nil,
 				Priority:   "low",
 				Closed:     false,
 				Responses: []db.Response{
@@ -577,6 +576,10 @@ func GetReviewHandler(c echo.Context) error {
 		return nil
 	}
 
+	for i, sub := range submissions {
+		submissions[i].Ticket.Labels = db.TicketLabels(*sub.Submission)
+	}
+
 	switch output {
 	case outputSubmissions, outputFull:
 		return c.JSON(http.StatusOK, submissions)
@@ -591,7 +594,7 @@ func GetReviewHandler(c echo.Context) error {
 	default:
 		var ticketLabels []db.TicketLabel
 		for _, sub := range submissions {
-			for _, label := range db.TicketLabels(*sub.Submission) {
+			for _, label := range sub.Ticket.Labels {
 				if !slices.Contains(ticketLabels, label) {
 					ticketLabels = append(ticketLabels, label)
 				}

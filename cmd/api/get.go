@@ -579,7 +579,6 @@ func GetReviewHandler(c echo.Context) error {
 		return c.JSON(http.StatusOK, submissions)
 	default:
 		return c.JSON(http.StatusOK, db.Ticket{
-			ID:         1,
 			Subject:    "subject",
 			DateOpened: time.Now().UTC(),
 			Status:     "triage",

@@ -27,7 +27,7 @@ func init() {
 	}
 
 	if !Initialized {
-		log.Printf("warning: redis not initialized")
+		log.Printf("warning: redis %s not initialized", addr)
 	} else {
 		log.Printf("redis initialized: %v", addr)
 	}

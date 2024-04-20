@@ -416,12 +416,20 @@ func GetAllAuditorsJHandler(c echo.Context) error {
 }
 
 // GetReviewHandler returns heuristic analysis of a submission
-//   - Set query "output" to "ticket", "submissions"
+//   - Set query "output" to "single_ticket", "multiple_tickets", "submissions", "full".
+//
+// - single_ticket: returns a single combined db.Ticket of all submissions
+//
+// - multiple_tickets: returns each db.Ticket for each submission
+//
+// - submissions: returns a []details of each submission
+//
+// - full: returns a []details db.Ticket with the original api.Submission and db.Ticket
+// Note: "parameters" and "interrogate" won't automatically be set on full output
+//
 //   - Set query "parameters" to "true" to parse the utils.Params from json/text files
 //   - Set query "interrogate" to "true" to parse entities.TaggerResponse from image files using (*sd.Host).Interrogate
-//   - Set query "multiple" to "true" to separate each db.Ticket by submission
 //   - Set query "stream" to "true" to receive multiple JSON objects
-//   - Set query "full" to "true" to include the original api.Submission
 func GetReviewHandler(c echo.Context) error {
 	sid, _, err := GetSIDandID(c)
 	if err != nil {
@@ -485,6 +493,15 @@ func GetReviewHandler(c echo.Context) error {
 		c.Logger().Warn("interrogate was set to true but host is offline, only using cached captions...")
 	}
 
+	output := c.QueryParam("output")
+
+	const (
+		outputSingleTicket    = "single_ticket"
+		outputMultipleTickets = "multiple_tickets"
+		outputSubmissions     = "submissions"
+		outputFull            = "full"
+	)
+
 	type details struct {
 		URL        string          `json:"url"`
 		ID         api.IntString   `json:"id"`
@@ -517,8 +534,17 @@ func GetReviewHandler(c echo.Context) error {
 			Submission: &submission,
 		}
 
-		if c.QueryParam("full") == "true" || c.QueryParam("multiple") == "true" {
+		switch output {
+		case outputFull:
 			submissions[i].Inkbunny = &sub
+			for f, file := range sub.Files {
+				if !strings.Contains(file.MimeType, "image") {
+					continue
+				}
+				submissions[i].Images = append(submissions[i].Images, &submission.Files[f])
+			}
+			fallthrough
+		case outputMultipleTickets:
 			submissions[i].Ticket = &db.Ticket{
 				ID:         submission.ID,
 				Subject:    fmt.Sprintf("Review for %v", submission.URL),
@@ -544,12 +570,6 @@ func GetReviewHandler(c echo.Context) error {
 					},
 				},
 			}
-			for f, file := range sub.Files {
-				if !strings.Contains(file.MimeType, "image") {
-					continue
-				}
-				submissions[i].Images = append(submissions[i].Images, &submission.Files[f])
-			}
 		}
 	}
 	eachSubmission.Wait()
@@ -557,27 +577,26 @@ func GetReviewHandler(c echo.Context) error {
 		return nil
 	}
 
-	if c.QueryParam("multiple") == "true" {
+	switch output {
+	case outputSubmissions, outputFull:
+		return c.JSON(http.StatusOK, submissions)
+	case outputMultipleTickets:
 		var tickets []db.Ticket
 		for _, sub := range submissions {
 			tickets = append(tickets, *sub.Ticket)
 		}
 		return c.JSON(http.StatusOK, tickets)
-	}
-
-	var ticketLabels []db.TicketLabel
-	for _, sub := range submissions {
-		for _, label := range db.TicketLabels(*sub.Submission) {
-			if !slices.Contains(ticketLabels, label) {
-				ticketLabels = append(ticketLabels, label)
+	case outputSingleTicket:
+		fallthrough
+	default:
+		var ticketLabels []db.TicketLabel
+		for _, sub := range submissions {
+			for _, label := range db.TicketLabels(*sub.Submission) {
+				if !slices.Contains(ticketLabels, label) {
+					ticketLabels = append(ticketLabels, label)
+				}
 			}
 		}
-	}
-
-	switch c.QueryParam("output") {
-	case "submissions":
-		return c.JSON(http.StatusOK, submissions)
-	default:
 		return c.JSON(http.StatusOK, db.Ticket{
 			Subject:    "subject",
 			DateOpened: time.Now().UTC(),

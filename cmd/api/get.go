@@ -567,7 +567,11 @@ func GetReviewHandler(c echo.Context) error {
 
 	var ticketLabels []db.TicketLabel
 	for _, sub := range submissions {
-		ticketLabels = append(ticketLabels, db.TicketLabels(*sub.Submission)...)
+		for _, label := range db.TicketLabels(*sub.Submission) {
+			if !slices.Contains(ticketLabels, label) {
+				ticketLabels = append(ticketLabels, label)
+			}
+		}
 	}
 
 	switch c.QueryParam("output") {

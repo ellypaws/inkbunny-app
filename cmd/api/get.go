@@ -19,6 +19,7 @@ import (
 	units "github.com/labstack/gommon/bytes"
 	"github.com/redis/go-redis/v9"
 	"net/http"
+	"regexp"
 	"slices"
 	"strconv"
 	"strings"
@@ -623,7 +624,11 @@ func processObjectMetadata(c echo.Context, submission *db.Submission) {
 	for _, obj := range submission.Metadata.Objects {
 		meta := strings.ToLower(obj.Prompt + obj.NegativePrompt)
 		for _, artist := range database.AllArtists() {
-			if strings.Contains(meta, strings.ToLower(artist.Username)) {
+			re, err := regexp.Compile(fmt.Sprintf(`\b%s\b`, strings.ToLower(artist.Username)))
+			if err != nil {
+				continue
+			}
+			if re.MatchString(meta) {
 				submission.Metadata.ArtistUsed = append(submission.Metadata.ArtistUsed, artist)
 			}
 		}

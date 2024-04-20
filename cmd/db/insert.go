@@ -467,6 +467,9 @@ func SubmissionLabels(submission Submission) []TicketLabel {
 	if submission.Metadata.AISubmission && !hasGenerationDetails {
 		labels = append(labels, LabelMissingPrompt)
 	}
+	if len(submission.Metadata.ArtistUsed) > 0 {
+		labels = append(labels, LabelArtistUsed)
+	}
 	return labels
 }
 

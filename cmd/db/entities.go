@@ -372,6 +372,7 @@ const (
 	LabelJSON          TicketLabel = "json"
 	LabelTxt           TicketLabel = "txt"
 	LabelMissingPrompt TicketLabel = "missing_prompt"
+	LabelArtistUsed    TicketLabel = "artist_used"
 )
 
 type Response struct {

@@ -592,10 +592,12 @@ func GetReviewHandler(c echo.Context) error {
 					Date:        time.Now().UTC(),
 					Message: func() string {
 						var sb strings.Builder
-						sb.WriteString("The following submissions don't include their prompts: ")
 						for _, sub := range submissions {
-							sb.WriteString("\n")
-							sb.WriteString(sub.URL)
+							if sb.Len() > 0 {
+								sb.WriteString("\n\n[s]                    [s]")
+							}
+							sb.WriteString(fmt.Sprintf("#M%s\n", sub.ID))
+							sb.WriteString(submissionMessage(sub.Submission))
 						}
 						return sb.String()
 					}(),

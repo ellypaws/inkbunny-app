@@ -462,7 +462,7 @@ func newTicket() {
 		}
 		id, _ := strconv.ParseInt(submissionDetails.Submissions[i].SubmissionID, 10, 64)
 		submissionsIDs = append(submissionsIDs, id)
-		ticketLabels = append(ticketLabels, db.SubmissionLabels(submission)...)
+		ticketLabels = append(ticketLabels, db.TicketLabels(submission)...)
 	}
 
 	if len(submissionsIDs) == 0 {

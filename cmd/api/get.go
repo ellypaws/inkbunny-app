@@ -507,7 +507,7 @@ func GetReviewHandler(c echo.Context) error {
 		go processSubmission(c, &eachSubmission, &dbMutex, &submission)
 
 		user := api.UsernameID{UserID: sub.UserID, Username: sub.Username}
-		labels := db.SubmissionLabels(submission)
+		labels := db.TicketLabels(submission)
 
 		submissions[i] = details{
 			URL:        submission.URL,
@@ -566,7 +566,7 @@ func GetReviewHandler(c echo.Context) error {
 
 	var ticketLabels []db.TicketLabel
 	for _, sub := range submissions {
-		ticketLabels = append(ticketLabels, db.SubmissionLabels(*sub.Submission)...)
+		ticketLabels = append(ticketLabels, db.TicketLabels(*sub.Submission)...)
 	}
 
 	switch c.QueryParam("output") {
@@ -647,7 +647,7 @@ func submissionMessage(sub *db.Submission) string {
 	sb.WriteString("The following submission is pending review: ")
 	sb.WriteString(sub.URL)
 
-	flags := db.SubmissionLabels(*sub)
+	flags := db.TicketLabels(*sub)
 	if len(flags) > 0 {
 		sb.WriteString("\n")
 		sb.WriteString("The following flags were detected: ")

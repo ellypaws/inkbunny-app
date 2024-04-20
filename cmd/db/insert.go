@@ -436,7 +436,7 @@ func SetSubmissionMeta(submission *Submission) {
 	}
 }
 
-func SubmissionLabels(submission Submission) []TicketLabel {
+func TicketLabels(submission Submission) []TicketLabel {
 	var labels []TicketLabel
 	m := submission.Metadata
 	var hasGenerationDetails bool

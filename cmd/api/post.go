@@ -40,7 +40,7 @@ var postHandlers = pathHandler{
 	"/heuristics/:id":     handler{GetHeuristicsHandler, append(loggedInMiddleware, withRedis...)},
 	"/sd/:path":           handler{HandlePath, nil},
 	"/artists":            handler{upsertArtist, staffMiddleware},
-	"/inkbunny/search":    handler{GetInkbunnySearch, append(loggedInMiddleware, withCache...)},
+	"/inkbunny/search":    handler{GetInkbunnySearch, append(loggedInMiddleware, withRedis...)},
 	"/generate":           handler{generate, append(staffMiddleware, withRedis...)},
 }
 

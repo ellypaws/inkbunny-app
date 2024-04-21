@@ -32,7 +32,7 @@ var getHandlers = pathHandler{
 	"/inkbunny/description":     handler{GetInkbunnyDescription, withCache},
 	"/inkbunny/submission":      handler{GetInkbunnySubmission, withCache},
 	"/inkbunny/submission/:ids": handler{GetInkbunnySubmission, withCache},
-	"/inkbunny/search":          handler{GetInkbunnySearch, append(loggedInMiddleware, withCache...)},
+	"/inkbunny/search":          handler{GetInkbunnySearch, append(loggedInMiddleware, withRedis...)},
 	"/image":                    handler{GetImageHandler, append(staticMiddleware, SIDMiddleware)},
 	"/review/:id":               handler{GetReviewHandler, append(staffMiddleware, withRedis...)},
 	"/heuristics/:id":           handler{GetHeuristicsHandler, append(loggedInMiddleware, withRedis...)},
@@ -184,16 +184,13 @@ func GetInkbunnySearch(c echo.Context) error {
 	var request = api.SubmissionSearchRequest{
 		Text:               "ai_generated",
 		SubmissionsPerPage: 10,
-		Random:             api.Yes,
+		Random:             true,
+		GetRID:             true,
 		Type:               api.SubmissionTypes{api.SubmissionTypePicturePinup},
 	}
 	var bind = struct {
 		*api.SubmissionSearchRequest
-		SessionID  *string `query:"sid"`
-		SearchTerm *string `json:"text,omitempty" query:"text"`
-		UserID     *string `json:"user_id,omitempty" query:"user_id"`
-		Username   *string `json:"username,omitempty" query:"username"`
-		Types      *string `json:"types,omitempty" query:"types"`
+		Types *string `json:"types,omitempty" query:"types"`
 	}{
 		SubmissionSearchRequest: &request,
 	}
@@ -206,24 +203,8 @@ func GetInkbunnySearch(c echo.Context) error {
 		return c.JSONBlob(http.StatusOK, app.Temp())
 	}
 
-	if cookie, err := c.Cookie("sid"); request.SID == "" && err == nil {
-		request.SID = cookie.Value
-	}
-
-	if bind.SessionID != nil {
-		request.SID = *bind.SessionID
-	}
-
-	if bind.SearchTerm != nil {
-		request.Text = *bind.SearchTerm
-	}
-
-	if bind.UserID != nil {
-		request.UserID = *bind.UserID
-	}
-
-	if bind.Username != nil {
-		request.Username = *bind.Username
+	if sid, ok := c.Get("sid").(string); ok {
+		request.SID = sid
 	}
 
 	if bind.Types != nil {
@@ -241,16 +222,23 @@ func GetInkbunnySearch(c echo.Context) error {
 		}
 	}
 
-	user := &api.Credentials{Sid: request.SID}
+	cacheToUse := cache.SwitchCache(c)
+	var response api.SubmissionSearchResponse
+	key := fmt.Sprintf("%s:inkbunny:search:%s:%s", echo.MIMEApplicationJSON, request.RID, request.Page)
 
-	if user.Sid == "guest" {
-		user, err = api.Guest().Login()
-		if err != nil {
-			return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
+	if request.RID != "" {
+		item, err := cacheToUse.Get(key)
+		if err == nil {
+			if err := json.Unmarshal(item.Blob, &response); err == nil {
+				c.Logger().Debugf("Cache hit for %s", key)
+				return c.JSON(http.StatusOK, response)
+			}
 		}
-		defer logoutGuest(c, user)
 	}
 
+	c.Logger().Infof("Cache miss for %s retrieving search...", key)
+
+	user := &api.Credentials{Sid: request.SID}
 	request.SID = user.Sid
 	searchResponse, err := user.SearchSubmissions(request)
 	if err != nil {
@@ -258,6 +246,48 @@ func GetInkbunnySearch(c echo.Context) error {
 	}
 	if len(searchResponse.Submissions) == 0 {
 		return c.JSON(http.StatusNotFound, crashy.ErrorResponse{ErrorString: "no submissions found"})
+	}
+
+	ttl := 15 * time.Minute
+	if searchResponse.RIDTTL != "" {
+		var d time.Duration
+		matches := regexp.MustCompile(`\d+[smhdwmy]`).FindAllString(strings.ReplaceAll(searchResponse.RIDTTL, " ", ""), -1)
+		for _, match := range matches {
+			i, err := strconv.Atoi(match[:len(match)-1])
+			if err != nil {
+				c.Logger().Errorf("error parsing RIDTTL: %v", err)
+				continue
+			}
+			switch match[len(match)-1] {
+			case 's':
+				d += time.Second * time.Duration(i)
+			case 'm':
+				d += time.Minute * time.Duration(i)
+			case 'h':
+				d += time.Hour * time.Duration(i)
+			case 'd':
+				d += time.Hour * 24 * time.Duration(i)
+			case 'w':
+				d += time.Hour * 24 * 7 * time.Duration(i)
+			case 'y':
+				d += time.Hour * 24 * 365 * time.Duration(i)
+			}
+		}
+		ttl = max(ttl, d)
+	}
+
+	bin, err := json.Marshal(searchResponse)
+	if err != nil {
+		c.Logger().Errorf("error marshaling search response: %v", err)
+	}
+	err = cacheToUse.Set(key, &cache.Item{
+		Blob:     bin,
+		MimeType: echo.MIMEApplicationJSON,
+	}, ttl)
+	if err != nil {
+		c.Logger().Errorf("error caching search response: %v", err)
+	} else {
+		c.Logger().Infof("Cached %s %s %dKiB", key, echo.MIMEApplicationJSON, len(bin)/units.KiB)
 	}
 
 	if output := c.QueryParam("output"); output != "" {

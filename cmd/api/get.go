@@ -223,12 +223,12 @@ func GetInkbunnySearch(c echo.Context) error {
 	}
 
 	cacheToUse := cache.SwitchCache(c)
-	var response api.SubmissionSearchResponse
 
 	if request.RID != "" {
 		key := fmt.Sprintf("%s:inkbunny:search:%s:%s", echo.MIMEApplicationJSON, request.RID, request.Page)
 		item, err := cacheToUse.Get(key)
 		if err == nil {
+			var response api.SubmissionSearchResponse
 			if err := json.Unmarshal(item.Blob, &response); err == nil {
 				c.Logger().Debugf("Cache hit for %s", key)
 				return c.JSON(http.StatusOK, response)
@@ -283,14 +283,14 @@ func GetInkbunnySearch(c echo.Context) error {
 		c.Logger().Warn("RIDTTL was not set, using default 15 minutes")
 	}
 
-	if response.RID != "" {
+	if searchResponse.RID != "" {
 		bin, err := json.Marshal(searchResponse)
 		if err != nil {
 			c.Logger().Errorf("error marshaling search response: %v", err)
 			return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
 		}
 
-		key := fmt.Sprintf("%s:inkbunny:search:%s:%s", echo.MIMEApplicationJSON, response.RID, request.Page)
+		key := fmt.Sprintf("%s:inkbunny:search:%s:%s", echo.MIMEApplicationJSON, searchResponse.RID, request.Page)
 		err = cacheToUse.Set(key, &cache.Item{
 			Blob:     bin,
 			MimeType: echo.MIMEApplicationJSON,

@@ -19,6 +19,7 @@ import (
 	units "github.com/labstack/gommon/bytes"
 	"github.com/redis/go-redis/v9"
 	"net/http"
+	"net/url"
 	"regexp"
 	"slices"
 	"strconv"
@@ -499,9 +500,9 @@ func GetReviewHandler(c echo.Context) error {
 	}
 
 	output := c.QueryParam("output")
-	parameters := c.QueryParam("parameters") == "true"
-	interrogate := c.QueryParam("interrogate") == "true"
-	stream := c.QueryParam("stream") == "true"
+	parameters := c.QueryParam("parameters")
+	interrogate := c.QueryParam("interrogate")
+	stream := c.QueryParam("stream")
 
 	const (
 		outputSingleTicket    = "single_ticket"
@@ -527,13 +528,17 @@ func GetReviewHandler(c echo.Context) error {
 	}
 
 	cacheToUse := cache.SwitchCache(c)
+	query := url.Values{
+		"sid":         {sid},
+		"parameters":  {parameters},
+		"interrogate": {interrogate},
+	}
 	reviewKey := fmt.Sprintf(
-		"%s:review:%s:%s?parameters=%v&interrogate=%v",
+		"%s:review:%s:%s?%s",
 		echo.MIMEApplicationJSON,
 		output,
 		submissionIDs,
-		parameters,
-		interrogate,
+		query.Encode(),
 	)
 	item, errFunc := cacheToUse.Get(reviewKey)
 	if errFunc == nil {
@@ -596,7 +601,7 @@ func GetReviewHandler(c echo.Context) error {
 		return c.JSON(http.StatusNotFound, crashy.ErrorResponse{ErrorString: "no submissions found"})
 	}
 
-	if interrogate && !host.Alive() {
+	if interrogate == "true" && !host.Alive() {
 		c.Logger().Warn("interrogate was set to true but host is offline, only using cached captions...")
 	}
 
@@ -670,7 +675,7 @@ func GetReviewHandler(c echo.Context) error {
 		}
 	}
 	eachSubmission.Wait()
-	if stream {
+	if stream == "true" {
 		return nil
 	}
 

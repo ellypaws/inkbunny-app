@@ -7,7 +7,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/labstack/echo/v4"
 	"image"
 	"image/jpeg"
 	"io"
@@ -15,6 +14,17 @@ import (
 	"mime/multipart"
 	"net/http"
 	"net/url"
+)
+
+const (
+	HeaderAccept        = "Accept"
+	HeaderContentType   = "Content-Type"
+	MIMEApplicationJSON = "application/json"
+	// Deprecated: Please use MIMEApplicationJSON instead. JSON should be encoded using UTF-8 by default.
+	// No "charset" parameter is defined for this registration.
+	// Adding one really has no effect on compliant recipients.
+	// See RFC 8259, section 8.1. https://datatracker.ietf.org/doc/html/rfc8259#section-8.1
+	MIMEApplicationJSONCharsetUTF8 = "application/json; charset=utf-8"
 )
 
 var ErrDeadAPI = errors.New("API is not running")
@@ -132,8 +142,8 @@ func (r *Request) Do() ([]byte, error) {
 		return nil, err
 	}
 
-	request.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSONCharsetUTF8)
-	request.Header.Set(echo.HeaderAccept, echo.MIMEApplicationJSON)
+	request.Header.Set(HeaderContentType, MIMEApplicationJSONCharsetUTF8)
+	request.Header.Set(HeaderAccept, MIMEApplicationJSON)
 
 	for _, opt := range r.opts {
 		opt(request.Header)
@@ -253,7 +263,7 @@ func WithImage(img *image.Image) func(*Request) {
 
 		r.Data = body
 		r.opts = append(r.opts, func(h http.Header) {
-			h.Set(echo.HeaderContentType, writer.FormDataContentType())
+			h.Set(HeaderContentType, writer.FormDataContentType())
 		})
 	}
 }
@@ -300,7 +310,7 @@ func WithImageAndFields(img *image.Image, fields map[string]string) func(*Reques
 		// Set the request body and content type.
 		r.Data = body
 		r.opts = append(r.opts, func(h http.Header) {
-			h.Set(echo.HeaderContentType, writer.FormDataContentType())
+			h.Set(HeaderContentType, writer.FormDataContentType())
 		})
 	}
 }

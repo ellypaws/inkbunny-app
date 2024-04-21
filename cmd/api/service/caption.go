@@ -28,13 +28,7 @@ func ProcessCaption(c echo.Context, wg *sync.WaitGroup, sub *db.Submission, i in
 		return
 	}
 
-	var cacheToUse cache.Cache
-	redis, ok := c.Get("redis").(*cache.Redis)
-	if ok {
-		cacheToUse = redis
-	} else {
-		cacheToUse = cache.GetLocalCache(c)
-	}
+	cacheToUse := cache.SwitchCache(c)
 
 	key := fmt.Sprintf("%s:%s", echo.MIMEApplicationJSON, f.FileURLScreen)
 

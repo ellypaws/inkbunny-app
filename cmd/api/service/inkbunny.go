@@ -65,7 +65,7 @@ func RetrieveSearch(c echo.Context, request api.SubmissionSearchRequest) (api.Su
 			var response api.SubmissionSearchResponse
 			if err := json.Unmarshal(item.Blob, &response); err == nil {
 				c.Logger().Debugf("Cache hit for %s", key)
-				return response, c.JSON(http.StatusOK, response)
+				return response, c.Blob(http.StatusOK, item.MimeType, item.Blob)
 			}
 		} else {
 			c.Logger().Infof("Cache miss for %s retrieving search...", key)

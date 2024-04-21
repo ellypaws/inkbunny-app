@@ -372,7 +372,14 @@ const (
 	LabelJSON          TicketLabel = "json"
 	LabelTxt           TicketLabel = "txt"
 	LabelMissingPrompt TicketLabel = "missing_prompt"
+	LabelMissingTags   TicketLabel = "missing_tags"
+	LabelMissingSeed   TicketLabel = "missing_seed"
+	LabelMissingModel  TicketLabel = "missing_model"
 	LabelArtistUsed    TicketLabel = "artist_used"
+	LabelPrivateModel  TicketLabel = "private_model"
+	LabelPrivateLora   TicketLabel = "private_lora"
+	LabelPrivateTool   TicketLabel = "private_tool"
+	LabelSoldArt       TicketLabel = "sold_art"
 )
 
 type Response struct {

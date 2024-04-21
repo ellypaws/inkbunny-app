@@ -440,15 +440,6 @@ func TicketLabels(submission Submission) []TicketLabel {
 	var labels []TicketLabel
 	m := submission.Metadata
 	var hasGenerationDetails bool
-	if m.Generated {
-		labels = append(labels, LabelAIGenerated)
-	}
-	if m.Assisted {
-		labels = append(labels, LabelAIAssisted)
-	}
-	if m.Img2Img {
-		labels = append(labels, LabelImg2Img)
-	}
 	if m.TaggedHuman {
 		labels = append(labels, LabelTaggedHuman)
 	}
@@ -464,11 +455,36 @@ func TicketLabels(submission Submission) []TicketLabel {
 	if m.HasTxt || m.HasJSON {
 		hasGenerationDetails = true
 	}
-	if submission.Metadata.AISubmission && !hasGenerationDetails {
-		labels = append(labels, LabelMissingPrompt)
-	}
-	if len(submission.Metadata.ArtistUsed) > 0 {
-		labels = append(labels, LabelArtistUsed)
+	if submission.Metadata.AISubmission {
+		if !hasGenerationDetails || m.MissingPrompt {
+			labels = append(labels, LabelMissingPrompt)
+		}
+		if m.MissingModel {
+			labels = append(labels, LabelMissingModel)
+		}
+		if m.MissingTags {
+			labels = append(labels, LabelMissingTags)
+		}
+		if len(submission.Metadata.ArtistUsed) > 0 {
+			labels = append(labels, LabelArtistUsed)
+		}
+		for _, obj := range m.Objects {
+			if obj.Prompt == "" {
+				if !slices.Contains(labels, LabelMissingPrompt) {
+					labels = append(labels, LabelMissingPrompt)
+				}
+			}
+			if obj.OverrideSettings.SDModelCheckpoint == nil && obj.OverrideSettings.SDCheckpointHash == "" {
+				if !slices.Contains(labels, LabelMissingModel) {
+					labels = append(labels, LabelMissingModel)
+				}
+			}
+			if obj.Seed == 0 {
+				if !slices.Contains(labels, LabelMissingSeed) {
+					labels = append(labels, LabelMissingSeed)
+				}
+			}
+		}
 	}
 	return labels
 }

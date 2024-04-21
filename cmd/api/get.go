@@ -206,8 +206,9 @@ func GetInkbunnySearch(c echo.Context) error {
 		return c.JSONBlob(http.StatusOK, app.Temp())
 	}
 
-	if sid, ok := c.Get("sid").(string); ok {
-		request.SID = sid
+	request.SID, _, err = GetSIDandID(c)
+	if err != nil {
+		return c.JSON(http.StatusUnauthorized, crashy.Wrap(err))
 	}
 
 	if bind.Types != nil {
@@ -225,86 +226,9 @@ func GetInkbunnySearch(c echo.Context) error {
 		}
 	}
 
-	cacheToUse := cache.SwitchCache(c)
-
-	if request.RID != "" {
-		key := fmt.Sprintf("%s:inkbunny:search:%s:%s", echo.MIMEApplicationJSON, request.RID, request.Page)
-		item, err := cacheToUse.Get(key)
-		if err == nil {
-			var response api.SubmissionSearchResponse
-			if err := json.Unmarshal(item.Blob, &response); err == nil {
-				c.Logger().Debugf("Cache hit for %s", key)
-				return c.JSON(http.StatusOK, response)
-			}
-		} else {
-			c.Logger().Infof("Cache miss for %s retrieving search...", key)
-		}
-	}
-
-	if !request.GetRID {
-		c.Logger().Warn("GetRID was explicitly set to false, overriding to true...")
-		request.GetRID = true
-	}
-
-	user := &api.Credentials{Sid: request.SID}
-	request.SID = user.Sid
-	searchResponse, err := user.SearchSubmissions(request)
+	searchResponse, err := service.RetrieveSearch(c, request)
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
-	}
-	if len(searchResponse.Submissions) == 0 {
-		return c.JSON(http.StatusNotFound, crashy.ErrorResponse{ErrorString: "no submissions found"})
-	}
-
-	ttl := 15 * time.Minute
-	if searchResponse.RIDTTL != "" {
-		var d time.Duration
-		matches := regexp.MustCompile(`\d+[smhdwmy]`).FindAllString(strings.ReplaceAll(searchResponse.RIDTTL, " ", ""), -1)
-		for _, match := range matches {
-			i, err := strconv.Atoi(match[:len(match)-1])
-			if err != nil {
-				c.Logger().Errorf("error parsing RIDTTL: %v", err)
-				continue
-			}
-			switch match[len(match)-1] {
-			case 's':
-				d += time.Second * time.Duration(i)
-			case 'm':
-				d += time.Minute * time.Duration(i)
-			case 'h':
-				d += time.Hour * time.Duration(i)
-			case 'd':
-				d += time.Hour * 24 * time.Duration(i)
-			case 'w':
-				d += time.Hour * 24 * 7 * time.Duration(i)
-			case 'y':
-				d += time.Hour * 24 * 365 * time.Duration(i)
-			}
-		}
-		ttl = max(ttl, d)
-	} else {
-		c.Logger().Warn("RIDTTL was not set, using default 15 minutes")
-	}
-
-	if searchResponse.RID != "" {
-		bin, err := json.Marshal(searchResponse)
-		if err != nil {
-			c.Logger().Errorf("error marshaling search response: %v", err)
-			return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
-		}
-
-		key := fmt.Sprintf("%s:inkbunny:search:%s:%s", echo.MIMEApplicationJSON, searchResponse.RID, request.Page)
-		err = cacheToUse.Set(key, &cache.Item{
-			Blob:     bin,
-			MimeType: echo.MIMEApplicationJSON,
-		}, ttl)
-		if err != nil {
-			c.Logger().Errorf("error caching search response: %v", err)
-		} else {
-			c.Logger().Infof("Cached %s %s %dKiB", key, echo.MIMEApplicationJSON, len(bin)/units.KiB)
-		}
-	} else {
-		c.Logger().Warn("RID was not set, not caching search response")
+		return err
 	}
 
 	if output := c.QueryParam("output"); output != "" {
@@ -314,7 +238,7 @@ func GetInkbunnySearch(c echo.Context) error {
 		case "xml":
 			return c.XML(http.StatusOK, searchResponse)
 		case "mail":
-			return mail(c, user, searchResponse)
+			return mail(c, &api.Credentials{Sid: request.SID}, searchResponse)
 		default:
 			return c.JSON(http.StatusBadRequest, crashy.ErrorResponse{ErrorString: "invalid output format"})
 		}

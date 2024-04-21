@@ -63,10 +63,12 @@ func RetrieveSearch(c echo.Context, request api.SubmissionSearchRequest) (api.Su
 		item, err := cacheToUse.Get(key)
 		if err == nil {
 			var response api.SubmissionSearchResponse
-			if err := json.Unmarshal(item.Blob, &response); err == nil {
-				c.Logger().Debugf("Cache hit for %s", key)
-				return response, c.Blob(http.StatusOK, item.MimeType, item.Blob)
+			if err := json.Unmarshal(item.Blob, &response); err != nil {
+				c.Logger().Errorf("error unmarshaling search response: %v", err)
+				return response, err
 			}
+			c.Logger().Debugf("Cache hit for %s", key)
+			return response, nil
 		} else {
 			c.Logger().Infof("Cache miss for %s retrieving search...", key)
 		}

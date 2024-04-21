@@ -20,6 +20,7 @@ import (
 	"github.com/redis/go-redis/v9"
 	"net/http"
 	"net/url"
+	"reflect"
 	"regexp"
 	"slices"
 	"strconv"
@@ -890,9 +891,14 @@ func processParams(c echo.Context, wg *sync.WaitGroup, sub *db.Submission) {
 	if textFile == nil {
 		c.Logger().Debugf("processing description heuristics for %v", sub.URL)
 		heuristics, err := utils.DescriptionHeuristics(sub.Description)
-		if err == nil {
-			sub.Metadata.Objects = map[string]entities.TextToImageRequest{sub.Title: heuristics}
+		if err != nil {
+			c.Logger().Errorf("error processing description heuristics for %v: %v", sub.URL, err)
 		}
+		if reflect.DeepEqual(heuristics, entities.TextToImageRequest{}) {
+			c.Logger().Debugf("no heuristics found for %v", sub.URL)
+			return
+		}
+		sub.Metadata.Objects = map[string]entities.TextToImageRequest{sub.Title: heuristics}
 		return
 	}
 
@@ -953,9 +959,15 @@ func processParams(c echo.Context, wg *sync.WaitGroup, sub *db.Submission) {
 	if len(sub.Metadata.Objects) == 0 {
 		c.Logger().Debugf("processing description heuristics for %v", sub.URL)
 		heuristics, err := utils.DescriptionHeuristics(sub.Description)
-		if err == nil {
-			sub.Metadata.Objects = map[string]entities.TextToImageRequest{sub.Title: heuristics}
+		if err != nil {
+			c.Logger().Errorf("error processing description heuristics for %v: %v", sub.URL, err)
 		}
+		if reflect.DeepEqual(heuristics, entities.TextToImageRequest{}) {
+			c.Logger().Debugf("no heuristics found for %v", sub.URL)
+			return
+		}
+		sub.Metadata.Objects = map[string]entities.TextToImageRequest{sub.Title: heuristics}
+		return
 	}
 }
 

@@ -485,30 +485,94 @@ func GetReviewHandler(c echo.Context) error {
 		return c.JSON(http.StatusUnauthorized, crashy.Wrap(err))
 	}
 
-	submissionID := c.Param("id")
-	if submissionID == "" {
+	submissionIDs := c.Param("id")
+	if submissionIDs == "" {
 		return c.JSON(http.StatusBadRequest, crashy.ErrorResponse{ErrorString: "missing submission ID"})
 	}
 
 	req := api.SubmissionDetailsRequest{
 		SID:                         sid,
-		SubmissionIDs:               submissionID,
+		SubmissionIDs:               submissionIDs,
 		OutputMode:                  "json",
 		ShowDescription:             true,
 		ShowDescriptionBbcodeParsed: true,
 	}
 
+	output := c.QueryParam("output")
+	parameters := c.QueryParam("parameters") == "true"
+	interrogate := c.QueryParam("interrogate") == "true"
+	stream := c.QueryParam("stream") == "true"
+
+	const (
+		outputSingleTicket    = "single_ticket"
+		outputMultipleTickets = "multiple_tickets"
+		outputSubmissions     = "submissions"
+		outputFull            = "full"
+	)
+
+	validOutputs := []string{
+		outputSingleTicket,
+		outputMultipleTickets,
+		outputSubmissions,
+		outputFull,
+	}
+
+	if output == "" {
+		output = outputSingleTicket
+	} else if !slices.Contains(validOutputs, output) {
+		return c.JSON(http.StatusBadRequest, crashy.ErrorResponse{
+			ErrorString: fmt.Sprintf("invalid output format %s. valid options are: %v", output, validOutputs),
+			Debug:       output,
+		})
+	}
+
 	cacheToUse := cache.SwitchCache(c)
-	key := fmt.Sprintf("%v:inkbunny:submissions:%v", echo.MIMEApplicationJSON, submissionID)
+	reviewKey := fmt.Sprintf(
+		"%s:review:%s:%s?parameters=%v&interrogate=%v",
+		echo.MIMEApplicationJSON,
+		output,
+		submissionIDs,
+		parameters,
+		interrogate,
+	)
+	item, errFunc := cacheToUse.Get(reviewKey)
+	if errFunc == nil {
+		c.Logger().Infof("Cache hit for %s", reviewKey)
+		return c.Blob(http.StatusOK, item.MimeType, item.Blob)
+	}
+	c.Logger().Debugf("Cache miss for %s retrieving review...", reviewKey)
+	var store any
+	defer func() {
+		if store == nil {
+			return
+		}
+		bin, err := json.Marshal(store)
+		if err != nil {
+			c.Logger().Errorf("error marshaling review: %v", err)
+			return
+		}
+
+		err = cacheToUse.Set(reviewKey, &cache.Item{
+			Blob:     bin,
+			MimeType: echo.MIMEApplicationJSON,
+		}, cache.Week)
+		if err != nil {
+			c.Logger().Errorf("error caching review: %v", err)
+			return
+		}
+		c.Logger().Infof("Cached %s %s %dKiB", reviewKey, echo.MIMEApplicationJSON, len(bin)/units.KiB)
+	}()
+
+	detailKey := fmt.Sprintf("%s:inkbunny:submissions:%s", echo.MIMEApplicationJSON, submissionIDs)
 
 	var submissionDetails api.SubmissionDetailsResponse
-	item, errFunc := cacheToUse.Get(key)
+	item, errFunc = cacheToUse.Get(detailKey)
 	if errFunc == nil {
 		if err := json.Unmarshal(item.Blob, &submissionDetails); err == nil {
-			c.Logger().Debugf("Cache hit for %s", key)
+			c.Logger().Debugf("Cache hit for %s", detailKey)
 		}
 	} else {
-		c.Logger().Infof("Cache miss for %s retrieving submission...", key)
+		c.Logger().Infof("Cache miss for %s retrieving submission...", detailKey)
 		submissionDetails, err = api.Credentials{Sid: sid}.SubmissionDetails(req)
 		if err != nil {
 			return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
@@ -517,14 +581,14 @@ func GetReviewHandler(c echo.Context) error {
 		if err != nil {
 			c.Logger().Errorf("error marshaling submission details: %v", err)
 		}
-		err = cacheToUse.Set(key, &cache.Item{
+		err = cacheToUse.Set(detailKey, &cache.Item{
 			Blob:     bin,
 			MimeType: echo.MIMEApplicationJSON,
 		}, cache.Week)
 		if err != nil {
 			c.Logger().Errorf("error caching submission details: %v", err)
 		} else {
-			c.Logger().Infof("Cached %s %s %dKiB", key, echo.MIMEApplicationJSON, len(bin)/units.KiB)
+			c.Logger().Infof("Cached %s %s %dKiB", detailKey, echo.MIMEApplicationJSON, len(bin)/units.KiB)
 		}
 	}
 
@@ -532,18 +596,9 @@ func GetReviewHandler(c echo.Context) error {
 		return c.JSON(http.StatusNotFound, crashy.ErrorResponse{ErrorString: "no submissions found"})
 	}
 
-	if c.QueryParam("interrogate") == "true" && !host.Alive() {
+	if interrogate && !host.Alive() {
 		c.Logger().Warn("interrogate was set to true but host is offline, only using cached captions...")
 	}
-
-	output := c.QueryParam("output")
-
-	const (
-		outputSingleTicket    = "single_ticket"
-		outputMultipleTickets = "multiple_tickets"
-		outputSubmissions     = "submissions"
-		outputFull            = "full"
-	)
 
 	type details struct {
 		URL        string          `json:"url"`
@@ -615,7 +670,7 @@ func GetReviewHandler(c echo.Context) error {
 		}
 	}
 	eachSubmission.Wait()
-	if c.QueryParam("stream") == "true" {
+	if stream {
 		return nil
 	}
 
@@ -625,12 +680,14 @@ func GetReviewHandler(c echo.Context) error {
 
 	switch output {
 	case outputSubmissions, outputFull:
+		store = submissions
 		return c.JSON(http.StatusOK, submissions)
 	case outputMultipleTickets:
 		var tickets []db.Ticket
 		for _, sub := range submissions {
 			tickets = append(tickets, *sub.Ticket)
 		}
+		store = tickets
 		return c.JSON(http.StatusOK, tickets)
 	case outputSingleTicket:
 		fallthrough
@@ -643,7 +700,7 @@ func GetReviewHandler(c echo.Context) error {
 				}
 			}
 		}
-		return c.JSON(http.StatusOK, db.Ticket{
+		ticket := db.Ticket{
 			Subject:    "subject",
 			DateOpened: time.Now().UTC(),
 			Status:     "triage",
@@ -686,7 +743,9 @@ func GetReviewHandler(c echo.Context) error {
 					return ids
 				}(),
 			},
-		})
+		}
+		store = ticket
+		return c.JSON(http.StatusOK, ticket)
 	}
 }
 

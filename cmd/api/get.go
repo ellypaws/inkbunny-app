@@ -486,7 +486,7 @@ func GetReviewHandler(c echo.Context) error {
 	}
 
 	submissionIDs := c.Param("id")
-	if submissionIDs == "" {
+	if submissionIDs == "" || submissionIDs == "null" {
 		return c.JSON(http.StatusBadRequest, crashy.ErrorResponse{ErrorString: "missing submission ID"})
 	}
 

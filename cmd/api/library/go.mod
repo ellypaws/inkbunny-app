@@ -7,7 +7,7 @@ go 1.22.1
 require (
 	github.com/disintegration/imaging v1.6.2
 	github.com/ellypaws/inkbunny-app/api v0.0.0
-	github.com/ellypaws/inkbunny-sd v0.0.0-20240414232612-cc1c70a633eb
+	github.com/ellypaws/inkbunny-sd v0.0.0-20240421145525-f3b56afc12a5
 	github.com/ellypaws/inkbunny/api v0.0.0-20240411110242-d491ced97f23
 	github.com/stretchr/testify v1.9.0
 	golang.org/x/net v0.24.0

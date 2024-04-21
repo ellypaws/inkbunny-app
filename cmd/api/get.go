@@ -224,19 +224,24 @@ func GetInkbunnySearch(c echo.Context) error {
 
 	cacheToUse := cache.SwitchCache(c)
 	var response api.SubmissionSearchResponse
-	key := fmt.Sprintf("%s:inkbunny:search:%s:%s", echo.MIMEApplicationJSON, request.RID, request.Page)
 
 	if request.RID != "" {
+		key := fmt.Sprintf("%s:inkbunny:search:%s:%s", echo.MIMEApplicationJSON, request.RID, request.Page)
 		item, err := cacheToUse.Get(key)
 		if err == nil {
 			if err := json.Unmarshal(item.Blob, &response); err == nil {
 				c.Logger().Debugf("Cache hit for %s", key)
 				return c.JSON(http.StatusOK, response)
 			}
+		} else {
+			c.Logger().Infof("Cache miss for %s retrieving search...", key)
 		}
 	}
 
-	c.Logger().Infof("Cache miss for %s retrieving search...", key)
+	if !request.GetRID {
+		c.Logger().Warn("GetRID was explicitly set to false, overriding to true...")
+		request.GetRID = true
+	}
 
 	user := &api.Credentials{Sid: request.SID}
 	request.SID = user.Sid
@@ -279,7 +284,10 @@ func GetInkbunnySearch(c echo.Context) error {
 	bin, err := json.Marshal(searchResponse)
 	if err != nil {
 		c.Logger().Errorf("error marshaling search response: %v", err)
+		return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
 	}
+
+	key := fmt.Sprintf("%s:inkbunny:search:%s:%s", echo.MIMEApplicationJSON, response.RID, request.Page)
 	err = cacheToUse.Set(key, &cache.Item{
 		Blob:     bin,
 		MimeType: echo.MIMEApplicationJSON,

@@ -226,7 +226,7 @@ func searchAIGenerated(user *api.Credentials) api.SubmissionSearchResponse {
 		SubmissionsPerPage: 1,
 		Page:               1,
 		Text:               "ai_generated",
-		Type:               api.SubmissionTypePicturePinup,
+		Type:               api.SubmissionTypes{api.SubmissionTypePicturePinup},
 		OrderBy:            "views",
 		Random:             true,
 		Scraps:             "both",

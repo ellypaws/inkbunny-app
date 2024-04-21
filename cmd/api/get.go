@@ -106,14 +106,15 @@ func GetInkbunnyDescription(c echo.Context) error {
 		request.SID = user.Sid
 	}
 
-	details, err := api.Credentials{Sid: request.SID}.SubmissionDetails(
-		api.SubmissionDetailsRequest{
-			SubmissionIDs:   request.SubmissionIDs,
-			ShowDescription: api.Yes,
-		})
+	details, err := service.RetrieveSubmission(c, api.SubmissionDetailsRequest{
+		SID:             request.SID,
+		SubmissionIDs:   request.SubmissionIDs,
+		ShowDescription: api.Yes,
+	})
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
 	}
+
 	if len(details.Submissions) == 0 {
 		return c.JSON(http.StatusNotFound, crashy.ErrorResponse{ErrorString: "no submissions found"})
 	}
@@ -167,10 +168,11 @@ func GetInkbunnySubmission(c echo.Context) error {
 		request.SID = *bind.SessionID
 	}
 
-	details, err := api.Credentials{Sid: request.SID}.SubmissionDetails(request)
+	details, err := service.RetrieveSubmission(c, request)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
 	}
+
 	if len(details.Submissions) == 0 {
 		return c.JSON(http.StatusNotFound, crashy.ErrorResponse{ErrorString: "no submissions found"})
 	}
@@ -345,7 +347,7 @@ func mail(c echo.Context, user *api.Credentials, response api.SubmissionSearchRe
 		submissionIDs[i] = s.SubmissionID
 	}
 
-	details, err := user.SubmissionDetails(api.SubmissionDetailsRequest{
+	details, err := service.RetrieveSubmission(c, api.SubmissionDetailsRequest{
 		SID:                         user.Sid,
 		SubmissionIDs:               strings.Join(submissionIDs, ","),
 		ShowDescription:             api.Yes,
@@ -353,6 +355,10 @@ func mail(c echo.Context, user *api.Credentials, response api.SubmissionSearchRe
 	})
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
+	}
+
+	if len(details.Submissions) == 0 {
+		return c.JSON(http.StatusNotFound, crashy.ErrorResponse{ErrorString: "no submissions found"})
 	}
 
 	var validLabels = []app.Label{
@@ -568,33 +574,9 @@ func GetReviewHandler(c echo.Context) error {
 		c.Logger().Infof("Cached %s %s %dKiB", reviewKey, echo.MIMEApplicationJSON, len(bin)/units.KiB)
 	}()
 
-	detailKey := fmt.Sprintf("%s:inkbunny:submissions:%s", echo.MIMEApplicationJSON, submissionIDs)
-
-	var submissionDetails api.SubmissionDetailsResponse
-	item, errFunc = cacheToUse.Get(detailKey)
-	if errFunc == nil {
-		if err := json.Unmarshal(item.Blob, &submissionDetails); err == nil {
-			c.Logger().Debugf("Cache hit for %s", detailKey)
-		}
-	} else {
-		c.Logger().Infof("Cache miss for %s retrieving submission...", detailKey)
-		submissionDetails, err = api.Credentials{Sid: sid}.SubmissionDetails(req)
-		if err != nil {
-			return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
-		}
-		bin, err := json.Marshal(submissionDetails)
-		if err != nil {
-			c.Logger().Errorf("error marshaling submission details: %v", err)
-		}
-		err = cacheToUse.Set(detailKey, &cache.Item{
-			Blob:     bin,
-			MimeType: echo.MIMEApplicationJSON,
-		}, cache.Week)
-		if err != nil {
-			c.Logger().Errorf("error caching submission details: %v", err)
-		} else {
-			c.Logger().Infof("Cached %s %s %dKiB", detailKey, echo.MIMEApplicationJSON, len(bin)/units.KiB)
-		}
+	submissionDetails, err := service.RetrieveSubmission(c, req)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
 	}
 
 	if len(submissionDetails.Submissions) == 0 {
@@ -979,7 +961,14 @@ func processParams(c echo.Context, wg *sync.WaitGroup, sub *db.Submission) {
 		}
 	}
 
+	defer processObjectMetadata(sub)
+
 	if textFile == nil {
+		c.Logger().Debugf("processing description heuristics for %v", sub.URL)
+		heuristics, err := utils.DescriptionHeuristics(sub.Description)
+		if err == nil {
+			sub.Metadata.Objects = map[string]entities.TextToImageRequest{sub.Title: heuristics}
+		}
 		return
 	}
 
@@ -1044,7 +1033,6 @@ func processParams(c echo.Context, wg *sync.WaitGroup, sub *db.Submission) {
 			sub.Metadata.Objects = map[string]entities.TextToImageRequest{sub.Title: heuristics}
 		}
 	}
-	processObjectMetadata(sub)
 }
 
 func parseObjects(c echo.Context, sub *db.Submission) {
@@ -1088,20 +1076,20 @@ func GetHeuristicsHandler(c echo.Context) error {
 		return c.JSON(http.StatusUnauthorized, crashy.Wrap(err))
 	}
 
-	submissionID := c.Param("id")
-	if submissionID == "" {
+	submissionIDs := c.Param("id")
+	if submissionIDs == "" {
 		return c.JSON(http.StatusBadRequest, crashy.ErrorResponse{ErrorString: "missing submission ID"})
 	}
 
 	req := api.SubmissionDetailsRequest{
 		SID:                         sid,
-		SubmissionIDs:               submissionID,
+		SubmissionIDs:               submissionIDs,
 		OutputMode:                  "json",
 		ShowDescription:             true,
 		ShowDescriptionBbcodeParsed: true,
 	}
 
-	submissionDetails, err := api.Credentials{Sid: sid}.SubmissionDetails(req)
+	submissionDetails, err := service.RetrieveSubmission(c, req)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
 	}
@@ -1161,15 +1149,17 @@ func GetHeuristicsHandler(c echo.Context) error {
 	}
 
 	type p struct {
+		URL     string                                 `json:"url"`
 		Params  *utils.Params                          `json:"params"`
 		Objects map[string]entities.TextToImageRequest `json:"objects"`
 	}
-	var params = make(map[string]*p)
-	for id, sub := range submissions {
-		params[fmt.Sprintf("https://inkbunny.net/s/%d", id)] = &p{
+	var params []*p
+	for _, sub := range submissions {
+		params = append(params, &p{
+			URL:     sub.URL,
 			Params:  sub.Submission.Metadata.Params,
 			Objects: sub.Submission.Metadata.Objects,
-		}
+		})
 	}
 
 	return c.JSON(http.StatusOK, params)

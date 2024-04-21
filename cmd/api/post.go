@@ -308,11 +308,11 @@ func stable(c echo.Context) error {
 		}
 	}
 
-	details, err := user.SubmissionDetails(
-		api.SubmissionDetailsRequest{
-			SubmissionIDs:   subRequest.SubmissionID,
-			ShowDescription: api.Yes,
-		})
+	details, err := service.RetrieveSubmission(c, api.SubmissionDetailsRequest{
+		SID:             user.Sid,
+		SubmissionIDs:   subRequest.SubmissionID,
+		ShowDescription: api.Yes,
+	})
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
 	}

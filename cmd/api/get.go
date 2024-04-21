@@ -567,7 +567,7 @@ func GetReviewHandler(c echo.Context) error {
 						SupportTeam: false,
 						User:        auditorAsUser,
 						Date:        time.Now().UTC(),
-						Message:     submissionMessage(&submission),
+						Message:     "",
 					},
 				},
 				SubmissionIDs: []int64{int64(submission.ID)},
@@ -588,6 +588,7 @@ func GetReviewHandler(c echo.Context) error {
 
 	for i, sub := range submissions {
 		submissions[i].Ticket.Labels = db.TicketLabels(*sub.Submission)
+		submissions[i].Ticket.Responses[0].Message = submissionMessage(sub.Submission)
 	}
 
 	switch output {

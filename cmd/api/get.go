@@ -279,23 +279,29 @@ func GetInkbunnySearch(c echo.Context) error {
 			}
 		}
 		ttl = max(ttl, d)
-	}
-
-	bin, err := json.Marshal(searchResponse)
-	if err != nil {
-		c.Logger().Errorf("error marshaling search response: %v", err)
-		return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
-	}
-
-	key := fmt.Sprintf("%s:inkbunny:search:%s:%s", echo.MIMEApplicationJSON, response.RID, request.Page)
-	err = cacheToUse.Set(key, &cache.Item{
-		Blob:     bin,
-		MimeType: echo.MIMEApplicationJSON,
-	}, ttl)
-	if err != nil {
-		c.Logger().Errorf("error caching search response: %v", err)
 	} else {
-		c.Logger().Infof("Cached %s %s %dKiB", key, echo.MIMEApplicationJSON, len(bin)/units.KiB)
+		c.Logger().Warn("RIDTTL was not set, using default 15 minutes")
+	}
+
+	if response.RID != "" {
+		bin, err := json.Marshal(searchResponse)
+		if err != nil {
+			c.Logger().Errorf("error marshaling search response: %v", err)
+			return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
+		}
+
+		key := fmt.Sprintf("%s:inkbunny:search:%s:%s", echo.MIMEApplicationJSON, response.RID, request.Page)
+		err = cacheToUse.Set(key, &cache.Item{
+			Blob:     bin,
+			MimeType: echo.MIMEApplicationJSON,
+		}, ttl)
+		if err != nil {
+			c.Logger().Errorf("error caching search response: %v", err)
+		} else {
+			c.Logger().Infof("Cached %s %s %dKiB", key, echo.MIMEApplicationJSON, len(bin)/units.KiB)
+		}
+	} else {
+		c.Logger().Warn("RID was not set, not caching search response")
 	}
 
 	if output := c.QueryParam("output"); output != "" {

@@ -375,6 +375,7 @@ const (
 	LabelDetectedHuman TicketLabel = "detected_human"
 	LabelJSON          TicketLabel = "json"
 	LabelTxt           TicketLabel = "txt"
+	LabelCannotParse   TicketLabel = "cannot_parse" // Cannot parse the JSON or TXT file
 	LabelMissingParams TicketLabel = "missing_params"
 	LabelMissingPrompt TicketLabel = "missing_prompt"
 	LabelMissingTags   TicketLabel = "missing_tags"

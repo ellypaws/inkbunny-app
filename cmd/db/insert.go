@@ -452,7 +452,11 @@ func TicketLabels(submission Submission) []TicketLabel {
 
 	if submission.Metadata.AISubmission {
 		if len(m.Objects) == 0 {
-			labels[LabelMissingParams] = true
+			if m.HasTxt || m.HasJSON {
+				labels[LabelCannotParse] = true
+			} else {
+				labels[LabelMissingParams] = true
+			}
 		}
 		if m.MissingTags {
 			labels[LabelMissingTags] = true

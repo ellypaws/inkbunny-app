@@ -306,14 +306,18 @@ type Metadata struct {
 	AIAccount     bool     `json:"ai_account"`
 	AISubmission  bool     `json:"ai_submission"`
 
-	MissingPrompt bool     `json:"missing_prompt"`         // FlagMissingPrompt
-	MissingTags   bool     `json:"missing_tags"`           // FlagMissingTags
-	MissingModel  bool     `json:"missing_model"`          // FlagMissingModel
-	ArtistUsed    []Artist `json:"artists_used,omitempty"` // FlagArtistUsed
-	PrivateModel  bool     `json:"private_model"`          // FlagPrivateModel
-	PrivateLora   bool     `json:"private_lora"`           // FlagPrivateLora
-	PrivateTool   bool     `json:"private_tool"`           // FlagPrivateTool
-	SoldArt       bool     `json:"sold_art"`               // FlagSoldArt
+	// FlagMissingPrompt.
+	// This gets set to false if at least one prompt is found.
+	MissingPrompt bool `json:"missing_prompt"`
+	// FlagMissingModel
+	// This gets set to false if at least one model is found.
+	MissingModel bool     `json:"missing_model"`
+	MissingTags  bool     `json:"missing_tags"`           // FlagMissingTags
+	ArtistUsed   []Artist `json:"artists_used,omitempty"` // FlagArtistUsed
+	PrivateModel bool     `json:"private_model"`          // FlagPrivateModel
+	PrivateLora  bool     `json:"private_lora"`           // FlagPrivateLora
+	PrivateTool  bool     `json:"private_tool"`           // FlagPrivateTool
+	SoldArt      bool     `json:"sold_art"`               // FlagSoldArt
 
 	Generator string `json:"generator,omitempty"`
 
@@ -371,6 +375,7 @@ const (
 	LabelDetectedHuman TicketLabel = "detected_human"
 	LabelJSON          TicketLabel = "json"
 	LabelTxt           TicketLabel = "txt"
+	LabelMissingParams TicketLabel = "missing_params"
 	LabelMissingPrompt TicketLabel = "missing_prompt"
 	LabelMissingTags   TicketLabel = "missing_tags"
 	LabelMissingSeed   TicketLabel = "missing_seed"

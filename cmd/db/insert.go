@@ -437,56 +437,73 @@ func SetSubmissionMeta(submission *Submission) {
 }
 
 func TicketLabels(submission Submission) []TicketLabel {
-	var labels []TicketLabel
+	labels := make(map[TicketLabel]bool)
 	m := submission.Metadata
-	var hasGenerationDetails bool
+
 	if m.TaggedHuman {
-		labels = append(labels, LabelTaggedHuman)
+		labels[LabelTaggedHuman] = true
 	}
 	if m.DetectedHuman {
-		labels = append(labels, LabelDetectedHuman)
+		labels[LabelDetectedHuman] = true
 	}
-	if m.Params != nil {
-		hasGenerationDetails = true
-	}
-	if m.Objects != nil {
-		hasGenerationDetails = true
-	}
-	if m.HasTxt || m.HasJSON {
-		hasGenerationDetails = true
-	}
+
 	if submission.Metadata.AISubmission {
-		if !hasGenerationDetails || m.MissingPrompt {
-			labels = append(labels, LabelMissingPrompt)
-		}
-		if m.MissingModel {
-			labels = append(labels, LabelMissingModel)
+		if len(m.Objects) == 0 {
+			labels[LabelMissingParams] = true
 		}
 		if m.MissingTags {
-			labels = append(labels, LabelMissingTags)
+			labels[LabelMissingTags] = true
 		}
 		if len(submission.Metadata.ArtistUsed) > 0 {
-			labels = append(labels, LabelArtistUsed)
+			labels[LabelArtistUsed] = true
+		}
+
+		const (
+			prompt = "prompt"
+			model  = "model"
+			seed   = "seed"
+		)
+		hint := [3]struct {
+			label   string
+			missing bool
+			partial bool
+		}{
+			{label: prompt},
+			{label: model},
+			{label: seed},
 		}
 		for _, obj := range m.Objects {
 			if obj.Prompt == "" {
-				if !slices.Contains(labels, LabelMissingPrompt) {
-					labels = append(labels, LabelMissingPrompt)
-				}
+				hint[0].missing = true
+			} else {
+				hint[0].partial = true
 			}
 			if obj.OverrideSettings.SDModelCheckpoint == nil && obj.OverrideSettings.SDCheckpointHash == "" {
-				if !slices.Contains(labels, LabelMissingModel) {
-					labels = append(labels, LabelMissingModel)
-				}
+				hint[1].missing = true
+			} else {
+				hint[1].partial = true
 			}
 			if obj.Seed == 0 {
-				if !slices.Contains(labels, LabelMissingSeed) {
-					labels = append(labels, LabelMissingSeed)
+				hint[2].missing = true
+			} else {
+				hint[2].partial = true
+			}
+		}
+		for _, v := range hint {
+			if v.missing {
+				if v.partial {
+					labels[TicketLabel("partial_"+v.label)] = true
+				} else {
+					labels[TicketLabel("missing_"+v.label)] = true
 				}
 			}
 		}
 	}
-	return labels
+	out := make([]TicketLabel, 0, len(labels))
+	for label := range labels {
+		out = append(out, label)
+	}
+	return out
 }
 
 func (db Sqlite) InsertSubmission(submission Submission) error {

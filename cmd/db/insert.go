@@ -10,6 +10,7 @@ import (
 	"github.com/ellypaws/inkbunny/api"
 	"log"
 	"reflect"
+	"regexp"
 	"slices"
 	"strconv"
 	"strings"
@@ -436,6 +437,8 @@ func SetSubmissionMeta(submission *Submission) {
 	}
 }
 
+var payment = regexp.MustCompile(`(?i)\b(ko-?fi|paypal|patreon|subscribestar|donate)\b`)
+
 func TicketLabels(submission Submission) []TicketLabel {
 	labels := make(map[TicketLabel]bool)
 	m := submission.Metadata
@@ -456,6 +459,14 @@ func TicketLabels(submission Submission) []TicketLabel {
 		}
 		if len(submission.Metadata.ArtistUsed) > 0 {
 			labels[LabelArtistUsed] = true
+		}
+
+		if payment.MatchString(submission.Description) {
+			labels[LabelPayMention] = true
+		}
+
+		if submission.Updated.Before(Nov21) {
+			labels[LabelBeforeRuleRevision] = true
 		}
 
 		const (

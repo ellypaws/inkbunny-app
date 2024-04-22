@@ -385,7 +385,20 @@ const (
 	LabelPrivateLora   TicketLabel = "private_lora"
 	LabelPrivateTool   TicketLabel = "private_tool"
 	LabelSoldArt       TicketLabel = "sold_art"
+	LabelPayMention    TicketLabel = "payment_mention"
+
+	// LabelBeforeRuleRevision is a [TicketLabel] for submissions before November 21, 2022.
+	// An [announcement] was made on 11/20/2022 21:13 UTC which revised the rules for AI submissions.
+	// "Best effort" for sketches/prompts on work posted before November 21, but keywords are required.
+	// Continuous [revisions] might have been made in the [ACP] since the original draft, which should be monitored.
+	//
+	// [announcement]: https://inkbunny.net/j/467389
+	// [revisions]: https://wiki.inkbunny.net/w/index.php?title=ACP&diff=cur&oldid=1082
+	// [ACP]: https://wiki.inkbunny.net/wiki/ACP#AI
+	LabelBeforeRuleRevision TicketLabel = "before_rule_revision"
 )
+
+var Nov21 = time.Date(2022, time.November, 21, 0, 0, 0, 0, time.UTC)
 
 type Response struct {
 	SupportTeam bool           `json:"support_team"`

@@ -2,6 +2,8 @@ module github.com/ellypaws/inkbunny-app/api/library
 
 replace github.com/ellypaws/inkbunny-app/api => ../
 
+replace github.com/ellypaws/inkbunny-sd => ../../mod/github.com/ellypaws/inkbunny-sd@v0.0.0-20240421145525-f3b56afc12a5
+
 go 1.22.1
 
 require (

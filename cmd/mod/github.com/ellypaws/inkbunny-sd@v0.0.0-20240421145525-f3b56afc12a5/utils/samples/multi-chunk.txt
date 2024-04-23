@@ -1,0 +1,90 @@
+00703-072fd72194-2135192999-realistic detailed fur cream the rabbit anthro cub!!!sfw.png:
+  PNG text chunks:
+    parameters:
+      realistic, detailed fur,
+      cream the rabbit, anthro, cub, toddler, short legs,
+      sleeveless pink dress, white collar gloves socks, blue cravat, (yellow:1.2) shoes,
+      low-angle view, solo, standing, action pose,
+      innie pussy,
+      detailed background, canyon, bush, day, sky,
+      <loractl: Sonic-Cream_The_Rabbit_v10: 1.0>
+      Negative prompt: bad-hands-5, bwu, dfc, ubbp, updn
+      Steps: 30, Sampler: DPM++ 2M SDE Karras, CFG scale: 7, Seed: 2135192999, Size: 768x960, Model hash: 072fd72194, Model: IndigoFurryMix_v105_Hybrid, CFG Rescale: 0.35, Template: "realistic, detailed fur,\ncream the rabbit, anthro, cub, toddler, short legs,\nsleeveless pink dress, white collar gloves socks, blue cravat, (yellow:1.2) shoes,\nlow-angle view, solo, standing, action pose,\ninnie pussy,\ndetailed background, canyon, bush, day, sky,\n<loractl: Sonic-Cream_The_Rabbit_v10: 1.0>", Negative Template: "bad-hands-5, bwu, dfc, ubbp, updn", Version: v1.7.0, Hashes: {"embed:bad-hands-5": "aa7651be15", "embed:bwu": "70e376c5cf", "embed:dfc": "21c6ae158a", "embed:ubbp": "047acf26d2", "embed:updn": "b4ae8ca1b2", "model": "072fd72194"}
+00703-072fd72194-2135192999-realistic detailed fur cream the rabbit anthro cub!!!sfw-2x1!.jpg:
+00703-072fd72194-2135192999-realistic detailed fur cream the rabbit anthro cub!!!sfw-2x1!.png:
+  PNG text chunks:
+    parameters:
+      realistic, detailed fur,
+      cream the rabbit, anthro, cub, toddler, short legs,
+      sleeveless pink dress, white collar gloves socks, blue cravat, (yellow:1.2) shoes,
+      low-angle view, solo, standing, action pose,
+      detailed background, canyon, bush, day, sky,
+      Negative prompt: bad-hands-5, bwu, dfc, ubbp, updn
+      Steps: 30, Sampler: DPM++ 2M SDE Karras, CFG scale: 7, Seed: 1926753807, Size: 1536x1920, Model hash: e0ba240086, Model: indigoFurryMix_v110_Realistic, Denoising strength: 0.7, Template: "realistic, detailed fur,\ncream the rabbit, anthro, cub, toddler, short legs,\nsleeveless pink dress, white collar gloves socks, blue cravat, (yellow:1.2) shoes,\nlow-angle view, solo, standing, action pose,\ndetailed background, canyon, bush, day, sky,", Negative Template: "bad-hands-5, bwu, dfc, ubbp, updn", ControlNet 0: "Module: tile_resample, Model: control_v11f1e_sd15_tile_fp16 [3b860298], Weight: 1, Resize Mode: Crop and Resize, Low Vram: False, Threshold A: 8, Guidance Start: 0, Guidance End: 0.5, Pixel Perfect: True, Control Mode: Balanced, Hr Option: Both, Save Detected Map: True", ControlNet 1: "Module: softedge_hed, Model: control_v11p_sd15_softedge_fp16 [f616a34f], Weight: 1, Resize Mode: Crop and Resize, Low Vram: False, Processor Res: 512, Guidance Start: 0, Guidance End: 0.4, Pixel Perfect: True, Control Mode: Balanced, Hr Option: Both, Save Detected Map: True", TI hashes: "bad-hands-5: aa7651be154c, bwu: 70e376c5cf1d, dfc: 21c6ae158a7e, ubbp: 047acf26d29c, updn: b4ae8ca1b247", Version: v1.7.0, Hashes: {"embed:bad-hands-5": "aa7651be15", "embed:bwu": "70e376c5cf", "embed:dfc": "21c6ae158a", "embed:ubbp": "047acf26d2", "embed:updn": "b4ae8ca1b2", "model": "e0ba240086"}
+00703-072fd72194-2135192999-realistic detailed fur cream the rabbit anthro cub!!!sfw-2x2.png:
+  PNG text chunks:
+    parameters:
+      realistic, detailed fur,
+      cream the rabbit, anthro, cub, toddler, short legs,
+      sleeveless pink dress, white collar gloves socks, blue cravat, (yellow:1.2) shoes,
+      low-angle view, solo, standing, action pose,
+      detailed background, canyon, bush, day, sky,
+      Negative prompt: bad-hands-5, bwu, dfc, ubbp, updn
+      Steps: 30, Sampler: DPM++ 2M SDE Karras, CFG scale: 7, Seed: 1926753808, Size: 1536x1920, Model hash: e0ba240086, Model: indigoFurryMix_v110_Realistic, Denoising strength: 0.7, Template: "realistic, detailed fur,\ncream the rabbit, anthro, cub, toddler, short legs,\nsleeveless pink dress, white collar gloves socks, blue cravat, (yellow:1.2) shoes,\nlow-angle view, solo, standing, action pose,\ndetailed background, canyon, bush, day, sky,", Negative Template: "bad-hands-5, bwu, dfc, ubbp, updn", ControlNet 0: "Module: tile_resample, Model: control_v11f1e_sd15_tile_fp16 [3b860298], Weight: 1, Resize Mode: Crop and Resize, Low Vram: False, Threshold A: 8, Guidance Start: 0, Guidance End: 0.5, Pixel Perfect: True, Control Mode: Balanced, Hr Option: Both, Save Detected Map: True", ControlNet 1: "Module: softedge_hed, Model: control_v11p_sd15_softedge_fp16 [f616a34f], Weight: 1, Resize Mode: Crop and Resize, Low Vram: False, Processor Res: 512, Guidance Start: 0, Guidance End: 0.4, Pixel Perfect: True, Control Mode: Balanced, Hr Option: Both, Save Detected Map: True", TI hashes: "bad-hands-5: aa7651be154c, bwu: 70e376c5cf1d, dfc: 21c6ae158a7e, ubbp: 047acf26d29c, updn: b4ae8ca1b247", Version: v1.7.0, Hashes: {"embed:bad-hands-5": "aa7651be15", "embed:bwu": "70e376c5cf", "embed:dfc": "21c6ae158a", "embed:ubbp": "047acf26d2", "embed:updn": "b4ae8ca1b2", "model": "e0ba240086"}
+00703-072fd72194-2135192999-realistic detailed fur cream the rabbit anthro cub!!!sfw-2x3.png:
+  PNG text chunks:
+    parameters:
+      realistic, detailed fur,
+      cream the rabbit, anthro, cub, toddler, short legs,
+      sleeveless pink dress, white collar gloves socks, blue cravat, (yellow:1.2) shoes,
+      low-angle view, solo, standing, action pose,
+      detailed background, canyon, bush, day, sky,
+      Negative prompt: bad-hands-5, bwu, dfc, ubbp, updn
+      Steps: 30, Sampler: DPM++ 2M SDE Karras, CFG scale: 7, Seed: 1926753809, Size: 1536x1920, Model hash: e0ba240086, Model: indigoFurryMix_v110_Realistic, Denoising strength: 0.7, Template: "realistic, detailed fur,\ncream the rabbit, anthro, cub, toddler, short legs,\nsleeveless pink dress, white collar gloves socks, blue cravat, (yellow:1.2) shoes,\nlow-angle view, solo, standing, action pose,\ndetailed background, canyon, bush, day, sky,", Negative Template: "bad-hands-5, bwu, dfc, ubbp, updn", ControlNet 0: "Module: tile_resample, Model: control_v11f1e_sd15_tile_fp16 [3b860298], Weight: 1, Resize Mode: Crop and Resize, Low Vram: False, Threshold A: 8, Guidance Start: 0, Guidance End: 0.5, Pixel Perfect: True, Control Mode: Balanced, Hr Option: Both, Save Detected Map: True", ControlNet 1: "Module: softedge_hed, Model: control_v11p_sd15_softedge_fp16 [f616a34f], Weight: 1, Resize Mode: Crop and Resize, Low Vram: False, Processor Res: 512, Guidance Start: 0, Guidance End: 0.4, Pixel Perfect: True, Control Mode: Balanced, Hr Option: Both, Save Detected Map: True", TI hashes: "bad-hands-5: aa7651be154c, bwu: 70e376c5cf1d, dfc: 21c6ae158a7e, ubbp: 047acf26d29c, updn: b4ae8ca1b247", Version: v1.7.0, Hashes: {"embed:bad-hands-5": "aa7651be15", "embed:bwu": "70e376c5cf", "embed:dfc": "21c6ae158a", "embed:ubbp": "047acf26d2", "embed:updn": "b4ae8ca1b2", "model": "e0ba240086"}
+00727-072fd72194-2135193023-realistic detailed fur cream the rabbit anthro cub!!!sfw.png:
+  PNG text chunks:
+    parameters:
+      realistic, detailed fur,
+      cream the rabbit, anthro, cub, toddler, short legs,
+      sleeveless pink dress, white collar gloves socks, blue cravat, (yellow:1.2) shoes,
+      low-angle view, solo, standing, action pose,
+      innie pussy,
+      detailed background, canyon, bush, day, sky,
+      <loractl: Sonic-Cream_The_Rabbit_v10: 1.0>
+      Negative prompt: bad-hands-5, bwu, dfc, ubbp, updn
+      Steps: 30, Sampler: DPM++ 2M SDE Karras, CFG scale: 7, Seed: 2135193023, Size: 768x960, Model hash: 072fd72194, Model: IndigoFurryMix_v105_Hybrid, CFG Rescale: 0.35, Template: "realistic, detailed fur,\ncream the rabbit, anthro, cub, toddler, short legs,\nsleeveless pink dress, white collar gloves socks, blue cravat, (yellow:1.2) shoes,\nlow-angle view, solo, standing, action pose,\ninnie pussy,\ndetailed background, canyon, bush, day, sky,\n<loractl: Sonic-Cream_The_Rabbit_v10: 1.0>", Negative Template: "bad-hands-5, bwu, dfc, ubbp, updn", Version: v1.7.0, Hashes: {"embed:bad-hands-5": "aa7651be15", "embed:bwu": "70e376c5cf", "embed:dfc": "21c6ae158a", "embed:ubbp": "047acf26d2", "embed:updn": "b4ae8ca1b2", "model": "072fd72194"}
+00727-072fd72194-2135193023-realistic detailed fur cream the rabbit anthro cub!!!sfw-2x1.png:
+  PNG text chunks:
+    parameters:
+      realistic, detailed fur,
+      cream the rabbit, anthro, cub, toddler, short legs,
+      sleeveless pink dress, white collar gloves socks, blue cravat, (yellow:1.2) shoes,
+      low-angle view, solo, standing, action pose,
+      detailed background, canyon, bush, day, sky,
+      Negative prompt: bad-hands-5, bwu, dfc, ubbp, updn
+      Steps: 30, Sampler: DPM++ 2M SDE Karras, CFG scale: 7, Seed: 3424383701, Size: 1536x1920, Model hash: e0ba240086, Model: indigoFurryMix_v110_Realistic, Denoising strength: 0.7, Template: "realistic, detailed fur,\ncream the rabbit, anthro, cub, toddler, short legs,\nsleeveless pink dress, white collar gloves socks, blue cravat, (yellow:1.2) shoes,\nlow-angle view, solo, standing, action pose,\ndetailed background, canyon, bush, day, sky,", Negative Template: "bad-hands-5, bwu, dfc, ubbp, updn", ControlNet 0: "Module: tile_resample, Model: control_v11f1e_sd15_tile_fp16 [3b860298], Weight: 1, Resize Mode: Crop and Resize, Low Vram: False, Threshold A: 8, Guidance Start: 0, Guidance End: 0.5, Pixel Perfect: True, Control Mode: Balanced, Hr Option: Both, Save Detected Map: True", ControlNet 1: "Module: softedge_hed, Model: control_v11p_sd15_softedge_fp16 [f616a34f], Weight: 1, Resize Mode: Crop and Resize, Low Vram: False, Processor Res: 512, Guidance Start: 0, Guidance End: 0.4, Pixel Perfect: True, Control Mode: Balanced, Hr Option: Both, Save Detected Map: True", TI hashes: "bad-hands-5: aa7651be154c, bwu: 70e376c5cf1d, dfc: 21c6ae158a7e, ubbp: 047acf26d29c, updn: b4ae8ca1b247", Version: v1.7.0, Hashes: {"embed:bad-hands-5": "aa7651be15", "embed:bwu": "70e376c5cf", "embed:dfc": "21c6ae158a", "embed:ubbp": "047acf26d2", "embed:updn": "b4ae8ca1b2", "model": "e0ba240086"}
+00727-072fd72194-2135193023-realistic detailed fur cream the rabbit anthro cub!!!sfw-2x2!.png:
+  PNG text chunks:
+    parameters:
+      realistic, detailed fur,
+      cream the rabbit, anthro, cub, toddler, short legs,
+      sleeveless pink dress, white collar gloves socks, blue cravat, (yellow:1.2) shoes,
+      low-angle view, solo, standing, action pose,
+      detailed background, canyon, bush, day, sky,
+      Negative prompt: bad-hands-5, bwu, dfc, ubbp, updn
+      Steps: 30, Sampler: DPM++ 2M SDE Karras, CFG scale: 7, Seed: 3424383702, Size: 1536x1920, Model hash: e0ba240086, Model: indigoFurryMix_v110_Realistic, Denoising strength: 0.7, Template: "realistic, detailed fur,\ncream the rabbit, anthro, cub, toddler, short legs,\nsleeveless pink dress, white collar gloves socks, blue cravat, (yellow:1.2) shoes,\nlow-angle view, solo, standing, action pose,\ndetailed background, canyon, bush, day, sky,", Negative Template: "bad-hands-5, bwu, dfc, ubbp, updn", ControlNet 0: "Module: tile_resample, Model: control_v11f1e_sd15_tile_fp16 [3b860298], Weight: 1, Resize Mode: Crop and Resize, Low Vram: False, Threshold A: 8, Guidance Start: 0, Guidance End: 0.5, Pixel Perfect: True, Control Mode: Balanced, Hr Option: Both, Save Detected Map: True", ControlNet 1: "Module: softedge_hed, Model: control_v11p_sd15_softedge_fp16 [f616a34f], Weight: 1, Resize Mode: Crop and Resize, Low Vram: False, Processor Res: 512, Guidance Start: 0, Guidance End: 0.4, Pixel Perfect: True, Control Mode: Balanced, Hr Option: Both, Save Detected Map: True", TI hashes: "bad-hands-5: aa7651be154c, bwu: 70e376c5cf1d, dfc: 21c6ae158a7e, ubbp: 047acf26d29c, updn: b4ae8ca1b247", Version: v1.7.0, Hashes: {"embed:bad-hands-5": "aa7651be15", "embed:bwu": "70e376c5cf", "embed:dfc": "21c6ae158a", "embed:ubbp": "047acf26d2", "embed:updn": "b4ae8ca1b2", "model": "e0ba240086"}
+00727-072fd72194-2135193023-realistic detailed fur cream the rabbit anthro cub!!!sfw-2x3.png:
+  PNG text chunks:
+    parameters:
+      realistic, detailed fur,
+      cream the rabbit, anthro, cub, toddler, short legs,
+      sleeveless pink dress, white collar gloves socks, blue cravat, (yellow:1.2) shoes,
+      low-angle view, solo, standing, action pose,
+      detailed background, canyon, bush, day, sky,
+      Negative prompt: bad-hands-5, bwu, dfc, ubbp, updn
+      Steps: 30, Sampler: DPM++ 2M SDE Karras, CFG scale: 7, Seed: 3424383703, Size: 1536x1920, Model hash: e0ba240086, Model: indigoFurryMix_v110_Realistic, Denoising strength: 0.7, Template: "realistic, detailed fur,\ncream the rabbit, anthro, cub, toddler, short legs,\nsleeveless pink dress, white collar gloves socks, blue cravat, (yellow:1.2) shoes,\nlow-angle view, solo, standing, action pose,\ndetailed background, canyon, bush, day, sky,", Negative Template: "bad-hands-5, bwu, dfc, ubbp, updn", ControlNet 0: "Module: tile_resample, Model: control_v11f1e_sd15_tile_fp16 [3b860298], Weight: 1, Resize Mode: Crop and Resize, Low Vram: False, Threshold A: 8, Guidance Start: 0, Guidance End: 0.5, Pixel Perfect: True, Control Mode: Balanced, Hr Option: Both, Save Detected Map: True", ControlNet 1: "Module: softedge_hed, Model: control_v11p_sd15_softedge_fp16 [f616a34f], Weight: 1, Resize Mode: Crop and Resize, Low Vram: False, Processor Res: 512, Guidance Start: 0, Guidance End: 0.4, Pixel Perfect: True, Control Mode: Balanced, Hr Option: Both, Save Detected Map: True", TI hashes: "bad-hands-5: aa7651be154c, bwu: 70e376c5cf1d, dfc: 21c6ae158a7e, ubbp: 047acf26d29c, updn: b4ae8ca1b247", Version: v1.7.0, Hashes: {"embed:bad-hands-5": "aa7651be15", "embed:bwu": "70e376c5cf", "embed:dfc": "21c6ae158a", "embed:ubbp": "047acf26d2", "embed:updn": "b4ae8ca1b2", "model": "e0ba240086"}
+00727-072fd72194-2135193023-realistic detailed fur cream the rabbit anthro cub!!!sfw-2xe.jpg:
+00727-072fd72194-2135193023-realistic detailed fur cream the rabbit anthro cub!!!sfw-2xe.png:
+  PNG text chunks:
+    Software:
+      Adobe ImageReady

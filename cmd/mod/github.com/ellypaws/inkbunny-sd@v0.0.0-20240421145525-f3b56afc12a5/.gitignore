@@ -1,0 +1,6 @@
+.idea/
+*.exe
+*.sqlite
+*.json
+/utils/samples/
+*.txt

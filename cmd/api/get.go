@@ -894,6 +894,7 @@ func processParams(c echo.Context, wg *sync.WaitGroup, sub *db.Submission) {
 		heuristics, err := utils.DescriptionHeuristics(sub.Description)
 		if err != nil {
 			c.Logger().Errorf("error processing description heuristics for %v: %v", sub.URL, err)
+			return
 		}
 		if reflect.DeepEqual(heuristics, entities.TextToImageRequest{}) {
 			c.Logger().Debugf("no heuristics found for %v", sub.URL)

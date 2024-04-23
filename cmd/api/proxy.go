@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/ellypaws/inkbunny-app/api/cache"
+	"github.com/ellypaws/inkbunny-app/api/service"
 	"github.com/ellypaws/inkbunny-app/cmd/crashy"
 	"github.com/ellypaws/inkbunny/api"
 	"github.com/labstack/echo/v4"
@@ -108,9 +109,9 @@ func GetAvatarHandler(c echo.Context) error {
 	}
 
 	cacheToUse := cache.SwitchCache(c)
-	key := fmt.Sprintf("%v:inkbunny:username_autosuggest:exact:%v", echo.MIMEApplicationJSON, username)
+	userKey := fmt.Sprintf("%v:inkbunny:username_autosuggest:exact:%v", echo.MIMEApplicationJSON, username)
 
-	item, err := cacheToUse.Get(key)
+	item, err := cacheToUse.Get(userKey)
 	if err == nil {
 		var users []api.Autocomplete
 		if err := json.Unmarshal(item.Blob, &users); err != nil {
@@ -120,10 +121,7 @@ func GetAvatarHandler(c echo.Context) error {
 			return c.JSON(http.StatusNotFound, crashy.ErrorResponse{ErrorString: "no users found"})
 		}
 
-		item, errFunc := cache.Retrieve(c, cacheToUse, cache.Fetch{
-			URL:      fmt.Sprintf("https://jp.ib.metapix.net/usericons/small/%v", users[0].Icon),
-			MimeType: cache.MimeTypeFromURL(users[0].Icon),
-		})
+		item, errFunc := service.RetrieveAvatar(c, cacheToUse, users[0])
 		if errFunc != nil {
 			return errFunc(c)
 		}
@@ -155,18 +153,16 @@ func GetAvatarHandler(c echo.Context) error {
 		return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
 	}
 
-	_ = cacheToUse.Set(key, &cache.Item{
+	_ = cacheToUse.Set(userKey, &cache.Item{
 		Blob:     bin,
 		MimeType: echo.MIMEApplicationJSON,
 	}, cache.Month)
 
-	item, errFunc := cache.Retrieve(c, cacheToUse, cache.Fetch{
-		URL:      fmt.Sprintf("https://jp.ib.metapix.net/usericons/small/%v", users[0].Icon),
-		MimeType: cache.MimeTypeFromURL(users[0].Icon),
-	})
-	if errFunc != nil {
+	item, errFunc := service.RetrieveAvatar(c, cacheToUse, users[0])
+	if err != nil {
 		return errFunc(c)
 	}
+
 	return c.Blob(http.StatusOK, item.MimeType, item.Blob)
 }
 

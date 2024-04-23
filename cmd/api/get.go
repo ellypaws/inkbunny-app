@@ -926,23 +926,23 @@ func processParams(c echo.Context, wg *sync.WaitGroup, sub *db.Submission) {
 	var err error
 	f := &textFile.File
 	c.Logger().Debugf("processing params for %v", f.FileName)
-	switch {
-	case strings.Contains(f.FileName, "_AutoSnep_"):
+	switch strings.SplitN(f.FileName, "_", 3)[1] {
+	case "AutoSnep":
 		params, err = utils.AutoSnep(utils.WithBytes(b.Blob))
-	case strings.Contains(f.FileName, "_druge_"):
+	case "druge":
 		params, err = utils.Common(utils.WithBytes(b.Blob), utils.UseDruge())
-	case strings.Contains(f.FileName, "_AIBean_"):
+	case "AIBean":
 		params, err = utils.Common(utils.WithBytes(b.Blob), utils.UseAIBean())
-	case strings.Contains(f.FileName, "_artiedragon_"):
+	case "artiedragon":
 		params, err = utils.Common(utils.WithBytes(b.Blob), utils.UseArtie())
-	case strings.Contains(f.FileName, "_picker52578_"):
+	case "picker52578":
 		params, err = utils.Common(
 			utils.WithBytes(b.Blob),
 			utils.WithFilename("picker52578_"),
 			utils.WithKeyCondition(func(line string) bool { return strings.HasPrefix(line, "File Name") }))
-	case strings.Contains(f.FileName, "_fairygarden_"):
+	case "fairygarden":
 		params, err = utils.Common(utils.WithBytes(b.Blob), utils.UseFairyGarden())
-	case strings.Contains(f.FileName, "_Cirn0_"):
+	case "Cirn0":
 		params, err = utils.Common(utils.WithBytes(b.Blob), utils.UseCirn0())
 	default:
 		params, err = utils.Common(

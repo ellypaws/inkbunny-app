@@ -926,23 +926,23 @@ func processParams(c echo.Context, wg *sync.WaitGroup, sub *db.Submission) {
 	var err error
 	f := &textFile.File
 	c.Logger().Debugf("processing params for %v", f.FileName)
-	switch strings.SplitN(f.FileName, "_", 3)[1] {
-	case "AutoSnep":
+	switch sub.UserID {
+	case utils.IDAutoSnep:
 		params, err = utils.AutoSnep(utils.WithBytes(b.Blob))
-	case "druge":
+	case utils.IDDruge:
 		params, err = utils.Common(utils.WithBytes(b.Blob), utils.UseDruge())
-	case "AIBean":
+	case utils.IDAIBean:
 		params, err = utils.Common(utils.WithBytes(b.Blob), utils.UseAIBean())
-	case "artiedragon":
+	case utils.IDArtieDragon:
 		params, err = utils.Common(utils.WithBytes(b.Blob), utils.UseArtie())
-	case "picker52578":
+	case 1125540:
 		params, err = utils.Common(
 			utils.WithBytes(b.Blob),
 			utils.WithFilename("picker52578_"),
 			utils.WithKeyCondition(func(line string) bool { return strings.HasPrefix(line, "File Name") }))
-	case "fairygarden":
+	case utils.IDFairyGarden:
 		params, err = utils.Common(utils.WithBytes(b.Blob), utils.UseFairyGarden())
-	case "Cirn0":
+	case utils.IDCirn0:
 		params, err = utils.Common(utils.WithBytes(b.Blob), utils.UseCirn0())
 	default:
 		params, err = utils.Common(

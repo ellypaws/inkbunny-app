@@ -30,6 +30,13 @@ const (
 	Postprocessing = "postprocessing"
 	Extras         = "extras"
 	Caption        = "caption"
+
+	IDAutoSnep    = 1004248
+	IDDruge       = 151203
+	IDArtieDragon = 1190392
+	IDAIBean      = 147301
+	IDFairyGarden = 215070
+	IDCirn0       = 177167
 )
 
 // AutoSnep is a Processor that parses yaml like raw txt where each two spaces is a new dict

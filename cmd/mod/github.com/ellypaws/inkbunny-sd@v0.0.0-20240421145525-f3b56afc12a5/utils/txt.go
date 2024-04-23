@@ -130,16 +130,17 @@ func UseCirn0() func(*Config) {
 		}
 		c.Filename = "cirn0_"
 
-		scanner := bufio.NewScanner(strings.NewReader(c.Text))
-		var part int
-		var out strings.Builder
-		for scanner.Scan() {
-			line := scanner.Text()
-			if strings.HasPrefix(line, "---") {
-				line = fmt.Sprintf("=== Part #%d ===", part)
+		var part string
+		lines := strings.Split(c.Text, "\n")
+		for i, line := range lines {
+			if strings.HasPrefix(line, "=== #") {
+				part = strings.TrimPrefix(line, "=== #")
 			}
-			out.WriteString(line)
+			if strings.HasPrefix(line, "---") {
+				lines[i] = fmt.Sprintf("=== Part #%s", part)
+			}
 		}
+		c.Text = strings.Join(lines, "\n")
 	}
 }
 

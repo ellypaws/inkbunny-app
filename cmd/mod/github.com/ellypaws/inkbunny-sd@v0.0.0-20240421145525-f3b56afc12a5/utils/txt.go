@@ -47,6 +47,9 @@ func AutoSnep(opts ...func(*Config)) (Params, error) {
 	var png string
 	var key string
 	for scanner.Scan() {
+		if err := scanner.Err(); err != nil {
+			return nil, err
+		}
 		line := scanner.Text()
 
 		indentLevel := len(line) - len(strings.TrimLeft(line, " "))
@@ -73,8 +76,8 @@ func AutoSnep(opts ...func(*Config)) (Params, error) {
 		}
 	}
 
-	if err := scanner.Err(); err != nil {
-		return nil, err
+	if len(chunks) == 0 {
+		return nil, errors.New("no chunks found")
 	}
 
 	return chunks, nil
@@ -189,7 +192,11 @@ func Common(opts ...func(*Config)) (Params, error) {
 	var foundNegative bool
 	var extra string
 	for scanner.Scan() {
+		if err := scanner.Err(); err != nil {
+			return nil, err
+		}
 		line := scanner.Text()
+
 		if c.SkipCondition != nil && c.SkipCondition(line) {
 			continue
 		}
@@ -232,6 +239,10 @@ func Common(opts ...func(*Config)) (Params, error) {
 			chunks[key][Parameters] += "\n"
 		}
 		chunks[key][Parameters] += line
+	}
+
+	if len(chunks) == 0 {
+		return nil, errors.New("no chunks found")
 	}
 
 	return chunks, nil

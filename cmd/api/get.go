@@ -406,6 +406,7 @@ func GetAllAuditorsJHandler(c echo.Context) error {
 //   - Set query "parameters" to "true" to parse the utils.Params from json/text files
 //   - Set query "interrogate" to "true" to parse entities.TaggerResponse from image files using (*sd.Host).Interrogate
 //   - Set query "stream" to "true" to receive multiple JSON objects
+//   - Set the param ":id" to "search" to combine search to immediately review
 func GetReviewHandler(c echo.Context) error {
 	sid, _, err := GetSIDandID(c)
 	if err != nil {
@@ -417,23 +418,16 @@ func GetReviewHandler(c echo.Context) error {
 		return c.JSON(http.StatusUnauthorized, crashy.Wrap(err))
 	}
 
-	submissionIDs := c.Param("id")
-	if submissionIDs == "" || submissionIDs == "null" {
-		return c.JSON(http.StatusBadRequest, crashy.ErrorResponse{ErrorString: "missing submission ID"})
-	}
-
-	req := api.SubmissionDetailsRequest{
-		SID:                         sid,
-		SubmissionIDs:               submissionIDs,
-		OutputMode:                  "json",
-		ShowDescription:             true,
-		ShowDescriptionBbcodeParsed: true,
+	type response struct {
+		Search api.SubmissionSearchResponse `json:"search"`
+		Review any                          `json:"review"`
 	}
 
 	output := c.QueryParam("output")
 	parameters := c.QueryParam("parameters")
 	interrogate := c.QueryParam("interrogate")
 	stream := c.QueryParam("stream")
+	useCache := c.Request().Header.Get("Cache-Control") != "no-cache"
 
 	const (
 		outputSingleTicket    = "single_ticket"
@@ -449,6 +443,133 @@ func GetReviewHandler(c echo.Context) error {
 		outputFull,
 	}
 
+	cacheToUse := cache.SwitchCache(c)
+	query := url.Values{
+		"sid":         {sid},
+		"parameters":  {parameters},
+		"interrogate": {interrogate},
+	}
+
+	var submissionIDs = c.Param("id")
+	var searchResponse api.SubmissionSearchResponse
+	var searchStore any
+	if submissionIDs == "search" {
+		var request = api.SubmissionSearchRequest{
+			Text:               "ai_generated",
+			SubmissionsPerPage: 10,
+			Random:             true,
+			GetRID:             true,
+			SubmissionIDsOnly:  true,
+			Type:               api.SubmissionTypes{api.SubmissionTypePicturePinup},
+		}
+		var bind = struct {
+			*api.SubmissionSearchRequest
+			Types *string `json:"types,omitempty" query:"types"`
+		}{
+			SubmissionSearchRequest: &request,
+		}
+		err := c.Bind(&bind)
+		if err != nil {
+			return c.JSON(http.StatusBadRequest, crashy.Wrap(err))
+		}
+
+		request.SID, _, err = GetSIDandID(c)
+		if err != nil {
+			return c.JSON(http.StatusUnauthorized, crashy.Wrap(err))
+		}
+
+		if !useCache {
+			request.RID = ""
+		}
+
+		if request.Page < 1 {
+			c.Logger().Warnf("Page is set to %d, overriding to 1...", request.Page)
+			request.Page = 1
+		}
+
+		const searchFormat = "%s:review:%s:search:%s:%d?%s"
+		if request.RID != "" {
+			searchReviewKey := fmt.Sprintf(
+				searchFormat,
+				echo.MIMEApplicationJSON,
+				output,
+				request.RID,
+				request.Page,
+				query.Encode(),
+			)
+			item, err := cacheToUse.Get(searchReviewKey)
+			if err == nil {
+				c.Logger().Infof("Cache hit for %s", searchReviewKey)
+				return c.Blob(http.StatusOK, item.MimeType, item.Blob)
+			}
+		}
+
+		if bind.Types != nil {
+			*bind.Types = strings.Trim(*bind.Types, "[]")
+			*bind.Types = strings.ReplaceAll(*bind.Types, `"`, "")
+			for _, t := range strings.Split(*bind.Types, ",") {
+				i, err := strconv.Atoi(t)
+				if err != nil {
+					return c.JSON(http.StatusBadRequest, crashy.ErrorResponse{
+						ErrorString: "invalid submission type",
+						Debug:       err,
+					})
+				}
+				request.Type = append(request.Type, api.SubmissionType(i))
+			}
+		}
+
+		searchResponse, err = service.RetrieveSearch(c, request)
+		if err != nil {
+			return err
+		}
+		defer func() {
+			if searchStore == nil {
+				return
+			}
+			bin, err := json.Marshal(searchStore)
+			if err != nil {
+				c.Logger().Errorf("error marshaling review: %v", err)
+				return
+			}
+			searchReviewKey := fmt.Sprintf(
+				searchFormat,
+				echo.MIMEApplicationJSON,
+				output,
+				searchResponse.RID,
+				searchResponse.Page,
+				query.Encode(),
+			)
+			err = cacheToUse.Set(searchReviewKey, &cache.Item{
+				Blob:     bin,
+				MimeType: echo.MIMEApplicationJSON,
+			}, cache.Week)
+			if err != nil {
+				c.Logger().Errorf("error caching review: %v", err)
+				return
+			}
+			c.Logger().Infof("Cached %s %s %dKiB", searchReviewKey, echo.MIMEApplicationJSON, len(bin)/units.KiB)
+		}()
+
+		var ids = make([]string, len(searchResponse.Submissions))
+		for i, submission := range searchResponse.Submissions {
+			ids[i] = submission.SubmissionID
+		}
+		submissionIDs = strings.Join(ids, ",")
+	}
+
+	if submissionIDs == "" || submissionIDs == "null" {
+		return c.JSON(http.StatusBadRequest, crashy.ErrorResponse{ErrorString: "missing submission ID"})
+	}
+
+	req := api.SubmissionDetailsRequest{
+		SID:                         sid,
+		SubmissionIDs:               submissionIDs,
+		OutputMode:                  "json",
+		ShowDescription:             true,
+		ShowDescriptionBbcodeParsed: true,
+	}
+
 	if output == "" {
 		output = outputSingleTicket
 	} else if !slices.Contains(validOutputs, output) {
@@ -458,12 +579,6 @@ func GetReviewHandler(c echo.Context) error {
 		})
 	}
 
-	cacheToUse := cache.SwitchCache(c)
-	query := url.Values{
-		"sid":         {sid},
-		"parameters":  {parameters},
-		"interrogate": {interrogate},
-	}
 	reviewKey := fmt.Sprintf(
 		"%s:review:%s:%s?%s",
 		echo.MIMEApplicationJSON,
@@ -475,7 +590,16 @@ func GetReviewHandler(c echo.Context) error {
 		item, errFunc := cacheToUse.Get(reviewKey)
 		if errFunc == nil {
 			c.Logger().Infof("Cache hit for %s", reviewKey)
-			return c.Blob(http.StatusOK, item.MimeType, item.Blob)
+			if c.Param("id") != "search" {
+				return c.Blob(http.StatusOK, item.MimeType, item.Blob)
+			} else {
+				var store any
+				if err := json.Unmarshal(item.Blob, &store); err != nil {
+					return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
+				}
+				searchStore = response{searchResponse, store}
+				return c.JSON(http.StatusOK, searchStore)
+			}
 		}
 	}
 	c.Logger().Debugf("Cache miss for %s retrieving review...", reviewKey)
@@ -607,14 +731,12 @@ func GetReviewHandler(c echo.Context) error {
 	switch output {
 	case outputSubmissions, outputFull:
 		store = submissions
-		return c.JSON(http.StatusOK, submissions)
 	case outputMultipleTickets:
 		var tickets []db.Ticket
 		for _, sub := range submissions {
 			tickets = append(tickets, *sub.Ticket)
 		}
 		store = tickets
-		return c.JSON(http.StatusOK, tickets)
 	case outputSingleTicket:
 		fallthrough
 	default:
@@ -671,8 +793,13 @@ func GetReviewHandler(c echo.Context) error {
 			},
 		}
 		store = ticket
-		return c.JSON(http.StatusOK, ticket)
 	}
+
+	if c.Param("id") == "search" {
+		searchStore = response{searchResponse, store}
+		return c.JSON(http.StatusOK, searchStore)
+	}
+	return c.JSON(http.StatusOK, store)
 }
 
 func processObjectMetadata(submission *db.Submission) {

@@ -58,8 +58,18 @@ func RetrieveSubmission(c echo.Context, req api.SubmissionDetailsRequest) (api.S
 func RetrieveSearch(c echo.Context, request api.SubmissionSearchRequest) (api.SubmissionSearchResponse, error) {
 	cacheToUse := cache.SwitchCache(c)
 
+	if c.Request().Header.Get("Cache-Control") == "no-cache" && request.RID != "" {
+		c.Logger().Warn("Cache-Control: no-cache header detected but RID is set, bypassing cache...")
+		request.RID = ""
+	}
+
+	if request.Page < 1 {
+		c.Logger().Warnf("Page is set to %d, overriding to 1...", request.Page)
+		request.Page = 1
+	}
+
 	if request.RID != "" {
-		key := fmt.Sprintf("%s:inkbunny:search:%s:%s", echo.MIMEApplicationJSON, request.RID, request.Page)
+		key := fmt.Sprintf("%s:inkbunny:search:%s:%d", echo.MIMEApplicationJSON, request.RID, request.Page)
 		item, err := cacheToUse.Get(key)
 		if err == nil {
 			var response api.SubmissionSearchResponse

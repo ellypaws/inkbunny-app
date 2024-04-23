@@ -74,7 +74,7 @@ func TestToImages(t *testing.T) {
 	}
 }
 
-//go:embed images/0.png
+//go:embed images/cat.jpg
 var image []byte
 
 func TestHost_Interrogate(t *testing.T) {

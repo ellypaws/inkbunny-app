@@ -555,6 +555,17 @@ func GetReviewHandler(c echo.Context) error {
 				submissions[i].Images = append(submissions[i].Images, &submission.Files[f])
 			}
 			fallthrough
+		case outputSingleTicket:
+			submissions[i].Ticket = &db.Ticket{
+				Responses: []db.Response{
+					{
+						SupportTeam: false,
+						User:        auditorAsUser,
+						Date:        time.Now().UTC(),
+						Message:     "",
+					},
+				},
+			}
 		case outputMultipleTickets:
 			submissions[i].Ticket = &db.Ticket{
 				ID:         submission.ID,

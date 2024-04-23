@@ -9,6 +9,7 @@ import (
 	"github.com/ellypaws/inkbunny-sd/entities"
 	"io"
 	"os"
+	"regexp"
 	"strconv"
 	"strings"
 )
@@ -37,6 +38,7 @@ const (
 	IDAIBean      = 147301
 	IDFairyGarden = 215070
 	IDCirn0       = 177167
+	IDHornybunny  = 12499
 )
 
 // AutoSnep is a Processor that parses yaml like raw txt where each two spaces is a new dict
@@ -151,6 +153,34 @@ func UseCirn0() func(*Config) {
 			}
 		}
 		c.Text = strings.Join(lines, "\n")
+	}
+}
+
+func UseHornybunny() func(*Config) {
+	return func(c *Config) {
+		c.KeyCondition = func(line string) bool {
+			return regexp.MustCompile(`^\(\d+\)$`).MatchString(line)
+		}
+		c.Filename = "Hornybunny_"
+		//c.Text = strings.ReplaceAll(c.Text, "----", "")
+		//c.Text = strings.ReplaceAll(c.Text, "Original generation details", "")
+		//c.Text = strings.ReplaceAll(c.Text, "Upscaling details", "")
+		c.Text = strings.ReplaceAll(c.Text, "Positive Prompt: ", "")
+		c.Text = strings.ReplaceAll(c.Text, "Other details: ", "")
+		c.SkipCondition = func(line string) bool {
+			switch line {
+			case "----":
+				return true
+			case "==========":
+				return true
+			case "Original generation details":
+				return true
+			case "Upscaling details":
+				return true
+			default:
+				return false
+			}
+		}
 	}
 }
 

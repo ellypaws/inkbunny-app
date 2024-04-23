@@ -944,6 +944,8 @@ func processParams(c echo.Context, wg *sync.WaitGroup, sub *db.Submission) {
 		params, err = utils.Common(utils.WithBytes(b.Blob), utils.UseFairyGarden())
 	case utils.IDCirn0:
 		params, err = utils.Common(utils.WithBytes(b.Blob), utils.UseCirn0())
+	case utils.IDHornybunny:
+		params, err = utils.Common(utils.WithBytes(b.Blob), utils.UseHornybunny())
 	default:
 		params, err = utils.Common(
 			// prepend "photo 1" to the input in case it's missing

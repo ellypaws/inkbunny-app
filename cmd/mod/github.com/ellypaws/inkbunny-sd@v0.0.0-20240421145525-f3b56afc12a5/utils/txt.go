@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"github.com/ellypaws/inkbunny-sd/entities"
 	"io"
 	"os"
@@ -117,6 +118,28 @@ func UseFairyGarden() func(*Config) {
 			return strings.HasPrefix(line, "photo")
 		}
 		c.Filename = "fairygarden_"
+		// prepend "photo 1" to the input in case it's missing
+		c.Text = "photo 1\n" + c.Text
+	}
+}
+
+func UseCirn0() func(*Config) {
+	return func(c *Config) {
+		c.KeyCondition = func(line string) bool {
+			return strings.HasPrefix(line, "===")
+		}
+		c.Filename = "cirn0_"
+
+		scanner := bufio.NewScanner(strings.NewReader(c.Text))
+		var part int
+		var out strings.Builder
+		for scanner.Scan() {
+			line := scanner.Text()
+			if strings.HasPrefix(line, "---") {
+				line = fmt.Sprintf("=== Part #%d ===", part)
+			}
+			out.WriteString(line)
+		}
 	}
 }
 

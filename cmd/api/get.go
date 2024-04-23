@@ -938,10 +938,9 @@ func processParams(c echo.Context, wg *sync.WaitGroup, sub *db.Submission) {
 			utils.WithFilename("picker52578_"),
 			utils.WithKeyCondition(func(line string) bool { return strings.HasPrefix(line, "File Name") }))
 	case strings.Contains(f.FileName, "_fairygarden_"):
-		params, err = utils.Common(
-			// prepend "photo 1" to the input in case it's missing
-			utils.WithBytes(bytes.Join([][]byte{[]byte("photo 1"), b.Blob}, []byte("\n"))),
-			utils.UseFairyGarden())
+		params, err = utils.Common(utils.WithBytes(b.Blob), utils.UseFairyGarden())
+	case strings.Contains(f.FileName, "_Cirn0_"):
+		params, err = utils.Common(utils.WithBytes(b.Blob), utils.UseCirn0())
 	default:
 		params, err = utils.Common(
 			// prepend "photo 1" to the input in case it's missing

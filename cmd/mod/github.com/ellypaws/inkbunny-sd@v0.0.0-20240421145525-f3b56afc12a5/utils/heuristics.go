@@ -281,6 +281,8 @@ func GetPrompts(lines []string) (strings.Builder, strings.Builder) {
 	for _, line := range lines {
 		line = strings.TrimSpace(line)
 		switch {
+		case len(line) == 0:
+			continue
 		case strings.HasPrefix(line, "Negative prompt:"):
 			negativeFound = true
 			negative.WriteString(strings.TrimSpace(line[16:]))

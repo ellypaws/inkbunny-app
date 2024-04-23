@@ -193,6 +193,12 @@ func Common(opts ...func(*Config)) (Params, error) {
 		if c.SkipCondition != nil && c.SkipCondition(line) {
 			continue
 		}
+		if len(key) == 0 {
+			continue
+		}
+		if len(line) == 0 {
+			continue
+		}
 		if foundNegative {
 			chunks[key][Parameters] += "\n" + line
 			foundNegative = false
@@ -202,12 +208,6 @@ func Common(opts ...func(*Config)) (Params, error) {
 		if c.KeyCondition(line) {
 			key = c.Filename + line
 			chunks[key] = make(PNGChunk)
-			continue
-		}
-		if len(key) == 0 {
-			continue
-		}
-		if len(line) == 0 {
 			continue
 		}
 		if strings.HasPrefix(line, "Negative Prompt:") {

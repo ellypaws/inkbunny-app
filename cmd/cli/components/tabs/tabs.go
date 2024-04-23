@@ -10,9 +10,9 @@
 package tabs
 
 import (
-	utils "cli/components"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	utils "github.com/ellypaws/inkbunny-app/cmd/cli/components"
 	zone "github.com/lrstanley/bubblezone"
 	"strings"
 )

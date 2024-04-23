@@ -1,11 +1,11 @@
 package tickets
 
 import (
-	"cli/apis"
-	utils "cli/components"
-	"cli/components/tickets/login"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/ellypaws/inkbunny-app/cmd/cli/apis"
+	utils "github.com/ellypaws/inkbunny-app/cmd/cli/components"
+	"github.com/ellypaws/inkbunny-app/cmd/cli/components/tickets/login"
 )
 
 type Model struct {

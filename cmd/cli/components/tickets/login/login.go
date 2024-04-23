@@ -1,11 +1,11 @@
 package login
 
 import (
-	"cli/apis"
 	"fmt"
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/ellypaws/inkbunny-app/cmd/cli/apis"
 	"github.com/ellypaws/inkbunny/api"
 	"strings"
 )

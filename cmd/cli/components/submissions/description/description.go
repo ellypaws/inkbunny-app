@@ -1,15 +1,15 @@
 package description
 
 import (
-	"cli/apis"
-	"cli/entle"
 	"fmt"
 	stick "github.com/76creates/stickers/flexbox"
 	"github.com/TheZoraiz/ascii-image-converter/aic_package"
 	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/ellypaws/inkbunny-app/cmd/cli/apis"
 	utils "github.com/ellypaws/inkbunny-app/cmd/cli/components"
+	"github.com/ellypaws/inkbunny-app/cmd/cli/entle"
 	sd "github.com/ellypaws/inkbunny-sd/stable_diffusion"
 	"github.com/ellypaws/inkbunny/api"
 	"strings"
@@ -198,9 +198,9 @@ func (m Model) processImage(s entle.Screen, sub api.Submission) {
 	flags.Threshold = 128 / 2
 	//flags.Dither = true
 	// Conversion for an image
-	url := file.ThumbURLMediumNonCustom
+	url := file.ThumbnailURLMediumNonCustom
 	if url == "" {
-		url = file.ThumbURLHugeNonCustom
+		url = file.ThumbnailURLMediumNonCustom
 	}
 	if url == "" {
 		(*m.images)[sub.SubmissionID] = "no image"

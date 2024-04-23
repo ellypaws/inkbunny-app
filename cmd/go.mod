@@ -2,7 +2,7 @@ module github.com/ellypaws/inkbunny-app/cmd
 
 go 1.22.1
 
-replace github.com/ellypaws/inkbunny-sd => ./mod/github.com/ellypaws/inkbunny-sd@v0.0.0-20240421145525-f3b56afc12a5
+replace github.com/ellypaws/inkbunny-sd => ./mod/github.com/ellypaws/inkbunny-sd
 
 require (
 	github.com/ellypaws/inkbunny-sd v0.0.0-20240421145525-f3b56afc12a5

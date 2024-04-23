@@ -8,7 +8,7 @@ replace github.com/ellypaws/inkbunny-app/api/library => ../api/library
 
 replace github.com/ellypaws/inkbunny-app/cmd/cli => .
 
-replace github.com/ellypaws/inkbunny-sd => ../mod/github.com/ellypaws/inkbunny-sd@v0.0.0-20240421145525-f3b56afc12a5
+replace github.com/ellypaws/inkbunny-sd => ./../mod/github.com/ellypaws/inkbunny-sd
 
 require (
 	github.com/76creates/stickers v1.3.1-0.20230410064447-c0cf398aec57

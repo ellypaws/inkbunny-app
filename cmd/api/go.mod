@@ -6,7 +6,7 @@ replace github.com/ellypaws/inkbunny-app/cmd => ../
 
 replace github.com/ellypaws/inkbunny-app/api/library => ./library
 
-replace github.com/ellypaws/inkbunny-sd => ../mod/github.com/ellypaws/inkbunny-sd@v0.0.0-20240421145525-f3b56afc12a5
+replace github.com/ellypaws/inkbunny-sd => ./../mod/github.com/ellypaws/inkbunny-sd
 
 require (
 	github.com/coocood/freecache v1.2.4

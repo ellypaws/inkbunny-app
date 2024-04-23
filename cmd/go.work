@@ -5,5 +5,5 @@ use (
 	api
 	api/library
 	cli
-	mod/github.com/ellypaws/inkbunny-sd@v0.0.0-20240421145525-f3b56afc12a5
+	./mod/github.com/ellypaws/inkbunny-sd
 )

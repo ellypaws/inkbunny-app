@@ -471,10 +471,12 @@ func GetReviewHandler(c echo.Context) error {
 		submissionIDs,
 		query.Encode(),
 	)
-	item, errFunc := cacheToUse.Get(reviewKey)
-	if errFunc == nil {
-		c.Logger().Infof("Cache hit for %s", reviewKey)
-		return c.Blob(http.StatusOK, item.MimeType, item.Blob)
+	if c.Request().Header.Get("Cache-Control") != "no-cache" {
+		item, errFunc := cacheToUse.Get(reviewKey)
+		if errFunc == nil {
+			c.Logger().Infof("Cache hit for %s", reviewKey)
+			return c.Blob(http.StatusOK, item.MimeType, item.Blob)
+		}
 	}
 	c.Logger().Debugf("Cache miss for %s retrieving review...", reviewKey)
 	var store any

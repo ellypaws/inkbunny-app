@@ -1,15 +1,11 @@
 package main
 
 import (
-	"encoding/json"
-	"errors"
 	"fmt"
 	"github.com/ellypaws/inkbunny-app/api/cache"
 	"github.com/ellypaws/inkbunny-app/api/service"
 	"github.com/ellypaws/inkbunny-app/cmd/crashy"
-	"github.com/ellypaws/inkbunny/api"
 	"github.com/labstack/echo/v4"
-	"github.com/redis/go-redis/v9"
 	"io"
 	"net/http"
 	"net/url"
@@ -109,60 +105,16 @@ func GetAvatarHandler(c echo.Context) error {
 	}
 
 	cacheToUse := cache.SwitchCache(c)
-	userKey := fmt.Sprintf("%v:inkbunny:username_autosuggest:exact:%v", echo.MIMEApplicationJSON, username)
 
-	item, err := cacheToUse.Get(userKey)
-	if err == nil {
-		var users []api.Autocomplete
-		if err := json.Unmarshal(item.Blob, &users); err != nil {
-			return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
-		}
-		if len(users) == 0 {
-			return c.JSON(http.StatusNotFound, crashy.ErrorResponse{ErrorString: "no users found"})
-		}
-
-		item, errFunc := service.RetrieveAvatar(c, cacheToUse, users[0])
-		if errFunc != nil {
-			return errFunc(c)
-		}
-		return c.Blob(http.StatusOK, item.MimeType, item.Blob)
-	}
-	if !errors.Is(err, redis.Nil) {
-		return c.JSON(http.StatusNotFound, crashy.ErrorResponse{ErrorString: "an error occurred while retrieving the username", Debug: err})
-	}
-
-	usernames, err := api.GetUserID(username)
+	users, err := service.RetrieveUsers(c, username, true)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
 	}
-
-	var users []api.Autocomplete
-	for i, user := range usernames.Results {
-		if strings.EqualFold(user.Value, user.SearchTerm) {
-			users = append(users, usernames.Results[i])
-			break
-		}
-	}
-
-	if len(users) == 0 {
-		return c.JSON(http.StatusNotFound, crashy.ErrorResponse{ErrorString: "no users found"})
-	}
-
-	bin, err := json.Marshal(users)
-	if err != nil {
-		return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
-	}
-
-	_ = cacheToUse.Set(userKey, &cache.Item{
-		Blob:     bin,
-		MimeType: echo.MIMEApplicationJSON,
-	}, cache.Month)
 
 	item, errFunc := service.RetrieveAvatar(c, cacheToUse, users[0])
-	if err != nil {
+	if errFunc != nil {
 		return errFunc(c)
 	}
-
 	return c.Blob(http.StatusOK, item.MimeType, item.Blob)
 }
 

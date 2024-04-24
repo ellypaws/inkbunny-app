@@ -152,3 +152,71 @@ func RetrieveSearch(c echo.Context, request api.SubmissionSearchRequest) (api.Su
 
 	return searchResponse, nil
 }
+
+func RetrieveUsers(c echo.Context, username string, exact bool) ([]api.Autocomplete, error) {
+	key := fmt.Sprintf("%v:inkbunny:username_autosuggest:%v", echo.MIMEApplicationJSON, username)
+	if exact {
+		key = fmt.Sprintf("%v:inkbunny:username_autosuggest:exact:%v", echo.MIMEApplicationJSON, username)
+	}
+
+	cacheToUse := cache.SwitchCache(c)
+
+	item, errFunc := cacheToUse.Get(key)
+	if errFunc == nil {
+		var users []api.Autocomplete
+		if err := json.Unmarshal(item.Blob, &users); err != nil {
+			return nil, err
+		}
+
+		if len(users) == 0 {
+			return nil, crashy.ErrorResponse{ErrorString: "no users found"}
+		}
+
+		return users, nil
+	}
+
+	c.Logger().Infof("Cache miss for %s retrieving user...", key)
+
+	usernames, err := api.GetUserID(username)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(usernames.Results) == 0 {
+		return nil, crashy.ErrorResponse{ErrorString: "no users found"}
+	}
+
+	var users = make([]api.Autocomplete, 0, len(usernames.Results))
+	if exact {
+		for i, user := range usernames.Results {
+			if strings.EqualFold(user.Value, user.SearchTerm) {
+				users = append(users, usernames.Results[i])
+				break
+			}
+		}
+	} else {
+		users = usernames.Results
+	}
+
+	if len(users) == 0 {
+		return nil, crashy.ErrorResponse{ErrorString: "no users found"}
+	}
+
+	bin, err := json.Marshal(users)
+	if err != nil {
+		c.Logger().Errorf("error marshaling user details: %v", err)
+		return users, err
+	}
+
+	err = cacheToUse.Set(key, &cache.Item{
+		Blob:     bin,
+		MimeType: echo.MIMEApplicationJSON,
+	}, cache.Week)
+	if err != nil {
+		c.Logger().Errorf("error caching user details: %v", err)
+	} else {
+		c.Logger().Infof("Cached %s %s %dKiB", key, echo.MIMEApplicationJSON, len(bin)/units.KiB)
+	}
+
+	return users, nil
+}

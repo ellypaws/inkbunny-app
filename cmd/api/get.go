@@ -681,6 +681,7 @@ func GetReviewHandler(c echo.Context) error {
 			fallthrough
 		case outputSingleTicket:
 			submissions[i].Ticket = &db.Ticket{
+				DateOpened: time.Now().UTC(),
 				Responses: []db.Response{
 					{
 						SupportTeam: false,

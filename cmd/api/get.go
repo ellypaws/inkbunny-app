@@ -811,7 +811,7 @@ var apiImage = regexp.MustCompile(`(?i)(https://(?:\w+\.ib\.metapix|inkbunny)\.n
 
 func sanitizeDescription(description string) string {
 	description = strings.ReplaceAll(description, "href='/", "href='https://inkbunny.net/")
-	description = strings.ReplaceAll(description, "thumbnails/large", "thumbnails/small")
+	description = strings.ReplaceAll(description, "thumbnails/large", "thumbnails/medium")
 	description = apiImage.ReplaceAllString(description, fmt.Sprintf("%s/image?url=${1}", apiHost))
 	return description
 }

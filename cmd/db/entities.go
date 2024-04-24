@@ -345,7 +345,7 @@ type HashID map[string]int64
 type ModelHashes map[string][]string
 
 type Ticket struct {
-	ID            int64         `json:"id"`
+	ID            int64         `json:"id,omitempty"`
 	Subject       string        `json:"subject"`
 	DateOpened    time.Time     `json:"date_opened"`
 	DateClosed    *time.Time    `json:"date_closed,omitempty"`

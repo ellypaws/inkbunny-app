@@ -646,6 +646,8 @@ func GetReviewHandler(c echo.Context) error {
 		Inkbunny   *api.Submission `json:"inkbunny,omitempty"`
 		Ticket     *db.Ticket      `json:"ticket,omitempty"`
 		Images     []*db.File      `json:"images,omitempty"`
+
+		DescriptionSanitized string `json:"description_sanitized,omitempty"`
 	}
 
 	var submissions = make([]details, len(submissionDetails.Submissions))
@@ -667,6 +669,8 @@ func GetReviewHandler(c echo.Context) error {
 			ID:         api.IntString(submission.ID),
 			User:       user,
 			Submission: &submission,
+
+			DescriptionSanitized: sanitizeDescription(sub.DescriptionBBCodeParsed),
 		}
 
 		switch output {
@@ -801,6 +805,15 @@ func GetReviewHandler(c echo.Context) error {
 		return c.JSON(http.StatusOK, searchStore)
 	}
 	return c.JSON(http.StatusOK, store)
+}
+
+var apiImage = regexp.MustCompile(`(?i)(https://(?:\w+\.ib\.metapix|inkbunny)\.net(?:/[\w\-.]+)+\.(?:jpe?g|png|gif))`)
+
+func sanitizeDescription(description string) string {
+	description = strings.ReplaceAll(description, "href='/", "href='https://inkbunny.net/")
+	description = strings.ReplaceAll(description, "thumbnails/large", "thumbnails/small")
+	description = apiImage.ReplaceAllString(description, fmt.Sprintf("%s/image?url=${1}", apiHost))
+	return description
 }
 
 func processObjectMetadata(submission *db.Submission) {

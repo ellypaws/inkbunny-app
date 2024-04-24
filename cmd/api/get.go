@@ -1018,11 +1018,8 @@ func processParams(c echo.Context, wg *sync.WaitGroup, sub *db.Submission) {
 
 	var textFile *db.File
 	for i, f := range sub.Files {
-		if strings.HasSuffix(f.File.MimeType, "json") {
-			textFile = &sub.Files[i]
-			break
-		}
-		if strings.HasPrefix(f.File.MimeType, "text") {
+		switch f.File.MimeType {
+		case echo.MIMEApplicationJSON, echo.MIMETextPlain:
 			textFile = &sub.Files[i]
 			break
 		}
@@ -1046,15 +1043,28 @@ func processParams(c echo.Context, wg *sync.WaitGroup, sub *db.Submission) {
 		return
 	}
 
-	if sub.Metadata.Params != nil {
-		return
+	if b.MimeType == echo.MIMEApplicationJSON {
+		easyDiffusion, err := entities.UnmarshalEasyDiffusion(b.Blob)
+		if err == nil && !reflect.DeepEqual(easyDiffusion, entities.EasyDiffusion{}) {
+			c.Logger().Debugf("easy diffusion found for %s", sub.URL)
+			sub.Metadata.Objects = map[string]entities.TextToImageRequest{
+				textFile.File.FileName: *easyDiffusion.Convert(),
+			}
+			sub.Metadata.Params = &utils.Params{
+				textFile.File.FileName: utils.PNGChunk{
+					"easy_diffusion": string(b.Blob),
+				},
+			}
+			return
+		}
+		c.Logger().Warnf("json is not easy diffusion for %s", sub.URL)
 	}
 
 	// Because some artists already have standardized txt files, opt to split each file separately
 	var params utils.Params
 	var err error
 	f := &textFile.File
-	c.Logger().Debugf("processing params for %v", f.FileName)
+	c.Logger().Debugf("processing params for %s", f.FileName)
 	switch sub.UserID {
 	case utils.IDAutoSnep:
 		params, err = utils.AutoSnep(utils.WithBytes(b.Blob))
@@ -1082,11 +1092,11 @@ func processParams(c echo.Context, wg *sync.WaitGroup, sub *db.Submission) {
 			utils.WithKeyCondition(func(line string) bool { return strings.HasPrefix(line, f.FileName) }))
 	}
 	if err != nil {
-		c.Logger().Errorf("error processing params for %v: %v", f.FileName, err)
+		c.Logger().Errorf("error processing params for %s: %s", f.FileName, err)
 		return
 	}
 	if len(params) > 0 {
-		c.Logger().Debugf("finished params for %v", f.FileName)
+		c.Logger().Debugf("finished params for %s", f.FileName)
 		sub.Metadata.Params = &params
 		parseObjects(c, sub)
 	}

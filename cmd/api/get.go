@@ -1031,17 +1031,7 @@ func processParams(c echo.Context, wg *sync.WaitGroup, sub *db.Submission) {
 	defer processObjectMetadata(sub)
 
 	if textFile == nil {
-		c.Logger().Debugf("processing description heuristics for %v", sub.URL)
-		heuristics, err := utils.DescriptionHeuristics(sub.Description)
-		if err != nil {
-			c.Logger().Errorf("error processing description heuristics for %v: %v", sub.URL, err)
-			return
-		}
-		if reflect.DeepEqual(heuristics, entities.TextToImageRequest{}) {
-			c.Logger().Debugf("no heuristics found for %v", sub.URL)
-			return
-		}
-		sub.Metadata.Objects = map[string]entities.TextToImageRequest{sub.Title: heuristics}
+		processDescriptionHeuristics(c, sub)
 		return
 	}
 
@@ -1101,18 +1091,23 @@ func processParams(c echo.Context, wg *sync.WaitGroup, sub *db.Submission) {
 		parseObjects(c, sub)
 	}
 	if len(sub.Metadata.Objects) == 0 {
-		c.Logger().Debugf("processing description heuristics for %v", sub.URL)
-		heuristics, err := utils.DescriptionHeuristics(sub.Description)
-		if err != nil {
-			c.Logger().Errorf("error processing description heuristics for %v: %v", sub.URL, err)
-		}
-		if reflect.DeepEqual(heuristics, entities.TextToImageRequest{}) {
-			c.Logger().Debugf("no heuristics found for %v", sub.URL)
-			return
-		}
-		sub.Metadata.Objects = map[string]entities.TextToImageRequest{sub.Title: heuristics}
+		processDescriptionHeuristics(c, sub)
 		return
 	}
+}
+
+func processDescriptionHeuristics(c echo.Context, sub *db.Submission) {
+	c.Logger().Debugf("processing description heuristics for %v", sub.URL)
+	heuristics, err := utils.DescriptionHeuristics(sub.Description)
+	if err != nil {
+		c.Logger().Errorf("error processing description heuristics for %v: %v", sub.URL, err)
+		return
+	}
+	if reflect.DeepEqual(heuristics, entities.TextToImageRequest{}) {
+		c.Logger().Debugf("no heuristics found for %v", sub.URL)
+		return
+	}
+	sub.Metadata.Objects = map[string]entities.TextToImageRequest{sub.Title: heuristics}
 }
 
 func parseObjects(c echo.Context, sub *db.Submission) {

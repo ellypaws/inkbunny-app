@@ -15,6 +15,7 @@ import (
 var (
 	database *db.Sqlite
 	host     = sd.DefaultHost
+	apiHost  *url.URL
 	port     = "1323"
 )
 
@@ -25,6 +26,21 @@ func init() {
 			log.Fatal(err)
 		}
 		host = (*sd.Host)(u)
+	} else {
+		log.Println("warning: SD_HOST not set, using default localhost:7860")
+	}
+
+	api := os.Getenv("API_HOST")
+	if api == "" {
+		log.Fatal("API_HOST must be set")
+	}
+
+	log.Printf("api host: %s\n", api)
+
+	var err error
+	apiHost, err = url.Parse(api)
+	if err != nil {
+		log.Fatal(err)
 	}
 
 	if host == nil || !host.Alive() {
@@ -38,7 +54,6 @@ func init() {
 	}
 
 	// Database
-	var err error
 	database, err = db.New(nil)
 	if err != nil {
 		log.Fatal(err)

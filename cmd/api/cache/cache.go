@@ -146,6 +146,12 @@ func Retrieve(c echo.Context, cache Cache, fetch Fetch) (*Item, func(c echo.Cont
 	done := make(chan *Item)
 	queue.ongoing[fetch.Key] = done
 	queue.mu.Unlock()
+	defer func() {
+		queue.mu.Lock()
+		close(done)
+		delete(queue.ongoing, fetch.Key)
+		queue.mu.Unlock()
+	}()
 
 	c.Logger().Infof("Downloading %s", fetch.URL)
 	resp, err := http.Get(fetch.URL)
@@ -192,11 +198,6 @@ func Retrieve(c echo.Context, cache Cache, fetch Fetch) (*Item, func(c echo.Cont
 		c.Logger().Errorf("could not set %s in cache %T: %v", fetch.URL, cache, err)
 	}
 	c.Logger().Infof("Cached %s %dKiB", fetch.Key, len(item.Blob)/units.KiB)
-
-	queue.mu.Lock()
-	close(done)
-	delete(queue.ongoing, fetch.Key)
-	queue.mu.Unlock()
 
 	c.Response().Header().Set("Cache-Control", "public, max-age=86400") // 24 hours
 	return item, nil

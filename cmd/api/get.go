@@ -427,7 +427,7 @@ func GetReviewHandler(c echo.Context) error {
 	parameters := c.QueryParam("parameters")
 	interrogate := c.QueryParam("interrogate")
 	stream := c.QueryParam("stream")
-	useCache := c.Request().Header.Get("Cache-Control") != "no-cache"
+	useCache := c.Request().Header.Get(echo.HeaderCacheControl) != "no-cache"
 
 	const (
 		outputSingleTicket    = "single_ticket"
@@ -586,7 +586,7 @@ func GetReviewHandler(c echo.Context) error {
 		submissionIDs,
 		query.Encode(),
 	)
-	if c.Request().Header.Get("Cache-Control") != "no-cache" {
+	if c.Request().Header.Get(echo.HeaderCacheControl) != "no-cache" {
 		item, errFunc := cacheToUse.Get(reviewKey)
 		if errFunc == nil {
 			c.Logger().Infof("Cache hit for %s", reviewKey)

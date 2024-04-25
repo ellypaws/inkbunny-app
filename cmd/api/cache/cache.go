@@ -118,7 +118,7 @@ func Retrieve(c echo.Context, cache Cache, fetch Fetch) (*Item, func(c echo.Cont
 	item, err := cache.Get(fetch.Key)
 	if err == nil {
 		c.Logger().Infof("Retrieved %s %dKiB", fetch.Key, len(item.Blob)/units.KiB)
-		c.Response().Header().Set("Cache-Control", "public, max-age=86400")
+		c.Response().Header().Set(echo.HeaderCacheControl, "public, max-age=86400")
 		return item, nil
 	}
 
@@ -140,7 +140,7 @@ func Retrieve(c echo.Context, cache Cache, fetch Fetch) (*Item, func(c echo.Cont
 			return nil, ErrFunc(http.StatusInternalServerError, err)
 		}
 		c.Logger().Infof("Retrieved %s %s %dKiB", fetch.Key, item.MimeType, len(item.Blob)/units.KiB)
-		c.Response().Header().Set("Cache-Control", "public, max-age=86400") // 24 hours
+		c.Response().Header().Set(echo.HeaderCacheControl, "public, max-age=86400") // 24 hours
 		return item, nil
 	}
 
@@ -200,7 +200,7 @@ func Retrieve(c echo.Context, cache Cache, fetch Fetch) (*Item, func(c echo.Cont
 	}
 	c.Logger().Infof("Cached %s %dKiB", fetch.Key, len(item.Blob)/units.KiB)
 
-	c.Response().Header().Set("Cache-Control", "public, max-age=86400") // 24 hours
+	c.Response().Header().Set(echo.HeaderCacheControl, "public, max-age=86400") // 24 hours
 	return item, nil
 }
 

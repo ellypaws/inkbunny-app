@@ -138,7 +138,7 @@ var defaultCacheConfig = &gocache.Config{
 	Methods: []string{echo.GET, echo.HEAD},
 	TTL:     timeToLive,
 	Refresh: func(r *http.Request) bool {
-		return r.Header.Get("Cache-Control") == "no-cache"
+		return r.Header.Get(echo.HeaderCacheControl) == "no-cache"
 	},
 }
 
@@ -153,7 +153,7 @@ func CacheMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
 
 func SetCacheHeaders(next echo.HandlerFunc) echo.HandlerFunc {
 	return func(c echo.Context) error {
-		c.Response().Header().Set("Cache-Control", timeToLiveString)
+		c.Response().Header().Set(echo.HeaderCacheControl, timeToLiveString)
 		return next(c)
 	}
 }
@@ -166,7 +166,7 @@ func Static(next echo.HandlerFunc) echo.HandlerFunc {
 		etag := s[len(s)-1]
 
 		c.Response().Header().Set("Etag", etag)
-		c.Response().Header().Set("Cache-Control", "public, max-age=86400") // 24 hours
+		c.Response().Header().Set(echo.HeaderCacheControl, "public, max-age=86400") // 24 hours
 		if match := c.Request().Header.Get("If-None-Match"); match != "" {
 			if strings.Contains(match, etag) {
 				return c.NoContent(http.StatusNotModified)

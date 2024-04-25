@@ -58,8 +58,8 @@ func RetrieveSubmission(c echo.Context, req api.SubmissionDetailsRequest) (api.S
 func RetrieveSearch(c echo.Context, request api.SubmissionSearchRequest) (api.SubmissionSearchResponse, error) {
 	cacheToUse := cache.SwitchCache(c)
 
-	if c.Request().Header.Get("Cache-Control") == "no-cache" && request.RID != "" {
-		c.Logger().Warn("Cache-Control: no-cache header detected but RID is set, bypassing cache...")
+	if c.Request().Header.Get(echo.HeaderCacheControl) == "no-cache" && request.RID != "" {
+		c.Logger().Warn("Cache-Control is set to no-cache but RID is also set, bypassing cache...")
 		request.RID = ""
 	}
 

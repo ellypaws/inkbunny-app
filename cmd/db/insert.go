@@ -293,14 +293,14 @@ func (db Sqlite) InsertFile(file File) error {
 	return err
 }
 
-// e.g. 2010-03-03 13:26:46.357649+00
-const inkbunnyTimeLayout = "2006-01-02 15:04:05.999999-07"
+// InkbunnyTimeLayout e.g. 2010-03-03 13:26:46.357649+00
+const InkbunnyTimeLayout = "2006-01-02 15:04:05.999999-07"
 
 func InkbunnySubmissionToDBSubmission(submission api.Submission) Submission {
 	id, _ := strconv.ParseInt(submission.SubmissionID, 10, 64)
 	userID, _ := strconv.ParseInt(submission.UserID, 10, 64)
 
-	parsedTime, err := time.Parse(inkbunnyTimeLayout, submission.UpdateDateSystem)
+	parsedTime, err := time.Parse(InkbunnyTimeLayout, submission.UpdateDateSystem)
 	if err != nil {
 		log.Printf("error: parsing date: %v", err)
 		parsedTime = time.Now().UTC()

@@ -33,7 +33,7 @@ func GetImageHandler(c echo.Context) error {
 		})
 	}
 
-	if strings.Contains(imageURL, "private_files") {
+	if strings.Contains(imageURL, "private_") {
 		if sid, ok := c.Get("sid").(string); ok && sid != "" {
 			q := parse.Query()
 			c.Logger().Debugf("Setting sid: %s for private file %s", sid, parse)

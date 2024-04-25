@@ -94,7 +94,7 @@ func Retrieve(c echo.Context, cache Cache, fetch Fetch) (*Item, func(c echo.Cont
 		fetch.MimeType = MimeTypeFromURL(fetch.URL)
 	}
 
-	if strings.Contains(fetch.URL, "private_files") {
+	if strings.Contains(fetch.URL, "private_") {
 		if sid, ok := c.Get("sid").(string); ok && sid != "" {
 			q := parse.Query()
 			if !q.Has("sid") {

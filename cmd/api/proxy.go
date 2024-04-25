@@ -36,7 +36,9 @@ func GetImageHandler(c echo.Context) error {
 	if strings.Contains(imageURL, "private_") {
 		if sid, ok := c.Get("sid").(string); ok && sid != "" {
 			q := parse.Query()
-			c.Logger().Debugf("Setting sid: %s for private file %s", sid, parse)
+			if querySID := c.QueryParam("sid"); querySID != "" {
+				sid = querySID
+			}
 			q.Set("sid", sid)
 			parse.RawQuery = q.Encode()
 		} else {

@@ -97,10 +97,11 @@ func Retrieve(c echo.Context, cache Cache, fetch Fetch) (*Item, func(c echo.Cont
 	if strings.Contains(fetch.URL, "private_") {
 		if sid, ok := c.Get("sid").(string); ok && sid != "" {
 			q := parse.Query()
-			if !q.Has("sid") {
-				c.Logger().Warnf("Setting sid: %s for private file %s", sid, parse)
-				q.Set("sid", sid)
+			if s := c.QueryParam("sid"); s != "" && s != sid {
+				sid = s
+				c.Logger().Warnf("using query parameter override for sid: %s", sid)
 			}
+			q.Set("sid", sid)
 			parse.RawQuery = q.Encode()
 			fetch.Key = fmt.Sprintf("%s:%s", fetch.MimeType, parse)
 			fetch.URL = parse.String()

@@ -272,6 +272,7 @@ type GenerationInfo struct {
 type Submission struct {
 	ID          int64  `json:"id"`
 	UserID      int64  `json:"user_id"`
+	Username    string `json:"username,omitempty"`
 	URL         string `json:"url"`
 	audit       *Audit
 	AuditID     *int64                 `json:"audit_id"`

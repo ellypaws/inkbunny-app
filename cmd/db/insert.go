@@ -309,6 +309,7 @@ func InkbunnySubmissionToDBSubmission(submission api.Submission) Submission {
 	dbSubmission := Submission{
 		ID:          id,
 		UserID:      userID,
+		Username:    submission.Username,
 		URL:         fmt.Sprintf("https://inkbunny.net/s/%v", id),
 		Title:       submission.Title,
 		Description: submission.Description,
@@ -441,27 +442,27 @@ var payment = regexp.MustCompile(`(?i)\b(ko-?fi|paypal|patreon|subscribestar|don
 
 func TicketLabels(submission Submission) []TicketLabel {
 	labels := make(map[TicketLabel]bool)
-	m := submission.Metadata
+	metadata := submission.Metadata
 
-	if m.TaggedHuman {
+	if metadata.TaggedHuman {
 		labels[LabelTaggedHuman] = true
 	}
-	if m.DetectedHuman {
+	if metadata.DetectedHuman {
 		labels[LabelDetectedHuman] = true
 	}
 
-	if submission.Metadata.AISubmission {
-		if len(m.Objects) == 0 {
-			if m.HasTxt || m.HasJSON {
+	if metadata.AISubmission {
+		if len(metadata.Objects) == 0 {
+			if metadata.HasTxt || metadata.HasJSON {
 				labels[LabelCannotParse] = true
 			} else {
 				labels[LabelMissingParams] = true
 			}
 		}
-		if m.MissingTags {
+		if metadata.MissingTags {
 			labels[LabelMissingTags] = true
 		}
-		if len(submission.Metadata.ArtistUsed) > 0 {
+		if len(metadata.ArtistUsed) > 0 {
 			labels[LabelArtistUsed] = true
 		}
 
@@ -487,7 +488,7 @@ func TicketLabels(submission Submission) []TicketLabel {
 			{label: model},
 			{label: seed},
 		}
-		for _, obj := range m.Objects {
+		for _, obj := range metadata.Objects {
 			if obj.Prompt == "" {
 				hint[0].missing = true
 			} else {

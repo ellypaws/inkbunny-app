@@ -769,9 +769,8 @@ func GetReviewHandler(c echo.Context) error {
 						var sb strings.Builder
 						for _, sub := range submissions {
 							if sb.Len() > 0 {
-								sb.WriteString("\n\n[s]                    [s]")
+								sb.WriteString("\n\n[s]                    [/s]\n\n")
 							}
-							sb.WriteString(fmt.Sprintf("#M%s\n", sub.ID))
 							sb.WriteString(submissionMessage(sub.Submission))
 						}
 						return sb.String()
@@ -859,41 +858,107 @@ func processObjectMetadata(submission *db.Submission) {
 
 func submissionMessage(sub *db.Submission) string {
 	var sb strings.Builder
-	sb.WriteString("The following submission is pending review: ")
-	sb.WriteString(sub.URL)
+	sb.WriteString(fmt.Sprintf("[u]AI Submission %d by @%s ", sub.ID, sub.Username))
 
 	flags := db.TicketLabels(*sub)
-	if len(flags) > 0 {
-		sb.WriteString("\n")
-		sb.WriteString("The following flags were detected: ")
-		for i, flag := range flags {
-			if i > 0 {
-				sb.WriteString(", ")
+	if len(flags) == 0 {
+		sb.WriteString("needs to be reviewd[/u]\n")
+	}
+	for i, flag := range flags {
+		switch i {
+		case 0:
+			switch flag {
+			case db.LabelArtistUsed:
+				sb.WriteString("has used an artist in the prompt[/u]\n")
+			case db.LabelMissingParams:
+				sb.WriteString("does not have any parameters[/u]\n")
+			case db.LabelMissingPrompt:
+				sb.WriteString("is missing the prompt[/u]\n")
+			case db.LabelMissingModel:
+				sb.WriteString("does not include the model information[/u]\n")
+			case db.LabelMissingSeed:
+				sb.WriteString("is missing the generation seed[/u]\n")
+			case db.LabelSoldArt:
+				sb.WriteString("is a selling content[/u]\n")
+			case db.LabelPrivateTool:
+				sb.WriteString(fmt.Sprintf("was generated using a private tool %s[/u]\n", sub.Metadata.Generator))
+			case db.LabelPrivateLora:
+				sb.WriteString("was generated using a private Lora model[/u]\n")
+			case db.LabelPrivateModel:
+				sb.WriteString("was generated using a private checkpoint model[/u]\n")
+			default:
+				sb.WriteString("is not following AI ACP[/u]\n")
 			}
+		case 1:
+			sb.WriteString("\n\nIn addition, the following flags were detected:")
+			fallthrough
+		default:
+			sb.WriteString("\n")
 			sb.WriteString(string(flag))
 		}
 	}
 
+	sb.WriteString(fmt.Sprintf("\n%s by @%s\n#M%d", sub.URL, sub.Username, sub.ID))
+
 	if len(sub.Metadata.ArtistUsed) > 0 {
-		sb.WriteString("\n")
+		sb.WriteString("\n\n")
 		sb.WriteString("The prompt may have used these artists: ")
+
 		for i, artist := range sub.Metadata.ArtistUsed {
 			if i > 0 {
 				sb.WriteString(", ")
 			}
-			sb.WriteString("ib!")
-			sb.WriteString(artist.Username)
+			sb.WriteString("[b]")
+			if artist.UserID != nil {
+				sb.WriteString(fmt.Sprintf("ib!%s[/b]", artist.Username))
+			} else {
+				sb.WriteString(artist.Username)
+				sb.WriteString("[/b]")
+			}
+			if i == len(sub.Metadata.ArtistUsed)-1 {
+				sb.WriteString("\n")
+			}
 		}
-	}
 
-	if sub.Metadata.HasJSON {
-		sb.WriteString("\n")
-		sb.WriteString("The submission has a JSON file")
-	}
+		highlight := make(map[string]string)
+		for name, obj := range sub.Metadata.Objects {
+			meta := strings.ToLower(obj.Prompt + obj.NegativePrompt)
 
-	if sub.Metadata.HasTxt {
-		sb.WriteString("\n")
-		sb.WriteString("The submission has a text file")
+			var replaced bool
+			for _, artist := range sub.Metadata.ArtistUsed {
+				re, err := regexp.Compile(fmt.Sprintf(`(?i)\b(%s)\b`, artist.Username))
+				if err != nil {
+					continue
+				}
+
+				if !replaced && re.MatchString(meta) {
+					replaced = true
+					highlight[name] = meta
+				}
+				if replaced {
+					highlight[name] = re.ReplaceAllStringFunc(highlight[name], func(s string) string {
+						if artist.UserID != nil {
+							return fmt.Sprintf("[b]>>> [u][name]%s[/name][/u] <<<[/b]", s)
+						}
+						return fmt.Sprintf("[b] >>> [color=#F78C6C][u]%s[/u][/color] <<< [/b]", s)
+					})
+				}
+			}
+		}
+
+		for title, prompt := range highlight {
+			var file *db.File
+			if slices.ContainsFunc(sub.Files, func(f db.File) bool {
+				if f.File.FileName == title {
+					file = &f
+					return true
+				}
+				return false
+			}) {
+				sb.WriteString(fmt.Sprintf("\nFile: [url=%s]%s[/url]", file.File.FileURLFull, file.File.FileName))
+			}
+			sb.WriteString(fmt.Sprintf("\n[q=%s]%s[/q]", title, prompt))
+		}
 	}
 
 	if sub.Metadata.MissingPrompt {
@@ -901,23 +966,25 @@ func submissionMessage(sub *db.Submission) string {
 		sb.WriteString("The submission is missing the prompt")
 	}
 
-	if len(sub.Metadata.AIKeywords) > 0 {
-		sb.WriteString("\n")
-		sb.WriteString("The submission has the following AI keywords: ")
-		for i, keyword := range sub.Metadata.AIKeywords {
-			if i > 0 {
-				sb.WriteString(", ")
-			}
-			sb.WriteString(keyword)
-		}
-		if sub.Metadata.Params == nil {
-			sb.WriteString("\n")
-			sb.WriteString("The submission is potentially missing parameters")
-		}
-	} else {
+	if len(sub.Metadata.AIKeywords) == 0 {
 		if sub.Metadata.AISubmission {
 			sb.WriteString("\n")
 			sb.WriteString("The submission was detected to have AI content, but was not tagged as such")
+		}
+	}
+
+	var added uint
+	for i, file := range sub.Files {
+		switch file.File.MimeType {
+		case echo.MIMEApplicationJSON, echo.MIMETextPlain:
+		default:
+			if added == 0 {
+				sb.WriteString("\n[u]MD5 Checksums at the time of writing[/u]:")
+			}
+			sb.WriteString("\n")
+			sb.WriteString(fmt.Sprintf("Page %d: [url=%s]%s[/url] (%s)", i+1,
+				file.File.FileURLFull, file.File.FileName, file.File.FullFileMD5))
+			added++
 		}
 	}
 

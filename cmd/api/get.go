@@ -862,7 +862,7 @@ func submissionMessage(sub *db.Submission) string {
 
 	flags := db.TicketLabels(*sub)
 	if len(flags) == 0 {
-		sb.WriteString("needs to be reviewd[/u]\n")
+		sb.WriteString("needs to be reviewed[/u]\n")
 	}
 	for i, flag := range flags {
 		switch i {

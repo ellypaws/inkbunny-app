@@ -528,6 +528,10 @@ func (r *ComfyUIBasic) Convert() *TextToImageRequest {
 		case CLIPTextEncode:
 			for _, input := range node.WidgetsValues.UnionArray {
 				if input.String != nil {
+					if node.Title != nil && strings.Contains(strings.ToLower(string(*node.Title)), "negative") {
+						req.NegativePrompt = *input.String
+						continue
+					}
 					if req.NegativePrompt != "" {
 						prompt.WriteString(strings.TrimSpace(*input.String))
 						continue

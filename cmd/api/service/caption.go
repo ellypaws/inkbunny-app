@@ -21,7 +21,7 @@ var defaultTaggerRequest = e.TaggerRequest{
 	Threshold: &defaultThreshold,
 }
 
-func ProcessCaption(c echo.Context, wg *sync.WaitGroup, sub *db.Submission, i int, host *sd.Host) {
+func RetrieveCaptions(c echo.Context, wg *sync.WaitGroup, sub *db.Submission, i int, host *sd.Host) {
 	defer wg.Done()
 	f := &sub.Files[i].File
 	if !strings.HasPrefix(f.MimeType, "image") {
@@ -30,7 +30,7 @@ func ProcessCaption(c echo.Context, wg *sync.WaitGroup, sub *db.Submission, i in
 
 	cacheToUse := cache.SwitchCache(c)
 
-	key := fmt.Sprintf("%s:%s", echo.MIMEApplicationJSON, f.FileURLScreen)
+	key := fmt.Sprintf("%s:caption:%s", echo.MIMEApplicationJSON, f.FileURLScreen)
 
 	item, err := cacheToUse.Get(key)
 	if err == nil {

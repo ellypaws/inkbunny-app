@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/ellypaws/inkbunny-app/api/cache"
 	"github.com/ellypaws/inkbunny-app/cmd/crashy"
+	"github.com/ellypaws/inkbunny-app/cmd/db"
 	"github.com/ellypaws/inkbunny/api"
 	"github.com/labstack/echo/v4"
 	units "github.com/labstack/gommon/bytes"
@@ -19,22 +20,23 @@ import (
 func RetrieveSubmission(c echo.Context, req api.SubmissionDetailsRequest) (api.SubmissionDetailsResponse, error) {
 	var submissionDetails api.SubmissionDetailsResponse
 
-	key := fmt.Sprintf("%s:inkbunny:submissions:%s?sid=%s", echo.MIMEApplicationJSON, req.SubmissionIDs, req.SID)
+	key := fmt.Sprintf("%s:inkbunny:submissions:%s?sid=%s", echo.MIMEApplicationJSON, req.SubmissionIDs, db.Hash(req.SID))
 	cacheToUse := cache.SwitchCache(c)
 
 	if c.Request().Header.Get(echo.HeaderCacheControl) != "no-cache" {
 		item, errFunc := cacheToUse.Get(key)
 		if errFunc == nil {
-			if err := json.Unmarshal(item.Blob, &submissionDetails); err == nil {
+			err := json.Unmarshal(item.Blob, &submissionDetails)
+			if err == nil {
 				c.Logger().Debugf("Cache hit for %s", key)
 			} else {
 				c.Logger().Errorf("error unmarshaling submission details: %v", err)
-				return submissionDetails, err
 			}
+			return submissionDetails, err
 		}
-	}
 
-	c.Logger().Infof("Cache miss for %s retrieving submission...", key)
+		c.Logger().Infof("Cache miss for %s retrieving submission...", key)
+	}
 
 	var err error
 	submissionDetails, err = api.Credentials{Sid: req.SID}.SubmissionDetails(req)

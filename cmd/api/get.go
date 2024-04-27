@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bytes"
 	_ "embed"
 	"encoding/json"
 	"errors"
@@ -20,7 +19,6 @@ import (
 	"github.com/redis/go-redis/v9"
 	"net/http"
 	"net/url"
-	"reflect"
 	"regexp"
 	"slices"
 	"strconv"
@@ -415,6 +413,8 @@ func GetReviewHandler(c echo.Context) error {
 		return c.JSON(http.StatusUnauthorized, crashy.Wrap(err))
 	}
 
+	hashed := db.Hash(sid)
+
 	auditor, err := GetCurrentAuditor(c)
 	if err != nil {
 		return c.JSON(http.StatusUnauthorized, crashy.Wrap(err))
@@ -429,27 +429,27 @@ func GetReviewHandler(c echo.Context) error {
 	parameters := c.QueryParam("parameters")
 	interrogate := c.QueryParam("interrogate")
 	stream := c.QueryParam("stream")
-	useCache := c.Request().Header.Get(echo.HeaderCacheControl) != "no-cache"
 
-	const (
-		outputSingleTicket    = "single_ticket"
-		outputMultipleTickets = "multiple_tickets"
-		outputSubmissions     = "submissions"
-		outputFull            = "full"
-		outputBadges          = "badges"
-	)
+	validOutputs := []service.OutputType{
+		service.OutputSingleTicket,
+		service.OutputMultipleTickets,
+		service.OutputSubmissions,
+		service.OutputFull,
+		service.OutputBadges,
+	}
 
-	validOutputs := []string{
-		outputSingleTicket,
-		outputMultipleTickets,
-		outputSubmissions,
-		outputFull,
-		outputBadges,
+	if output == "" {
+		output = service.OutputSingleTicket
+	} else if !slices.Contains(validOutputs, output) {
+		return c.JSON(http.StatusBadRequest, crashy.ErrorResponse{
+			ErrorString: fmt.Sprintf("invalid output format %s. valid options are: %v", output, validOutputs),
+			Debug:       output,
+		})
 	}
 
 	cacheToUse := cache.SwitchCache(c)
 	query := url.Values{
-		"sid":         {sid},
+		"sid":         {hashed},
 		"parameters":  {parameters},
 		"interrogate": {interrogate},
 	}
@@ -458,76 +458,12 @@ func GetReviewHandler(c echo.Context) error {
 	var searchResponse api.SubmissionSearchResponse
 	var searchStore any
 	if submissionIDs == "search" {
-		var request = api.SubmissionSearchRequest{
-			Text:               "ai_generated",
-			SubmissionsPerPage: 10,
-			Random:             true,
-			GetRID:             true,
-			SubmissionIDsOnly:  true,
-			Type:               api.SubmissionTypes{api.SubmissionTypePicturePinup},
+		var errFunc func(echo.Context) error
+		submissionIDs, errFunc = service.RetrieveReviewSearch(c, sid, output, query, cacheToUse)
+		if errFunc != nil {
+			return errFunc(c)
 		}
-		var bind = struct {
-			*api.SubmissionSearchRequest
-			Types *string `json:"types,omitempty" query:"types"`
-		}{
-			SubmissionSearchRequest: &request,
-		}
-		err := c.Bind(&bind)
-		if err != nil {
-			return c.JSON(http.StatusBadRequest, crashy.Wrap(err))
-		}
-
-		request.SID, _, err = GetSIDandID(c)
-		if err != nil {
-			return c.JSON(http.StatusUnauthorized, crashy.Wrap(err))
-		}
-
-		if !useCache {
-			request.RID = ""
-		}
-
-		if request.Page < 1 {
-			c.Logger().Warnf("Page is set to %d, overriding to 1...", request.Page)
-			request.Page = 1
-		}
-
-		const searchFormat = "%s:review:%s:search:%s:%d?%s"
-		if request.RID != "" {
-			searchReviewKey := fmt.Sprintf(
-				searchFormat,
-				echo.MIMEApplicationJSON,
-				output,
-				request.RID,
-				request.Page,
-				query.Encode(),
-			)
-			item, err := cacheToUse.Get(searchReviewKey)
-			if err == nil {
-				c.Logger().Infof("Cache hit for %s", searchReviewKey)
-				return c.Blob(http.StatusOK, item.MimeType, item.Blob)
-			}
-		}
-
-		if bind.Types != nil {
-			*bind.Types = strings.Trim(*bind.Types, "[]")
-			*bind.Types = strings.ReplaceAll(*bind.Types, `"`, "")
-			for _, t := range strings.Split(*bind.Types, ",") {
-				i, err := strconv.Atoi(t)
-				if err != nil {
-					return c.JSON(http.StatusBadRequest, crashy.ErrorResponse{
-						ErrorString: "invalid submission type",
-						Debug:       err,
-					})
-				}
-				request.Type = append(request.Type, api.SubmissionType(i))
-			}
-		}
-
-		searchResponse, err = service.RetrieveSearch(c, request)
-		if err != nil {
-			return err
-		}
-		defer func() {
+		defer func(searchStore any) {
 			if searchStore == nil {
 				return
 			}
@@ -537,7 +473,7 @@ func GetReviewHandler(c echo.Context) error {
 				return
 			}
 			searchReviewKey := fmt.Sprintf(
-				searchFormat,
+				service.ReviewSearchFormat,
 				echo.MIMEApplicationJSON,
 				output,
 				searchResponse.RID,
@@ -553,34 +489,11 @@ func GetReviewHandler(c echo.Context) error {
 				return
 			}
 			c.Logger().Infof("Cached %s %s %dKiB", searchReviewKey, echo.MIMEApplicationJSON, len(bin)/units.KiB)
-		}()
-
-		var ids = make([]string, len(searchResponse.Submissions))
-		for i, submission := range searchResponse.Submissions {
-			ids[i] = submission.SubmissionID
-		}
-		submissionIDs = strings.Join(ids, ",")
+		}(searchStore)
 	}
 
 	if submissionIDs == "" || submissionIDs == "null" {
 		return c.JSON(http.StatusBadRequest, crashy.ErrorResponse{ErrorString: "missing submission ID"})
-	}
-
-	req := api.SubmissionDetailsRequest{
-		SID:                         sid,
-		SubmissionIDs:               submissionIDs,
-		OutputMode:                  "json",
-		ShowDescription:             true,
-		ShowDescriptionBbcodeParsed: true,
-	}
-
-	if output == "" {
-		output = outputSingleTicket
-	} else if !slices.Contains(validOutputs, output) {
-		return c.JSON(http.StatusBadRequest, crashy.ErrorResponse{
-			ErrorString: fmt.Sprintf("invalid output format %s. valid options are: %v", output, validOutputs),
-			Debug:       output,
-		})
 	}
 
 	reviewKey := fmt.Sprintf(
@@ -605,8 +518,10 @@ func GetReviewHandler(c echo.Context) error {
 				return c.JSON(http.StatusOK, searchStore)
 			}
 		}
+
+		c.Logger().Debugf("Cache miss for %s retrieving review...", reviewKey)
 	}
-	c.Logger().Debugf("Cache miss for %s retrieving review...", reviewKey)
+
 	var store any
 	defer func() {
 		if store == nil {
@@ -629,6 +544,13 @@ func GetReviewHandler(c echo.Context) error {
 		c.Logger().Infof("Cached %s %s %dKiB", reviewKey, echo.MIMEApplicationJSON, len(bin)/units.KiB)
 	}()
 
+	req := api.SubmissionDetailsRequest{
+		SID:                         sid,
+		SubmissionIDs:               submissionIDs,
+		OutputMode:                  "json",
+		ShowDescription:             true,
+		ShowDescriptionBbcodeParsed: true,
+	}
 	submissionDetails, err := service.RetrieveSubmission(c, req)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
@@ -642,121 +564,43 @@ func GetReviewHandler(c echo.Context) error {
 		c.Logger().Warn("interrogate was set to true but host is offline, only using cached captions...")
 	}
 
-	type details struct {
-		URL        string          `json:"url"`
-		ID         api.IntString   `json:"id"`
-		User       api.UsernameID  `json:"user"`
-		Submission *db.Submission  `json:"submission,omitempty"`
-		Inkbunny   *api.Submission `json:"inkbunny,omitempty"`
-		Ticket     *db.Ticket      `json:"ticket,omitempty"`
-		Images     []*db.File      `json:"images,omitempty"`
+	details := service.ProcessResponse(c, &service.Config{
+		SubmissionDetails: submissionDetails,
+		Database:          database,
+		Cache:             cacheToUse,
+		Host:              host,
+		Output:            output,
+		Auditor:           auditor,
+		ApiHost:           nil,
+	})
 
-		DescriptionSanitized string `json:"description_sanitized,omitempty"`
-	}
-
-	var submissions = make([]details, len(submissionDetails.Submissions))
-
-	auditorAsUser := auditorAsUsernameID(auditor)
-
-	var eachSubmission sync.WaitGroup
-	var dbMutex sync.Mutex
-	for i, sub := range submissionDetails.Submissions {
-		eachSubmission.Add(1)
-
-		submission := db.InkbunnySubmissionToDBSubmission(sub)
-		go processSubmission(c, &eachSubmission, &dbMutex, &submission)
-
-		user := api.UsernameID{UserID: sub.UserID, Username: sub.Username}
-
-		submissions[i] = details{
-			URL:        submission.URL,
-			ID:         api.IntString(submission.ID),
-			User:       user,
-			Submission: &submission,
-
-			DescriptionSanitized: sanitizeDescription(sub.DescriptionBBCodeParsed),
-		}
-
-		switch output {
-		case outputBadges:
-			submissions[i].Ticket = new(db.Ticket)
-		case outputFull:
-			submissions[i].Inkbunny = &sub
-			for f, file := range sub.Files {
-				if !strings.Contains(file.MimeType, "image") {
-					continue
-				}
-				submissions[i].Images = append(submissions[i].Images, &submission.Files[f])
-			}
-			fallthrough
-		case outputSubmissions:
-			fallthrough
-		case outputSingleTicket:
-			submissions[i].Ticket = &db.Ticket{
-				DateOpened: time.Now().UTC(),
-				Responses: []db.Response{
-					{
-						SupportTeam: false,
-						User:        auditorAsUser,
-						Date:        time.Now().UTC(),
-						Message:     "",
-					},
-				},
-			}
-		case outputMultipleTickets:
-			submissions[i].Ticket = &db.Ticket{
-				ID:         submission.ID,
-				Subject:    fmt.Sprintf("Review for %v", submission.URL),
-				DateOpened: time.Now().UTC(),
-				Status:     "triage",
-				Labels:     nil,
-				Priority:   "low",
-				Closed:     false,
-				Responses: []db.Response{
-					{
-						SupportTeam: false,
-						User:        auditorAsUser,
-						Date:        time.Now().UTC(),
-						Message:     "",
-					},
-				},
-				SubmissionIDs: []int64{int64(submission.ID)},
-				AssignedID:    &auditor.UserID,
-				UsersInvolved: db.Involved{
-					Reporter: auditorAsUser,
-					ReportedIDs: []api.UsernameID{
-						user,
-					},
-				},
-			}
-		}
-	}
-	eachSubmission.Wait()
 	if stream == "true" {
 		return nil
 	}
 
-	for i, sub := range submissions {
-		submissions[i].Ticket.Labels = db.TicketLabels(*sub.Submission)
-		if output != outputBadges {
-			submissions[i].Ticket.Responses[0].Message = submissionMessage(sub.Submission)
+	for i, sub := range details {
+		details[i].Ticket.Labels = db.TicketLabels(*sub.Submission)
+		if output != service.OutputBadges {
+			details[i].Ticket.Responses[0].Message = submissionMessage(sub.Submission)
 		}
 	}
 
 	switch output {
-	case outputSubmissions, outputFull, outputBadges:
-		store = submissions
-	case outputMultipleTickets:
+	case service.OutputSubmissions, service.OutputFull, service.OutputBadges:
+		store = details
+	case service.OutputMultipleTickets:
 		var tickets []db.Ticket
-		for _, sub := range submissions {
+		for _, sub := range details {
 			tickets = append(tickets, *sub.Ticket)
 		}
 		store = tickets
-	case outputSingleTicket:
+	case service.OutputSingleTicket:
 		fallthrough
 	default:
+		auditorAsUser := service.AuditorAsUsernameID(auditor)
+
 		var ticketLabels []db.TicketLabel
-		for _, sub := range submissions {
+		for _, sub := range details {
 			for _, label := range sub.Ticket.Labels {
 				if !slices.Contains(ticketLabels, label) {
 					ticketLabels = append(ticketLabels, label)
@@ -777,7 +621,7 @@ func GetReviewHandler(c echo.Context) error {
 					Date:        time.Now().UTC(),
 					Message: func() string {
 						var sb strings.Builder
-						for _, sub := range submissions {
+						for _, sub := range details {
 							if sb.Len() > 0 {
 								sb.WriteString("\n\n[s]                    [/s]\n\n")
 							}
@@ -789,7 +633,7 @@ func GetReviewHandler(c echo.Context) error {
 			},
 			SubmissionIDs: func() []int64 {
 				var ids []int64
-				for _, sub := range submissions {
+				for _, sub := range details {
 					ids = append(ids, int64(sub.ID))
 				}
 				return ids
@@ -799,7 +643,7 @@ func GetReviewHandler(c echo.Context) error {
 				Reporter: auditorAsUser,
 				ReportedIDs: func() []api.UsernameID {
 					var ids []api.UsernameID
-					for _, sub := range submissions {
+					for _, sub := range details {
 						ids = append(ids, sub.User)
 					}
 					return ids
@@ -814,56 +658,6 @@ func GetReviewHandler(c echo.Context) error {
 		return c.JSON(http.StatusOK, searchStore)
 	}
 	return c.JSON(http.StatusOK, store)
-}
-
-var apiImage = regexp.MustCompile(`(?i)(https://(?:\w+\.ib\.metapix|inkbunny)\.net(?:/[\w\-.]+)+\.(?:jpe?g|png|gif))`)
-
-func sanitizeDescription(description string) string {
-	description = strings.ReplaceAll(description, "href='/", "href='https://inkbunny.net/")
-	description = strings.ReplaceAll(description, "thumbnails/large", "thumbnails/medium")
-	description = apiImage.ReplaceAllString(description, fmt.Sprintf("%s/image?url=${1}", apiHost))
-	return description
-}
-
-func processObjectMetadata(submission *db.Submission) {
-	submission.Metadata.MissingPrompt = true
-	submission.Metadata.MissingModel = true
-
-	artists := database.AllArtists()
-	for _, obj := range submission.Metadata.Objects {
-		submission.Metadata.AISubmission = true
-		meta := strings.ToLower(obj.Prompt + obj.NegativePrompt)
-		for _, artist := range artists {
-			re, err := regexp.Compile(fmt.Sprintf(`\b%s\b`, strings.ToLower(artist.Username)))
-			if err != nil {
-				continue
-			}
-			if re.MatchString(meta) {
-				submission.Metadata.ArtistUsed = append(submission.Metadata.ArtistUsed, artist)
-			}
-		}
-
-		privateTools := []string{
-			"midjourney",
-			"novelai",
-		}
-
-		for _, tool := range privateTools {
-			if strings.Contains(meta, tool) {
-				submission.Metadata.PrivateTool = true
-				submission.Metadata.Generator = tool
-				break
-			}
-		}
-
-		if obj.Prompt != "" {
-			submission.Metadata.MissingPrompt = false
-		}
-
-		if obj.OverrideSettings.SDModelCheckpoint != nil || obj.OverrideSettings.SDCheckpointHash != "" {
-			submission.Metadata.MissingModel = false
-		}
-	}
 }
 
 func submissionMessage(sub *db.Submission) string {
@@ -1012,49 +806,6 @@ func submissionMessage(sub *db.Submission) string {
 	return sb.String()
 }
 
-func processSubmission(c echo.Context, eachSubmission *sync.WaitGroup, mutex *sync.Mutex, sub *db.Submission) {
-	defer eachSubmission.Done()
-	var fileWaitGroup sync.WaitGroup
-	if len(sub.Files) > 0 {
-		fileWaitGroup.Add(1)
-		c.Logger().Infof("processing files for %s %s", sub.URL, sub.Title)
-		go parseFiles(c, &fileWaitGroup, sub)
-	}
-	fileWaitGroup.Wait()
-
-	mutex.Lock()
-	defer mutex.Unlock()
-
-	for _, obj := range sub.Metadata.Objects {
-		for hash, model := range obj.LoraHashes {
-			database.Wait()
-			err := database.UpsertModel(db.ModelHashes{
-				hash: []string{model},
-			})
-			if err != nil {
-				c.Logger().Errorf("error inserting model %s: %s", hash, err)
-			}
-		}
-	}
-
-	if c.QueryParam("stream") == "true" {
-		enc := json.NewEncoder(c.Response())
-		if err := enc.Encode(sub); err != nil {
-			c.Logger().Errorf("error encoding submission %v: %v", sub.ID, err)
-		}
-		c.Logger().Debugf("flushing %v", sub.ID)
-		c.Response().Header().Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
-		c.Response().WriteHeader(http.StatusOK)
-		c.Get("writer").(http.Flusher).Flush()
-		c.Logger().Infof("finished processing %v", sub.ID)
-	}
-
-	err := database.InsertSubmission(*sub)
-	if err != nil {
-		c.Logger().Errorf("error inserting submission %v: %v", sub.ID, err)
-	}
-}
-
 func maxConfidence(old, new *entities.TaggerResponse) *entities.TaggerResponse {
 	if old == nil {
 		return new
@@ -1082,199 +833,6 @@ func maxConfidence(old, new *entities.TaggerResponse) *entities.TaggerResponse {
 	}
 
 	return &merged
-}
-
-func parseFiles(c echo.Context, wg *sync.WaitGroup, sub *db.Submission) {
-	defer wg.Done()
-	if c.QueryParam("parameters") == "true" {
-		wg.Add(1)
-		go processParams(c, wg, sub)
-	}
-	if c.QueryParam("interrogate") != "true" {
-		return
-	}
-	for i := range sub.Files {
-		wg.Add(1)
-		go service.ProcessCaption(c, wg, sub, i, host)
-	}
-}
-
-func processParams(c echo.Context, wg *sync.WaitGroup, sub *db.Submission) {
-	defer wg.Done()
-
-	if sub.Metadata.Params != nil {
-		return
-	}
-
-	var textFile *db.File
-
-	for i, f := range sub.Files {
-		switch f.File.MimeType {
-		case echo.MIMEApplicationJSON:
-			if strings.Contains(f.File.FileName, "plugin") {
-				continue
-			}
-			textFile = &sub.Files[i]
-			if strings.Contains(f.File.FileName, "workflow") {
-				break
-			}
-		case echo.MIMETextPlain:
-			textFile = &sub.Files[i]
-			break
-		}
-	}
-
-	defer processObjectMetadata(sub)
-
-	if textFile == nil {
-		processDescriptionHeuristics(c, sub)
-		return
-	}
-
-	cacheToUse := cache.SwitchCache(c)
-
-	b, errFunc := cache.Retrieve(c, cacheToUse, cache.Fetch{
-		Key:      fmt.Sprintf("%s:%s", textFile.File.MimeType, textFile.File.FileURLFull),
-		URL:      textFile.File.FileURLFull,
-		MimeType: textFile.File.MimeType,
-	})
-	if errFunc != nil {
-		return
-	}
-
-	if b.MimeType == echo.MIMEApplicationJSON {
-		comfyUI, err := entities.UnmarshalComfyUIBasic(b.Blob)
-		if err != nil {
-			c.Logger().Errorf("error parsing comfy ui %s: %s", textFile.File.FileURLFull, err)
-		}
-		if err == nil && len(comfyUI.Nodes) > 0 {
-			c.Logger().Debugf("comfy ui found for %s", sub.URL)
-			sub.Metadata.Objects = map[string]entities.TextToImageRequest{
-				textFile.File.FileName: *comfyUI.Convert(),
-			}
-			sub.Metadata.Params = &utils.Params{
-				textFile.File.FileName: utils.PNGChunk{
-					"comfy_ui": string(b.Blob),
-				},
-			}
-			sub.Metadata.Generator = "comfy_ui"
-			return
-		}
-
-		easyDiffusion, err := entities.UnmarshalEasyDiffusion(b.Blob)
-		if err != nil {
-			c.Logger().Errorf("error parsing easy diffusion %s: %s", textFile.File.FileURLFull, err)
-		}
-		if err == nil && !reflect.DeepEqual(easyDiffusion, entities.EasyDiffusion{}) {
-			c.Logger().Debugf("easy diffusion found for %s", sub.URL)
-			sub.Metadata.Objects = map[string]entities.TextToImageRequest{
-				textFile.File.FileName: *easyDiffusion.Convert(),
-			}
-			sub.Metadata.Params = &utils.Params{
-				textFile.File.FileName: utils.PNGChunk{
-					"easy_diffusion": string(b.Blob),
-				},
-			}
-			sub.Metadata.Generator = "easy_diffusion"
-			return
-		}
-
-		c.Logger().Warnf("could not parse json %s for %s", textFile.File.FileURLFull, sub.URL)
-		return
-	}
-
-	// Because some artists already have standardized txt files, opt to split each file separately
-	var params utils.Params
-	var err error
-	f := &textFile.File
-	c.Logger().Debugf("processing params for %s", f.FileName)
-	switch sub.UserID {
-	case utils.IDAutoSnep:
-		params, err = utils.AutoSnep(utils.WithBytes(b.Blob))
-	case utils.IDDruge:
-		params, err = utils.Common(utils.WithBytes(b.Blob), utils.UseDruge())
-	case utils.IDAIBean:
-		params, err = utils.Common(utils.WithBytes(b.Blob), utils.UseAIBean())
-	case utils.IDArtieDragon:
-		params, err = utils.Common(utils.WithBytes(b.Blob), utils.UseArtie())
-	case 1125540:
-		params, err = utils.Common(
-			utils.WithBytes(b.Blob),
-			utils.WithFilename("picker52578_"),
-			utils.WithKeyCondition(func(line string) bool { return strings.HasPrefix(line, "File Name") }))
-	case utils.IDFairyGarden:
-		params, err = utils.Common(utils.WithBytes(b.Blob), utils.UseFairyGarden())
-	case utils.IDCirn0:
-		params, err = utils.Common(utils.WithBytes(b.Blob), utils.UseCirn0())
-	case utils.IDHornybunny:
-		params, err = utils.Common(utils.WithBytes(b.Blob), utils.UseHornybunny())
-	default:
-		params, err = utils.Common(
-			// prepend "photo 1" to the input in case it's missing
-			utils.WithBytes(bytes.Join([][]byte{[]byte(f.FileName), b.Blob}, []byte("\n"))),
-			utils.WithKeyCondition(func(line string) bool { return strings.HasPrefix(line, f.FileName) }))
-	}
-	if err != nil {
-		c.Logger().Errorf("error processing params for %s: %s", f.FileName, err)
-		return
-	}
-	if len(params) > 0 {
-		c.Logger().Debugf("finished params for %s", f.FileName)
-		sub.Metadata.Params = &params
-		parseObjects(c, sub)
-	}
-	if len(sub.Metadata.Objects) == 0 {
-		processDescriptionHeuristics(c, sub)
-		return
-	}
-}
-
-func processDescriptionHeuristics(c echo.Context, sub *db.Submission) {
-	c.Logger().Debugf("processing description heuristics for %v", sub.URL)
-	heuristics, err := utils.DescriptionHeuristics(sub.Description)
-	if err != nil {
-		c.Logger().Errorf("error processing description heuristics for %v: %v", sub.URL, err)
-		return
-	}
-	if reflect.DeepEqual(heuristics, entities.TextToImageRequest{}) {
-		c.Logger().Debugf("no heuristics found for %v", sub.URL)
-		return
-	}
-	sub.Metadata.Objects = map[string]entities.TextToImageRequest{sub.Title: heuristics}
-}
-
-func parseObjects(c echo.Context, sub *db.Submission) {
-	if sub.Metadata.Objects != nil {
-		return
-	}
-
-	var wg sync.WaitGroup
-	var mutex sync.Mutex
-	for fileName, params := range *sub.Metadata.Params {
-		if p, ok := params[utils.Parameters]; ok {
-			c.Logger().Debugf("processing heuristics for %v", fileName)
-			wg.Add(1)
-			go func(name string, content string) {
-				defer wg.Done()
-				heuristics, err := utils.ParameterHeuristics(content)
-				if err != nil {
-					c.Logger().Errorf("error processing heuristics for %v: %v", name, err)
-					return
-				}
-				if sub.Metadata.Objects == nil {
-					sub.Metadata.Objects = make(map[string]entities.TextToImageRequest)
-				}
-				mutex.Lock()
-				sub.Metadata.Objects[name] = heuristics
-				mutex.Unlock()
-			}(fileName, p)
-		}
-	}
-	wg.Wait()
-}
-
-func auditorAsUsernameID(auditor *db.Auditor) api.UsernameID {
-	return api.UsernameID{UserID: strconv.FormatInt(auditor.UserID, 10), Username: auditor.Username}
 }
 
 // GetHeuristicsHandler returns the heuristics of a submission
@@ -1315,6 +873,9 @@ func GetHeuristicsHandler(c echo.Context) error {
 
 	var submissions = make(map[int64]details)
 
+	cacheToUse := cache.SwitchCache(c)
+	artists := database.AllArtists()
+
 	var waitGroup sync.WaitGroup
 	var mutex sync.Locker
 	for _, sub := range submissionDetails.Submissions {
@@ -1322,11 +883,8 @@ func GetHeuristicsHandler(c echo.Context) error {
 
 		submission := db.InkbunnySubmissionToDBSubmission(sub)
 		go func(wg *sync.WaitGroup, sub *db.Submission) {
-			defer wg.Done()
-			var p sync.WaitGroup
-			p.Add(1)
-			go processParams(c, &p, sub)
-			p.Wait()
+			service.RetrieveParams(c, wg, sub, cacheToUse, artists)
+
 			if c.QueryParam("stream") == "true" {
 				mutex.Lock()
 				defer mutex.Unlock()

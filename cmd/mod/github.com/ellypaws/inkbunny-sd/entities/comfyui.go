@@ -584,7 +584,6 @@ func (r *ComfyUIBasic) Convert() *TextToImageRequest {
 					if input.Double != nil {
 						fallback(&req.Seed, int64(*input.Double))
 					}
-				case 1:
 				case 2:
 					if input.Double != nil {
 						req.Steps = int(*input.Double)

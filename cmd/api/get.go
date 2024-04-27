@@ -976,7 +976,7 @@ func submissionMessage(sub *db.Submission) string {
 	var added uint
 	for i, file := range sub.Files {
 		switch file.File.MimeType {
-		case echo.MIMEApplicationJSON, echo.MIMETextPlain:
+		//case echo.MIMEApplicationJSON, echo.MIMETextPlain:
 		default:
 			if added == 0 {
 				sb.WriteString("\n[u]MD5 Checksums at the time of writing[/u]:")

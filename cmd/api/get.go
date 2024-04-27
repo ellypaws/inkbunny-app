@@ -403,6 +403,8 @@ func GetAllAuditorsJHandler(c echo.Context) error {
 // - full: returns a []details db.Ticket with the original api.Submission and db.Ticket
 // Note: "parameters" and "interrogate" won't automatically be set on full output
 //
+// - badges: returns a simplified []details of each submission
+//
 //   - Set query "parameters" to "true" to parse the utils.Params from json/text files
 //   - Set query "interrogate" to "true" to parse entities.TaggerResponse from image files using (*sd.Host).Interrogate
 //   - Set query "stream" to "true" to receive multiple JSON objects
@@ -434,6 +436,7 @@ func GetReviewHandler(c echo.Context) error {
 		outputMultipleTickets = "multiple_tickets"
 		outputSubmissions     = "submissions"
 		outputFull            = "full"
+		outputBadges          = "badges"
 	)
 
 	validOutputs := []string{
@@ -441,6 +444,7 @@ func GetReviewHandler(c echo.Context) error {
 		outputMultipleTickets,
 		outputSubmissions,
 		outputFull,
+		outputBadges,
 	}
 
 	cacheToUse := cache.SwitchCache(c)
@@ -674,6 +678,8 @@ func GetReviewHandler(c echo.Context) error {
 		}
 
 		switch output {
+		case outputBadges:
+			submissions[i].Ticket = new(db.Ticket)
 		case outputFull:
 			submissions[i].Inkbunny = &sub
 			for f, file := range sub.Files {
@@ -732,11 +738,13 @@ func GetReviewHandler(c echo.Context) error {
 
 	for i, sub := range submissions {
 		submissions[i].Ticket.Labels = db.TicketLabels(*sub.Submission)
-		submissions[i].Ticket.Responses[0].Message = submissionMessage(sub.Submission)
+		if output != outputBadges {
+			submissions[i].Ticket.Responses[0].Message = submissionMessage(sub.Submission)
+		}
 	}
 
 	switch output {
-	case outputSubmissions, outputFull:
+	case outputSubmissions, outputFull, outputBadges:
 		store = submissions
 	case outputMultipleTickets:
 		var tickets []db.Ticket

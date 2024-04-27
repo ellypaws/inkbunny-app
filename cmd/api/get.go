@@ -1097,11 +1097,29 @@ func processParams(c echo.Context, wg *sync.WaitGroup, sub *db.Submission) {
 	}
 
 	var textFile *db.File
-	for i, f := range sub.Files {
-		switch f.File.MimeType {
-		case echo.MIMEApplicationJSON, echo.MIMETextPlain:
-			textFile = &sub.Files[i]
-			break
+
+	switch sub.UserID {
+	case utils.IDNeoncortex:
+		for i, f := range sub.Files {
+			switch f.File.MimeType {
+			case echo.MIMEApplicationJSON:
+				if strings.Contains(f.File.FileName, "workflow") {
+					textFile = &sub.Files[i]
+					break
+				}
+			case echo.MIMETextPlain:
+				textFile = &sub.Files[i]
+				break
+			}
+		}
+		c.Logger().Warnf("workflow not found for %s", sub.URL)
+	default:
+		for i, f := range sub.Files {
+			switch f.File.MimeType {
+			case echo.MIMEApplicationJSON, echo.MIMETextPlain:
+				textFile = &sub.Files[i]
+				break
+			}
 		}
 	}
 
@@ -1135,9 +1153,26 @@ func processParams(c echo.Context, wg *sync.WaitGroup, sub *db.Submission) {
 					"easy_diffusion": string(b.Blob),
 				},
 			}
+			sub.Metadata.Generator = "easy_diffusion"
 			return
 		}
-		c.Logger().Warnf("json is not easy diffusion for %s", sub.URL)
+
+		comfyUI, err := entities.UnmarshalComfyUI(b.Blob)
+		if err == nil && !reflect.DeepEqual(comfyUI, entities.ComfyUI{}) {
+			c.Logger().Debugf("comfy ui found for %s", sub.URL)
+			sub.Metadata.Objects = map[string]entities.TextToImageRequest{
+				textFile.File.FileName: *comfyUI.Convert(),
+			}
+			sub.Metadata.Params = &utils.Params{
+				textFile.File.FileName: utils.PNGChunk{
+					"comfy_ui": string(b.Blob),
+				},
+			}
+			sub.Metadata.Generator = "comfy_ui"
+			return
+		}
+
+		c.Logger().Warnf("could not parse json for %s", textFile.File.FileURLFull)
 	}
 
 	// Because some artists already have standardized txt files, opt to split each file separately

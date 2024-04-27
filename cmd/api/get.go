@@ -1098,28 +1098,19 @@ func processParams(c echo.Context, wg *sync.WaitGroup, sub *db.Submission) {
 
 	var textFile *db.File
 
-	switch sub.UserID {
-	case utils.IDNeoncortex:
-		for i, f := range sub.Files {
-			switch f.File.MimeType {
-			case echo.MIMEApplicationJSON:
-				if strings.Contains(f.File.FileName, "workflow") {
-					textFile = &sub.Files[i]
-					break
-				}
-			case echo.MIMETextPlain:
-				textFile = &sub.Files[i]
+	for i, f := range sub.Files {
+		switch f.File.MimeType {
+		case echo.MIMEApplicationJSON:
+			if strings.Contains(f.File.FileName, "plugin") {
+				continue
+			}
+			textFile = &sub.Files[i]
+			if strings.Contains(f.File.FileName, "workflow") {
 				break
 			}
-		}
-		c.Logger().Warnf("workflow not found for %s", sub.URL)
-	default:
-		for i, f := range sub.Files {
-			switch f.File.MimeType {
-			case echo.MIMEApplicationJSON, echo.MIMETextPlain:
-				textFile = &sub.Files[i]
-				break
-			}
+		case echo.MIMETextPlain:
+			textFile = &sub.Files[i]
+			break
 		}
 	}
 
@@ -1142,6 +1133,21 @@ func processParams(c echo.Context, wg *sync.WaitGroup, sub *db.Submission) {
 	}
 
 	if b.MimeType == echo.MIMEApplicationJSON {
+		comfyUI, err := entities.UnmarshalComfyUI(b.Blob)
+		if err == nil && len(comfyUI.Nodes) > 0 {
+			c.Logger().Debugf("comfy ui found for %s", sub.URL)
+			sub.Metadata.Objects = map[string]entities.TextToImageRequest{
+				textFile.File.FileName: *comfyUI.Convert(),
+			}
+			sub.Metadata.Params = &utils.Params{
+				textFile.File.FileName: utils.PNGChunk{
+					"comfy_ui": string(b.Blob),
+				},
+			}
+			sub.Metadata.Generator = "comfy_ui"
+			return
+		}
+
 		easyDiffusion, err := entities.UnmarshalEasyDiffusion(b.Blob)
 		if err == nil && !reflect.DeepEqual(easyDiffusion, entities.EasyDiffusion{}) {
 			c.Logger().Debugf("easy diffusion found for %s", sub.URL)
@@ -1157,22 +1163,8 @@ func processParams(c echo.Context, wg *sync.WaitGroup, sub *db.Submission) {
 			return
 		}
 
-		comfyUI, err := entities.UnmarshalComfyUI(b.Blob)
-		if err == nil && !reflect.DeepEqual(comfyUI, entities.ComfyUI{}) {
-			c.Logger().Debugf("comfy ui found for %s", sub.URL)
-			sub.Metadata.Objects = map[string]entities.TextToImageRequest{
-				textFile.File.FileName: *comfyUI.Convert(),
-			}
-			sub.Metadata.Params = &utils.Params{
-				textFile.File.FileName: utils.PNGChunk{
-					"comfy_ui": string(b.Blob),
-				},
-			}
-			sub.Metadata.Generator = "comfy_ui"
-			return
-		}
-
-		c.Logger().Warnf("could not parse json for %s", textFile.File.FileURLFull)
+		c.Logger().Warnf("could not parse json %s for %s", textFile.File.FileURLFull, sub.URL)
+		return
 	}
 
 	// Because some artists already have standardized txt files, opt to split each file separately

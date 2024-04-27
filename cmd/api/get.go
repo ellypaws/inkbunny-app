@@ -1133,7 +1133,10 @@ func processParams(c echo.Context, wg *sync.WaitGroup, sub *db.Submission) {
 	}
 
 	if b.MimeType == echo.MIMEApplicationJSON {
-		comfyUI, err := entities.UnmarshalComfyUI(b.Blob)
+		comfyUI, err := entities.UnmarshalComfyUIBasic(b.Blob)
+		if err != nil {
+			c.Logger().Errorf("error parsing comfy ui %s: %s", textFile.File.FileURLFull, err)
+		}
 		if err == nil && len(comfyUI.Nodes) > 0 {
 			c.Logger().Debugf("comfy ui found for %s", sub.URL)
 			sub.Metadata.Objects = map[string]entities.TextToImageRequest{
@@ -1149,6 +1152,9 @@ func processParams(c echo.Context, wg *sync.WaitGroup, sub *db.Submission) {
 		}
 
 		easyDiffusion, err := entities.UnmarshalEasyDiffusion(b.Blob)
+		if err != nil {
+			c.Logger().Errorf("error parsing easy diffusion %s: %s", textFile.File.FileURLFull, err)
+		}
 		if err == nil && !reflect.DeepEqual(easyDiffusion, entities.EasyDiffusion{}) {
 			c.Logger().Debugf("easy diffusion found for %s", sub.URL)
 			sub.Metadata.Objects = map[string]entities.TextToImageRequest{

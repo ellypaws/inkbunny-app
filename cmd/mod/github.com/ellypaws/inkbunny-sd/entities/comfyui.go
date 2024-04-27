@@ -22,17 +22,32 @@ func (r *ComfyUI) Marshal() ([]byte, error) {
 }
 
 type ComfyUI struct {
-	LastNodeID int64    `json:"last_node_id"`
-	LastLinkID int64    `json:"last_link_id"`
-	Nodes      []Node   `json:"nodes"`
-	Links      [][]Link `json:"links"`
-	Groups     []Group  `json:"groups"`
-	Config     Empty    `json:"config"`
-	Extra      Empty    `json:"extra"`
-	Version    float64  `json:"version"`
+	LastNodeID int64           `json:"last_node_id"`
+	LastLinkID int64           `json:"last_link_id"`
+	Nodes      []Node          `json:"nodes"`
+	Links      [][]LinkElement `json:"links"`
+	Groups     []Group         `json:"groups"`
+	Config     ExtraClass      `json:"config"`
+	Extra      ExtraClass      `json:"extra"`
+	Version    float64         `json:"version"`
 }
 
-type Empty struct{}
+func UnmarshalComfyUIBasic(data []byte) (ComfyUIBasic, error) {
+	var r ComfyUIBasic
+	err := json.Unmarshal(data, &r)
+	return r, err
+}
+
+func (r *ComfyUIBasic) Marshal() ([]byte, error) {
+	return json.Marshal(r)
+}
+
+type ComfyUIBasic struct {
+	Nodes   []Node  `json:"nodes"`
+	Version float64 `json:"version"`
+}
+
+type ExtraClass struct{}
 
 type Group struct {
 	Title    string  `json:"title"`
@@ -43,19 +58,20 @@ type Group struct {
 }
 
 type Node struct {
-	ID            int64          `json:"id"`
-	Type          NodeType       `json:"type"`
-	Pos           *Pos           `json:"pos"`
-	Size          *Pos           `json:"size"`
-	Flags         Flags          `json:"flags"`
-	Order         int64          `json:"order"`
-	Mode          int64          `json:"mode"`
-	Inputs        []Input        `json:"inputs,omitempty"`
-	Outputs       []Output       `json:"outputs,omitempty"`
-	Properties    Properties     `json:"properties"`
-	WidgetsValues []WidgetsValue `json:"widgets_values,omitempty"`
-	Color         *string        `json:"color,omitempty"`
-	BGColor       *string        `json:"bgcolor,omitempty"`
+	ID            int64               `json:"id"`
+	Type          NodeType            `json:"type"`
+	Pos           *Pos                `json:"pos"`
+	Size          *Pos                `json:"size"`
+	Flags         Flags               `json:"flags"`
+	Order         int64               `json:"order"`
+	Mode          int64               `json:"mode"`
+	Inputs        []Input             `json:"inputs,omitempty"`
+	Outputs       []Output            `json:"outputs,omitempty"`
+	Properties    Properties          `json:"properties"`
+	WidgetsValues *WidgetsValuesUnion `json:"widgets_values,omitempty"`
+	Color         *string             `json:"color,omitempty"`
+	BGColor       *string             `json:"bgcolor,omitempty"`
+	Title         *Title              `json:"title,omitempty"`
 }
 
 type Flags struct {
@@ -63,25 +79,30 @@ type Flags struct {
 }
 
 type Input struct {
-	Name      string  `json:"name"`
-	Type      string  `json:"type"`
-	Link      *int64  `json:"link"`
-	SlotIndex *int64  `json:"slot_index,omitempty"`
-	Widget    *Widget `json:"widget,omitempty"`
+	Name      string   `json:"name"`
+	Type      LinkEnum `json:"type"`
+	Link      *int64   `json:"link"`
+	SlotIndex *int64   `json:"slot_index,omitempty"`
+	Widget    *Widget  `json:"widget,omitempty"`
 }
 
 type Widget struct {
-	Name string `json:"name"`
+	Name   WidgetName      `json:"name"`
+	Config []ConfigElement `json:"config,omitempty"`
+}
+
+type ConfigConfig struct {
+	Multiline bool `json:"multiline"`
 }
 
 type Output struct {
-	Name      string  `json:"name"`
-	Type      string  `json:"type"`
-	Links     []int64 `json:"links"`
-	SlotIndex *int64  `json:"slot_index,omitempty"`
-	Shape     *int64  `json:"shape,omitempty"`
-	Dir       *int64  `json:"dir,omitempty"`
-	Label     *string `json:"label,omitempty"`
+	Name      string   `json:"name"`
+	Type      LinkEnum `json:"type"`
+	Links     []int64  `json:"links"`
+	SlotIndex *int64   `json:"slot_index,omitempty"`
+	Shape     *int64   `json:"shape,omitempty"`
+	Dir       *int64   `json:"dir,omitempty"`
+	Label     *string  `json:"label,omitempty"`
 }
 
 type Properties struct {
@@ -97,13 +118,89 @@ type Properties struct {
 	Horizontal         *bool   `json:"horizontal,omitempty"`
 }
 
-type Link struct {
-	Integer *int64
-	String  *string
+type WidgetsValueClass struct {
+	Filename         string   `json:"filename"`
+	Subfolder        string   `json:"subfolder"`
+	Type             string   `json:"type"`
+	ImageHash        *float64 `json:"image_hash,omitempty"`
+	ForwardFilename  *string  `json:"forward_filename,omitempty"`
+	ForwardSubfolder *string  `json:"forward_subfolder,omitempty"`
+	ForwardType      *string  `json:"forward_type,omitempty"`
 }
 
-func (x *Link) UnmarshalJSON(data []byte) error {
-	object, err := unmarshalUnion(data, &x.Integer, nil, nil, &x.String, false, nil, false, nil, false, nil, false, nil, false)
+type WidgetsValuesClass struct {
+	UpscaleBy         float64 `json:"upscale_by"`
+	Seed              int64   `json:"seed"`
+	Steps             int64   `json:"steps"`
+	CFG               float64 `json:"cfg"`
+	SamplerName       string  `json:"sampler_name"`
+	Scheduler         string  `json:"scheduler"`
+	Denoise           float64 `json:"denoise"`
+	ModeType          string  `json:"mode_type"`
+	TileWidth         int64   `json:"tile_width"`
+	TileHeight        int64   `json:"tile_height"`
+	MaskBlur          int64   `json:"mask_blur"`
+	TilePadding       int64   `json:"tile_padding"`
+	SeamFixMode       string  `json:"seam_fix_mode"`
+	SeamFixDenoise    int64   `json:"seam_fix_denoise"`
+	SeamFixWidth      int64   `json:"seam_fix_width"`
+	SeamFixMaskBlur   int64   `json:"seam_fix_mask_blur"`
+	SeamFixPadding    int64   `json:"seam_fix_padding"`
+	ForceUniformTiles bool    `json:"force_uniform_tiles"`
+	TiledDecode       bool    `json:"tiled_decode"`
+}
+
+type LinkEnum string
+
+const (
+	LinkASCII        LinkEnum = "ASCII"
+	LinkBboxDetector LinkEnum = "BBOX_DETECTOR"
+	LinkClip         LinkEnum = "CLIP"
+	LinkConditioning LinkEnum = "CONDITIONING"
+	LinkControlNet   LinkEnum = "CONTROL_NET"
+	LinkDetailerHook LinkEnum = "DETAILER_HOOK"
+	LinkDetailerPipe LinkEnum = "DETAILER_PIPE"
+	LinkEmpty        LinkEnum = "*"
+	LinkImage        LinkEnum = "IMAGE"
+	LinkImagePath    LinkEnum = "IMAGE_PATH"
+	LinkInt          LinkEnum = "INT"
+	LinkLatent       LinkEnum = "LATENT"
+	LinkLoraStack    LinkEnum = "LORA_STACK"
+	LinkMask         LinkEnum = "MASK"
+	LinkModel        LinkEnum = "MODEL"
+	LinkModelStack   LinkEnum = "MODEL_STACK"
+	LinkPipeLine     LinkEnum = "PIPE_LINE"
+	LinkSamModel     LinkEnum = "SAM_MODEL"
+	LinkSegmDetector LinkEnum = "SEGM_DETECTOR"
+	LinkString       LinkEnum = "STRING"
+	LinkUpscaleModel LinkEnum = "UPSCALE_MODEL"
+	LinkVae          LinkEnum = "VAE"
+)
+
+type WidgetName string
+
+const (
+	WidgetSeed  WidgetName = "seed"
+	WidgetText  WidgetName = "text"
+	WidgetValue WidgetName = "value"
+)
+
+type Title string
+
+const (
+	Furry          Title = "Furry"
+	IncludePrompt  Title = "Include Prompt"
+	NegativePrompt Title = "Negative Prompt"
+)
+
+type LinkElement struct {
+	Enum    *LinkEnum
+	Integer *int64
+}
+
+func (x *LinkElement) UnmarshalJSON(data []byte) error {
+	x.Enum = nil
+	object, err := unmarshalUnion(data, &x.Integer, nil, nil, nil, false, nil, false, nil, false, nil, true, &x.Enum, false)
 	if err != nil {
 		return err
 	}
@@ -112,8 +209,31 @@ func (x *Link) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-func (x *Link) MarshalJSON() ([]byte, error) {
-	return marshalUnion(x.Integer, nil, nil, x.String, false, nil, false, nil, false, nil, false, nil, false)
+func (x *LinkElement) MarshalJSON() ([]byte, error) {
+	return marshalUnion(x.Integer, nil, nil, nil, false, nil, false, nil, false, nil, x.Enum != nil, x.Enum, false)
+}
+
+type ConfigElement struct {
+	ConfigConfig *ConfigConfig
+	Enum         *LinkEnum
+}
+
+func (x *ConfigElement) UnmarshalJSON(data []byte) error {
+	x.ConfigConfig = nil
+	x.Enum = nil
+	var c ConfigConfig
+	object, err := unmarshalUnion(data, nil, nil, nil, nil, false, nil, true, &c, false, nil, true, &x.Enum, false)
+	if err != nil {
+		return err
+	}
+	if object {
+		x.ConfigConfig = &c
+	}
+	return nil
+}
+
+func (x *ConfigElement) MarshalJSON() ([]byte, error) {
+	return marshalUnion(nil, nil, nil, nil, false, nil, x.ConfigConfig != nil, x.ConfigConfig, false, nil, x.Enum != nil, x.Enum, false)
 }
 
 type Pos struct {
@@ -137,24 +257,51 @@ func (x *Pos) MarshalJSON() ([]byte, error) {
 	return marshalUnion(nil, nil, nil, nil, x.DoubleArray != nil, x.DoubleArray, false, nil, x.DoubleMap != nil, x.DoubleMap, false, nil, false)
 }
 
-type WidgetsValue struct {
-	Bool   *bool
-	Double *float64
-	String *string
+type WidgetsValuesUnion struct {
+	UnionArray         []WidgetsValueElement
+	WidgetsValuesClass *WidgetsValuesClass
 }
 
-func (x *WidgetsValue) UnmarshalJSON(data []byte) error {
-	object, err := unmarshalUnion(data, nil, &x.Double, &x.Bool, &x.String, false, nil, false, nil, false, nil, false, nil, true)
+func (x *WidgetsValuesUnion) UnmarshalJSON(data []byte) error {
+	x.UnionArray = nil
+	x.WidgetsValuesClass = nil
+	var c WidgetsValuesClass
+	object, err := unmarshalUnion(data, nil, nil, nil, nil, true, &x.UnionArray, true, &c, false, nil, false, nil, false)
 	if err != nil {
 		return err
 	}
 	if object {
+		x.WidgetsValuesClass = &c
 	}
 	return nil
 }
 
-func (x *WidgetsValue) MarshalJSON() ([]byte, error) {
-	return marshalUnion(nil, x.Double, x.Bool, x.String, false, nil, false, nil, false, nil, false, nil, true)
+func (x *WidgetsValuesUnion) MarshalJSON() ([]byte, error) {
+	return marshalUnion(nil, nil, nil, nil, x.UnionArray != nil, x.UnionArray, x.WidgetsValuesClass != nil, x.WidgetsValuesClass, false, nil, false, nil, false)
+}
+
+type WidgetsValueElement struct {
+	Bool              *bool
+	Double            *float64
+	String            *string
+	WidgetsValueClass *WidgetsValueClass
+}
+
+func (x *WidgetsValueElement) UnmarshalJSON(data []byte) error {
+	x.WidgetsValueClass = nil
+	var c WidgetsValueClass
+	object, err := unmarshalUnion(data, nil, &x.Double, &x.Bool, &x.String, false, nil, true, &c, false, nil, false, nil, true)
+	if err != nil {
+		return err
+	}
+	if object {
+		x.WidgetsValueClass = &c
+	}
+	return nil
+}
+
+func (x *WidgetsValueElement) MarshalJSON() ([]byte, error) {
+	return marshalUnion(nil, x.Double, x.Bool, x.String, false, nil, x.WidgetsValueClass != nil, x.WidgetsValueClass, false, nil, false, nil, true)
 }
 
 func unmarshalUnion(data []byte, pi **int64, pf **float64, pb **bool, ps **string, haveArray bool, pa interface{}, haveObject bool, pc interface{}, haveMap bool, pm interface{}, haveEnum bool, pe interface{}, nullable bool) (bool, error) {
@@ -323,6 +470,14 @@ var negatives = []string{
 }
 
 func (r *ComfyUI) Convert() *TextToImageRequest {
+	basic := ComfyUIBasic{
+		Nodes:   r.Nodes,
+		Version: r.Version,
+	}
+	return basic.Convert()
+}
+
+func (r *ComfyUIBasic) Convert() *TextToImageRequest {
 	if r == nil {
 		return nil
 	}
@@ -333,13 +488,13 @@ func (r *ComfyUI) Convert() *TextToImageRequest {
 	for _, node := range r.Nodes {
 		switch node.Type {
 		case CheckpointLoaderSimple:
-			for _, input := range node.WidgetsValues {
+			for _, input := range node.WidgetsValues.UnionArray {
 				if input.String != nil {
 					req.OverrideSettings.SDModelCheckpoint = input.String
 				}
 			}
 		case VAELoader:
-			for _, input := range node.WidgetsValues {
+			for _, input := range node.WidgetsValues.UnionArray {
 				if input.String != nil {
 					req.OverrideSettings.SDVae = input.String
 				}
@@ -347,7 +502,7 @@ func (r *ComfyUI) Convert() *TextToImageRequest {
 		case CRLoRAStack:
 			var lastLora *string
 			var enabled bool
-			for i, input := range node.WidgetsValues {
+			for i, input := range node.WidgetsValues.UnionArray {
 				switch i % 4 {
 				case 0:
 					if input.String != nil {
@@ -371,7 +526,7 @@ func (r *ComfyUI) Convert() *TextToImageRequest {
 				}
 			}
 		case CLIPTextEncode:
-			for _, input := range node.WidgetsValues {
+			for _, input := range node.WidgetsValues.UnionArray {
 				if input.String != nil {
 					if req.NegativePrompt != "" {
 						prompt.WriteString(strings.TrimSpace(*input.String))
@@ -387,13 +542,13 @@ func (r *ComfyUI) Convert() *TextToImageRequest {
 				}
 			}
 		case SeedNode:
-			for _, input := range node.WidgetsValues {
+			for _, input := range node.WidgetsValues.UnionArray {
 				if input.Double != nil {
 					req.Seed = int64(*input.Double)
 				}
 			}
 		case KSamplerCycle:
-			for i, input := range node.WidgetsValues {
+			for i, input := range node.WidgetsValues.UnionArray {
 				switch i {
 				case 0:
 					if input.Double != nil {
@@ -419,7 +574,7 @@ func (r *ComfyUI) Convert() *TextToImageRequest {
 				}
 			}
 		case KSampler:
-			for i, input := range node.WidgetsValues {
+			for i, input := range node.WidgetsValues.UnionArray {
 				switch i {
 				case 0:
 					if input.Double != nil {

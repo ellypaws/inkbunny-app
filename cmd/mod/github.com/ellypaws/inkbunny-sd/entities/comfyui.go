@@ -443,6 +443,7 @@ const (
 	CLIPSetLastLayer            NodeType = "CLIPSetLastLayer"
 	CRApplyModelMerge           NodeType = "CR Apply Model Merge"
 	CRLoRAStack                 NodeType = "CR LoRA Stack"
+	LoraLoader                  NodeType = "LoraLoader"
 	FastGroupsBypasser          NodeType = "Fast Groups Bypasser (rgthree)"
 	EmptyLatentImage            NodeType = "EmptyLatentImage"
 	CRModelMergeStack           NodeType = "CR Model Merge Stack"
@@ -521,6 +522,24 @@ func (r *ComfyUIBasic) Convert() *TextToImageRequest {
 						if enabled && lastLora != nil {
 							loras[*lastLora] = *input.Double
 							enabled = false
+							lastLora = nil
+						}
+					}
+				}
+			}
+		case LoraLoader:
+			var lastLora *string
+			for i, input := range node.WidgetsValues.UnionArray {
+				switch i {
+				case 0:
+					if input.String != nil {
+						lastLora = input.String
+						loras[*lastLora] = 1
+					}
+				case 1:
+					if input.Double != nil {
+						if lastLora != nil {
+							loras[*lastLora] = *input.Double
 							lastLora = nil
 						}
 					}

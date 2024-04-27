@@ -683,6 +683,8 @@ func GetReviewHandler(c echo.Context) error {
 				submissions[i].Images = append(submissions[i].Images, &submission.Files[f])
 			}
 			fallthrough
+		case outputSubmissions:
+			fallthrough
 		case outputSingleTicket:
 			submissions[i].Ticket = &db.Ticket{
 				DateOpened: time.Now().UTC(),

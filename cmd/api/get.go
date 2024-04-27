@@ -771,7 +771,7 @@ func GetReviewHandler(c echo.Context) error {
 							if sb.Len() > 0 {
 								sb.WriteString("\n\n[s]                    [/s]\n\n")
 							}
-							sb.WriteString(submissionMessage(sub.Submission))
+							sb.WriteString(sub.Ticket.Responses[0].Message)
 						}
 						return sb.String()
 					}(),

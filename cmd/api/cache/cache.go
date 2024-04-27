@@ -115,19 +115,21 @@ func Retrieve(c echo.Context, cache Cache, fetch Fetch) (*Item, func(c echo.Cont
 		fetch.Key = fmt.Sprintf("%s:%s", fetch.MimeType, fetch.URL)
 	}
 
-	item, err := cache.Get(fetch.Key)
-	if err == nil {
-		c.Logger().Infof("Retrieved %s %dKiB", fetch.Key, len(item.Blob)/units.KiB)
-		c.Response().Header().Set(echo.HeaderCacheControl, "public, max-age=86400")
-		return item, nil
-	}
+	if c.Request().Header.Get(echo.HeaderCacheControl) != "no-cache" {
+		item, err := cache.Get(fetch.Key)
+		if err == nil {
+			c.Logger().Infof("Retrieved %s %dKiB", fetch.Key, len(item.Blob)/units.KiB)
+			c.Response().Header().Set(echo.HeaderCacheControl, "public, max-age=86400")
+			return item, nil
+		}
 
-	if !errors.Is(err, redis.Nil) && fetch.URL == "" {
-		c.Logger().Errorf("could not get %s from cache %T", fetch.Key, cache)
-		return nil, ErrFunc(http.StatusInternalServerError, err)
-	}
+		if !errors.Is(err, redis.Nil) && fetch.URL == "" {
+			c.Logger().Errorf("could not get %s from cache %T", fetch.Key, cache)
+			return nil, ErrFunc(http.StatusInternalServerError, err)
+		}
 
-	c.Logger().Debugf("Cache miss for %s retrieving image...", fetch.Key)
+		c.Logger().Debugf("Cache miss for %s retrieving image...", fetch.Key)
+	}
 
 	queue.mu.Lock()
 	if ongoing, found := queue.ongoing[fetch.Key]; found {
@@ -160,7 +162,6 @@ func Retrieve(c echo.Context, cache Cache, fetch Fetch) (*Item, func(c echo.Cont
 		c.Logger().Errorf("failed to fetch resource %v, %v", fetch.URL, err)
 		return nil, ErrFunc(http.StatusInternalServerError, crashy.ErrorResponse{ErrorString: fmt.Sprintf("failed to fetch resource %v", fetch.URL), Debug: err})
 	}
-
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
@@ -189,18 +190,19 @@ func Retrieve(c echo.Context, cache Cache, fetch Fetch) (*Item, func(c echo.Cont
 		return nil, ErrFunc(http.StatusInternalServerError, crashy.ErrorResponse{ErrorString: fmt.Sprintf("error downloading %s: %s", fetch.URL, blob)})
 	}
 
-	item = &Item{
+	item := &Item{
 		Blob:     blob,
 		MimeType: mimeType,
 	}
 
-	err = cache.Set(fmt.Sprintf("%v:%v", mimeType, fetch.URL), item, Day)
+	err = cache.Set(fmt.Sprintf("%v:%v", item.MimeType, fetch.URL), item, Day)
 	if err != nil {
 		c.Logger().Errorf("could not set %s in cache %T: %v", fetch.URL, cache, err)
 	}
 	c.Logger().Infof("Cached %s %dKiB", fetch.Key, len(item.Blob)/units.KiB)
 
 	c.Response().Header().Set(echo.HeaderCacheControl, "public, max-age=86400") // 24 hours
+
 	return item, nil
 }
 

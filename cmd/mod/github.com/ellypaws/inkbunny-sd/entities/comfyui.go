@@ -437,6 +437,7 @@ const (
 	Note                        NodeType = "Note"
 	FreeU_V2                    NodeType = "FreeU_V2"
 	CheckpointLoaderSimple      NodeType = "CheckpointLoaderSimple"
+	KSamplerAdvanced            NodeType = "KSamplerAdvanced"
 	KSamplerCycle               NodeType = "KSampler Cycle"
 	CRApplyLoRAStack            NodeType = "CR Apply LoRA Stack"
 	CLIPSetLastLayer            NodeType = "CLIPSetLastLayer"
@@ -549,6 +550,31 @@ func (r *ComfyUIBasic) Convert() *TextToImageRequest {
 			for _, input := range node.WidgetsValues.UnionArray {
 				if input.Double != nil {
 					req.Seed = int64(*input.Double)
+				}
+			}
+		case KSamplerAdvanced:
+			for i, input := range node.WidgetsValues.UnionArray {
+				switch i {
+				case 1:
+					if input.Double != nil {
+						req.Seed = int64(*input.Double)
+					}
+				case 3:
+					if input.Double != nil {
+						req.Steps = int(*input.Double)
+					}
+				case 4:
+					if input.Double != nil {
+						req.CFGScale = *input.Double
+					}
+				case 5:
+					if input.String != nil {
+						req.SamplerName = *input.String
+					}
+				case 6:
+					if input.String != nil {
+						req.Scheduler = input.String
+					}
 				}
 			}
 		case KSamplerCycle:

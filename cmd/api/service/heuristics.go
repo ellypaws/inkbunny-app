@@ -139,6 +139,8 @@ func processParams(c echo.Context, sub *db.Submission, cacheToUse cache.Cache, a
 	}
 }
 
+var privateTools = regexp.MustCompile(`\b(midjourney|novelai|bing|dall[- ]?e|nijijourney|craiyon)\b`)
+
 // deferred call to set metadata flags after processing objects
 func processObjectMetadata(submission *db.Submission, artists []db.Artist) {
 	submission.Metadata.MissingPrompt = true
@@ -157,17 +159,10 @@ func processObjectMetadata(submission *db.Submission, artists []db.Artist) {
 			}
 		}
 
-		privateTools := []string{
-			"midjourney",
-			"novelai",
-		}
-
-		for _, tool := range privateTools {
-			if strings.Contains(meta, tool) {
-				submission.Metadata.PrivateTool = true
-				submission.Metadata.Generator = tool
-				break
-			}
+		if tool := privateTools.FindString(meta); tool != "" {
+			submission.Metadata.PrivateTool = true
+			submission.Metadata.Generator = tool
+			break
 		}
 
 		if obj.Prompt != "" {

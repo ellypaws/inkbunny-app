@@ -1,4 +1,4 @@
-package main
+package api
 
 import (
 	"github.com/ellypaws/inkbunny-app/cmd/crashy"
@@ -24,11 +24,11 @@ func newTicket(c echo.Context) error {
 		return err
 	}
 
-	if err := db.Error(database); err != nil {
+	if err := db.Error(Database); err != nil {
 		return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
 	}
 
-	id, err := database.InsertTicket(ticket)
+	id, err := Database.InsertTicket(ticket)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
 	}
@@ -43,7 +43,7 @@ func newArtist(c echo.Context) error {
 		return err
 	}
 
-	if err := db.Error(database); err != nil {
+	if err := db.Error(Database); err != nil {
 		return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
 	}
 
@@ -51,7 +51,7 @@ func newArtist(c echo.Context) error {
 		return c.JSON(http.StatusLengthRequired, crashy.ErrorResponse{ErrorString: "no artists to upsert"})
 	}
 
-	known := database.AllArtists()
+	known := Database.AllArtists()
 	for _, artist := range artists {
 		if artist.Username == "" {
 			return c.JSON(http.StatusBadRequest, crashy.ErrorResponse{ErrorString: "missing username", Debug: artists})
@@ -61,7 +61,7 @@ func newArtist(c echo.Context) error {
 				return c.JSON(http.StatusConflict, crashy.ErrorResponse{ErrorString: "artist already exists", Debug: artists})
 			}
 		}
-		err := database.UpsertArtist(artist)
+		err := Database.UpsertArtist(artist)
 		if err != nil {
 			return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
 		}
@@ -76,7 +76,7 @@ func newAuditor(c echo.Context) error {
 		return err
 	}
 
-	if err := db.Error(database); err != nil {
+	if err := db.Error(Database); err != nil {
 		return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
 	}
 
@@ -84,7 +84,7 @@ func newAuditor(c echo.Context) error {
 		return c.JSON(http.StatusLengthRequired, crashy.ErrorResponse{ErrorString: "no auditors to upsert"})
 	}
 
-	known := database.AllAuditors()
+	known := Database.AllAuditors()
 	for _, auditor := range auditors {
 		if auditor.Username == "" {
 			return c.JSON(http.StatusBadRequest, crashy.ErrorResponse{ErrorString: "missing username", Debug: auditors})
@@ -94,7 +94,7 @@ func newAuditor(c echo.Context) error {
 				return c.JSON(http.StatusConflict, crashy.ErrorResponse{ErrorString: "auditor already exists", Debug: auditors})
 			}
 		}
-		err := database.InsertAuditor(auditor)
+		err := Database.InsertAuditor(auditor)
 		if err != nil {
 			return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
 		}

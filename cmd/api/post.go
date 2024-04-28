@@ -1,4 +1,4 @@
-package main
+package api
 
 import (
 	"bytes"
@@ -31,13 +31,13 @@ var postHandlers = pathHandler{
 	"/prefill":            handler{prefill, nil},
 	"/interrogate":        handler{interrogate, nil},
 	"/interrogate/upload": handler{interrogateImage, nil},
-	"/review/:id":         handler{GetReviewHandler, append(staffMiddleware, withRedis...)},
+	"/review/:id":         handler{GetReviewHandler, append(staffMiddleware, WithRedis...)},
 	"/heuristics":         handler{heuristics, nil},
-	"/heuristics/:id":     handler{GetHeuristicsHandler, append(loggedInMiddleware, withRedis...)},
+	"/heuristics/:id":     handler{GetHeuristicsHandler, append(loggedInMiddleware, WithRedis...)},
 	"/sd/:path":           handler{HandlePath, nil},
 	"/artists":            handler{upsertArtist, staffMiddleware},
-	"/inkbunny/search":    handler{GetInkbunnySearch, append(loggedInMiddleware, withRedis...)},
-	"/generate":           handler{generate, append(staffMiddleware, withRedis...)},
+	"/inkbunny/search":    handler{GetInkbunnySearch, append(loggedInMiddleware, WithRedis...)},
+	"/generate":           handler{generate, append(staffMiddleware, WithRedis...)},
 }
 
 // Deprecated: use registerAs((*echo.Echo).POST, postHandlers) instead
@@ -59,11 +59,11 @@ func login(c echo.Context) error {
 		return c.JSON(http.StatusUnauthorized, crashy.Wrap(err))
 	}
 
-	if err := db.Error(database); err != nil {
+	if err := db.Error(Database); err != nil {
 		return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
 	}
 
-	err = database.InsertSIDHash(db.HashCredentials(*user))
+	err = Database.InsertSIDHash(db.HashCredentials(*user))
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
 	}
@@ -106,7 +106,7 @@ func guest(c echo.Context) error {
 		}
 	}
 
-	if database.ValidSID(api.Credentials{Sid: sid}) {
+	if Database.ValidSID(api.Credentials{Sid: sid}) {
 		return c.JSON(http.StatusOK, crashy.ErrorResponse{ErrorString: "already logged in"})
 	}
 
@@ -118,11 +118,11 @@ func guest(c echo.Context) error {
 		return c.JSON(http.StatusUnauthorized, crashy.Wrap(err))
 	}
 
-	if err := db.Error(database); err != nil {
+	if err := db.Error(Database); err != nil {
 		return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
 	}
 
-	err = database.InsertSIDHash(db.HashCredentials(*user))
+	err = Database.InsertSIDHash(db.HashCredentials(*user))
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
 	}
@@ -174,12 +174,12 @@ func logout(c echo.Context) error {
 		return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
 	}
 
-	if err := db.Error(database); err != nil {
+	if err := db.Error(Database); err != nil {
 		return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
 	}
 
 	sidHash := db.HashCredentials(api.Credentials{Sid: sid, UserID: api.IntString(id)})
-	err = database.RemoveSIDHash(sidHash)
+	err = Database.RemoveSIDHash(sidHash)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, crashy.ErrorResponse{ErrorString: err.Error(), Debug: db.HashCredentials(*user)})
 	}
@@ -205,7 +205,7 @@ func validate(c echo.Context) error {
 		return c.JSON(http.StatusUnauthorized, crashy.Wrap(err))
 	}
 
-	if !database.ValidSID(api.Credentials{Sid: sid}) {
+	if !Database.ValidSID(api.Credentials{Sid: sid}) {
 		return c.JSON(http.StatusUnauthorized, crashy.ErrorResponse{ErrorString: "invalid SID"})
 	}
 
@@ -423,7 +423,7 @@ func interrogate(c echo.Context) error {
 	}
 
 	if sorted := c.QueryParam("sorted"); sorted == "false" {
-		response, err := host.Interrogate(&request)
+		response, err := SDHost.Interrogate(&request)
 		if err != nil {
 			return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
 		}
@@ -431,7 +431,7 @@ func interrogate(c echo.Context) error {
 		return c.JSON(http.StatusOK, response)
 	}
 
-	response, err := host.InterrogateRaw(&request)
+	response, err := SDHost.InterrogateRaw(&request)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
 	}
@@ -485,7 +485,7 @@ func interrogateImage(c echo.Context) error {
 	}
 
 	if sorted := c.FormValue("sorted"); sorted == "false" {
-		response, err := host.Interrogate(&request)
+		response, err := SDHost.Interrogate(&request)
 		if err != nil {
 			return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
 		}
@@ -493,7 +493,7 @@ func interrogateImage(c echo.Context) error {
 		return c.JSON(http.StatusOK, response)
 	}
 
-	response, err := host.InterrogateRaw(&request)
+	response, err := SDHost.InterrogateRaw(&request)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
 	}
@@ -563,11 +563,11 @@ func generate(c echo.Context) error {
 		return err
 	}
 
-	if !host.Alive() {
+	if !SDHost.Alive() {
 		return c.JSON(http.StatusServiceUnavailable, crashy.ErrorResponse{ErrorString: "host is not available"})
 	}
 
-	responses, err := service.Inference(c, object, host, database)
+	responses, err := service.Inference(c, object, SDHost, Database)
 	if err != nil {
 		return err
 	}

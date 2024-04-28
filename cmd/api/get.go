@@ -1,4 +1,4 @@
-package main
+package api
 
 import (
 	_ "embed"
@@ -32,20 +32,20 @@ var getHandlers = pathHandler{
 	"/inkbunny/description":     handler{GetInkbunnyDescription, withCache},
 	"/inkbunny/submission":      handler{GetInkbunnySubmission, withCache},
 	"/inkbunny/submission/:ids": handler{GetInkbunnySubmission, withCache},
-	"/inkbunny/search":          handler{GetInkbunnySearch, append(loggedInMiddleware, withRedis...)},
+	"/inkbunny/search":          handler{GetInkbunnySearch, append(loggedInMiddleware, WithRedis...)},
 	"/image":                    handler{GetImageHandler, append(staticMiddleware, SIDMiddleware)},
-	"/review/:id":               handler{GetReviewHandler, append(staffMiddleware, withRedis...)},
-	"/heuristics/:id":           handler{GetHeuristicsHandler, append(loggedInMiddleware, withRedis...)},
+	"/review/:id":               handler{GetReviewHandler, append(staffMiddleware, WithRedis...)},
+	"/heuristics/:id":           handler{GetHeuristicsHandler, append(loggedInMiddleware, WithRedis...)},
 	"/audits":                   handler{GetAuditHandler, staffMiddleware},
 	"/tickets":                  handler{GetTicketsHandler, staffMiddleware},
 	"/auditors":                 handler{GetAllAuditorsJHandler, staffMiddleware},
 	"/robots.txt":               handler{robots, staticMiddleware},
 	"/favicon.ico":              handler{favicon, staticMiddleware},
-	"/username/:username":       handler{GetUsernameHandler, append(loggedInMiddleware, withRedis...)},
+	"/username/:username":       handler{GetUsernameHandler, append(loggedInMiddleware, WithRedis...)},
 	"/avatar/:username":         handler{GetAvatarHandler, staticMiddleware},
-	"/artists":                  handler{GetArtistsHandler, append(loggedInMiddleware, withRedis...)},
+	"/artists":                  handler{GetArtistsHandler, append(loggedInMiddleware, WithRedis...)},
 	"/models":                   handler{GetModelsHandler, withCache},
-	"/models/:hash":             handler{GetModelsHandler, withRedis},
+	"/models/:hash":             handler{GetModelsHandler, WithRedis},
 }
 
 func robots(c echo.Context) error {
@@ -340,7 +340,7 @@ func GetAuditHandler(c echo.Context) error {
 		return c.JSON(http.StatusUnauthorized, crashy.Wrap(err))
 	}
 
-	audits, err := database.GetAuditsByAuditor(auditor.UserID)
+	audits, err := Database.GetAuditsByAuditor(auditor.UserID)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
 	}
@@ -357,7 +357,7 @@ func GetTicketsHandler(c echo.Context) error {
 			return c.JSON(http.StatusBadRequest, crashy.Wrap(err))
 		}
 
-		tickets, err := database.GetTicketsByAuditor(p)
+		tickets, err := Database.GetTicketsByAuditor(p)
 		if err != nil {
 			return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
 		}
@@ -365,7 +365,7 @@ func GetTicketsHandler(c echo.Context) error {
 		return c.JSON(http.StatusOK, tickets)
 	}
 
-	tickets, err := database.GetAllTickets()
+	tickets, err := Database.GetAllTickets()
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
 	}
@@ -374,15 +374,15 @@ func GetTicketsHandler(c echo.Context) error {
 }
 
 func validAuditor(c echo.Context, user api.Credentials) bool {
-	if err := db.Error(database); err != nil {
+	if err := db.Error(Database); err != nil {
 		c.Logger().Warnf("warning: validAuditor was called with a nil database: %v", err)
 		return false
 	}
-	return database.IsAuditorRole(int64(user.UserID.Int()))
+	return Database.IsAuditorRole(int64(user.UserID.Int()))
 }
 
 func GetAllAuditorsJHandler(c echo.Context) error {
-	auditors := database.AllAuditors()
+	auditors := Database.AllAuditors()
 	if auditors == nil {
 		return c.JSON(http.StatusInternalServerError, crashy.ErrorResponse{ErrorString: "no auditors found"})
 	}
@@ -575,18 +575,18 @@ func GetReviewHandler(c echo.Context) error {
 		return c.JSON(http.StatusNotFound, crashy.ErrorResponse{ErrorString: "no submissions found"})
 	}
 
-	if interrogate == "true" && !host.Alive() {
+	if interrogate == "true" && !SDHost.Alive() {
 		c.Logger().Warn("interrogate was set to true but host is offline, only using cached captions...")
 	}
 
 	details := service.ProcessResponse(c, &service.Config{
 		SubmissionDetails: submissionDetails,
-		Database:          database,
+		Database:          Database,
 		Cache:             cacheToUse,
-		Host:              host,
+		Host:              SDHost,
 		Output:            output,
 		Auditor:           auditor,
-		ApiHost:           apiHost,
+		ApiHost:           ServerHost,
 	})
 
 	if stream == "true" {
@@ -889,7 +889,7 @@ func GetHeuristicsHandler(c echo.Context) error {
 	var submissions = make(map[int64]details)
 
 	cacheToUse := cache.SwitchCache(c)
-	artists := database.AllArtists()
+	artists := Database.AllArtists()
 
 	var waitGroup sync.WaitGroup
 	var mutex sync.Locker
@@ -1003,7 +1003,7 @@ func GetUsernameHandler(c echo.Context) error {
 // GetArtistsHandler returns a list of known artists
 // Set query "avatar" to "true" to include the avatar URL
 func GetArtistsHandler(c echo.Context) error {
-	artists := database.AllArtists()
+	artists := Database.AllArtists()
 
 	if c.QueryParam("avatar") != "true" {
 		return c.JSON(http.StatusOK, artists)
@@ -1099,7 +1099,7 @@ func GetModelsHandler(c echo.Context) error {
 	}
 
 	if hash == "all" {
-		models, err := database.AllModels()
+		models, err := Database.AllModels()
 		if err != nil {
 			return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
 		}
@@ -1114,7 +1114,7 @@ func GetModelsHandler(c echo.Context) error {
 	cacheToUse := cache.SwitchCache(c)
 	if c.QueryParam("civitai") != "true" {
 		if c.QueryParam("recache") != "true" {
-			if models := database.ModelNamesFromHash(hash); models != nil {
+			if models := Database.ModelNamesFromHash(hash); models != nil {
 				return c.JSON(http.StatusOK, db.ModelHashes{hash: models})
 			} else {
 				c.Logger().Warnf("model %s not found, attempting to find", hash)
@@ -1126,7 +1126,7 @@ func GetModelsHandler(c echo.Context) error {
 		var match db.ModelHashes
 		if len(hash) == 12 {
 			var err error
-			match, err = service.QueryHost(c, cacheToUse, host, database, hash)
+			match, err = service.QueryHost(c, cacheToUse, SDHost, Database, hash)
 			if err != nil {
 				return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
 			}
@@ -1146,7 +1146,7 @@ func GetModelsHandler(c echo.Context) error {
 	if c.QueryParam("civitai") == "true" {
 		return c.JSON(http.StatusOK, civ)
 	}
-	if err = database.UpsertModel(match); err != nil {
+	if err = Database.UpsertModel(match); err != nil {
 		c.Logger().Errorf("error inserting model %s: %s", hash, err)
 	}
 

@@ -1,0 +1,26 @@
+[
+  {
+    "user_id": 0,
+    "username": "guest",
+    "role": 4,
+    "audit_count": 0
+  },
+  {
+    "user_id": 49,
+    "username": "Kadm",
+    "role": 2,
+    "audit_count": 0
+  },
+  {
+    "user_id": 1432,
+    "username": "JeffyCottonbun",
+    "role": 1,
+    "audit_count": 0
+  },
+  {
+    "user_id": 196417,
+    "username": "Elly",
+    "role": 4,
+    "audit_count": 0
+  }
+]

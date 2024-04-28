@@ -1,4 +1,4 @@
-package main
+package api
 
 import (
 	"github.com/ellypaws/inkbunny-app/cmd/db"
@@ -6,65 +6,23 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	logger "github.com/labstack/gommon/log"
-	"log"
 	"net/url"
-	"os"
 	"time"
 )
 
 var (
-	database *db.Sqlite
-	host     = sd.DefaultHost
-	apiHost  *url.URL
-	port     = "1323"
+	Database   *db.Sqlite
+	SDHost     = sd.DefaultHost
+	ServerHost *url.URL
 )
 
-func init() {
-	if h := os.Getenv("SD_HOST"); h != "" {
-		u, err := url.Parse(h)
-		if err != nil {
-			log.Fatal(err)
-		}
-		host = (*sd.Host)(u)
-	} else {
-		log.Println("warning: SD_HOST not set, using default localhost:7860")
-	}
+func Run(db *db.Sqlite, stableDiffusion *sd.Host, apiURL *url.URL, port string) {
+	Database = db
+	SDHost = stableDiffusion
+	ServerHost = apiURL
 
-	api := os.Getenv("API_HOST")
-	if api == "" {
-		log.Fatal("API_HOST must be set")
-	}
-
-	log.Printf("api host: %s\n", api)
-
-	var err error
-	apiHost, err = url.Parse(api)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	if host == nil || !host.Alive() {
-		log.Println("warning: host is not alive")
-	}
-
-	log.Printf("host: %s\n", host)
-
-	if p := os.Getenv("PORT"); p != "" {
-		port = p
-	}
-
-	// Database
-	database, err = db.New(nil)
-	if err != nil {
-		log.Fatal(err)
-	}
-}
-
-func main() {
-	// Echo instance
 	e := echo.New()
 
-	// Middleware
 	e.Use(middleware.LoggerWithConfig(
 		middleware.LoggerConfig{
 			Skipper:          nil,
@@ -79,7 +37,6 @@ func main() {
 		AllowMethods: []string{echo.GET, echo.HEAD, echo.PUT, echo.PATCH, echo.POST, echo.DELETE},
 	}))
 
-	// Routes
 	registerAs(e.GET, getHandlers)
 	registerAs(e.POST, postHandlers)
 	registerAs(e.HEAD, headHandlers)
@@ -90,7 +47,6 @@ func main() {
 	e.Logger.SetLevel(logger.DEBUG)
 	e.Logger.SetHeader(`${time_rfc3339} ${level}	${short_file}:${line}	`)
 
-	// Start server
 	e.Logger.Fatal(e.Start(":" + port))
 }
 

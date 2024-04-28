@@ -1,4 +1,4 @@
-package main
+package api
 
 import (
 	"github.com/ellypaws/inkbunny-app/cmd/crashy"
@@ -21,7 +21,7 @@ func updateTicket(c echo.Context) error {
 		return err
 	}
 
-	if err := db.Error(database); err != nil {
+	if err := db.Error(Database); err != nil {
 		return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
 	}
 
@@ -29,7 +29,7 @@ func updateTicket(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, crashy.ErrorResponse{ErrorString: "missing date opened"})
 	}
 
-	id, err := database.UpsertTicket(ticket)
+	id, err := Database.UpsertTicket(ticket)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
 	}
@@ -46,7 +46,7 @@ func upsertArtist(c echo.Context) error {
 		return err
 	}
 
-	if err := db.Error(database); err != nil {
+	if err := db.Error(Database); err != nil {
 		return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
 	}
 
@@ -58,7 +58,7 @@ func upsertArtist(c echo.Context) error {
 		if artist.Username == "" {
 			return c.JSON(http.StatusBadRequest, crashy.ErrorResponse{ErrorString: "missing username", Debug: artists})
 		}
-		err := database.UpsertArtist(artist)
+		err := Database.UpsertArtist(artist)
 		if err != nil {
 			return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
 		}
@@ -73,7 +73,7 @@ func upsertAuditor(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, crashy.Wrap(err))
 	}
 
-	if err := db.Error(database); err != nil {
+	if err := db.Error(Database); err != nil {
 		return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
 	}
 
@@ -81,7 +81,7 @@ func upsertAuditor(c echo.Context) error {
 		return c.JSON(http.StatusLengthRequired, crashy.ErrorResponse{ErrorString: "no auditors to upsert"})
 	}
 
-	stored := database.AllAuditors()
+	stored := Database.AllAuditors()
 	for _, auditor := range auditors {
 		if auditor.Username == "" {
 			return c.JSON(http.StatusBadRequest, crashy.ErrorResponse{ErrorString: "missing username", Debug: auditors})
@@ -98,7 +98,7 @@ func upsertAuditor(c echo.Context) error {
 			return c.JSON(http.StatusConflict, crashy.ErrorResponse{ErrorString: "auditor not found", Debug: auditors})
 		}
 
-		err := database.EditAuditorRole(auditor.UserID, auditor.Role)
+		err := Database.EditAuditorRole(auditor.UserID, auditor.Role)
 		if err != nil {
 			return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
 		}
@@ -113,7 +113,7 @@ func upsertModel(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, crashy.Wrap(err))
 	}
 
-	if err := db.Error(database); err != nil {
+	if err := db.Error(Database); err != nil {
 		return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
 	}
 
@@ -121,7 +121,7 @@ func upsertModel(c echo.Context) error {
 		return c.JSON(http.StatusLengthRequired, crashy.ErrorResponse{ErrorString: "no models to upsert"})
 	}
 
-	stored, err := database.AllModels()
+	stored, err := Database.AllModels()
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
 	}
@@ -148,7 +148,7 @@ func upsertModel(c echo.Context) error {
 		stored[hash] = known
 	}
 
-	err = database.InsertModel(stored)
+	err = Database.InsertModel(stored)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
 	}

@@ -1,4 +1,4 @@
-package main
+package api
 
 import (
 	"fmt"
@@ -37,11 +37,11 @@ func LoggedInMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
 			return c.JSON(http.StatusUnauthorized, crashy.ErrorResponse{ErrorString: "empty sid"})
 		}
 
-		if !database.ValidSID(api.Credentials{Sid: sid}) {
+		if !Database.ValidSID(api.Credentials{Sid: sid}) {
 			return c.JSON(http.StatusUnauthorized, crashy.ErrorResponse{ErrorString: "invalid sid"})
 		}
 
-		id, err := database.GetUserIDFromSID(sid)
+		id, err := Database.GetUserIDFromSID(sid)
 		if err != nil {
 			return c.JSON(http.StatusUnauthorized, crashy.ErrorResponse{ErrorString: "invalid sid"})
 		}
@@ -74,7 +74,7 @@ func SIDMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
 		}
 
 		c.Set("sid", sid)
-		id, err := database.GetUserIDFromSID(sid)
+		id, err := Database.GetUserIDFromSID(sid)
 		if err == nil {
 			c.Set("id", id)
 		}
@@ -88,7 +88,7 @@ func RequireAuditor(next echo.HandlerFunc) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		_, id, err := GetSIDandID(c)
 
-		auditor, err := database.GetAuditorByID(id)
+		auditor, err := Database.GetAuditorByID(id)
 		if err != nil {
 			return c.JSON(http.StatusUnauthorized, crashy.ErrorResponse{ErrorString: "invalid user"})
 		}
@@ -126,6 +126,18 @@ func GetCurrentAuditor(c echo.Context) (auditor *db.Auditor, err error) {
 	}
 
 	return auditor, nil
+}
+
+func Anonymous(next echo.HandlerFunc) echo.HandlerFunc {
+	return func(c echo.Context) error {
+		auditor := db.Auditor{
+			Username: "anonymous",
+			Role:     db.RoleAuditor,
+		}
+		c.Set("auditor", &auditor)
+		c.Set("id", int64(0))
+		return next(c)
+	}
 }
 
 var staffMiddleware = []echo.MiddlewareFunc{LoggedInMiddleware, RequireAuditor}
@@ -187,7 +199,7 @@ var withOriginalResponseWriter = []echo.MiddlewareFunc{LoggedInMiddleware, Requi
 
 var staticMiddleware = []echo.MiddlewareFunc{Static, RedisMiddleware, CacheMiddleware}
 
-var withRedis = []echo.MiddlewareFunc{OriginalResponseWriter, SetCacheHeaders, RedisMiddleware, CacheMiddleware}
+var WithRedis = []echo.MiddlewareFunc{OriginalResponseWriter, SetCacheHeaders, RedisMiddleware, CacheMiddleware}
 
 func RedisMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
 	return func(c echo.Context) error {

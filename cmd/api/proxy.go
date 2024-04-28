@@ -1,4 +1,4 @@
-package main
+package api
 
 import (
 	"fmt"
@@ -61,7 +61,7 @@ func GetImageHandler(c echo.Context) error {
 
 func ProxyHandler(path string) echo.HandlerFunc {
 	return func(c echo.Context) error {
-		req, err := http.NewRequest(http.MethodPost, host.WithPath(path).String(), c.Request().Body)
+		req, err := http.NewRequest(http.MethodPost, SDHost.WithPath(path).String(), c.Request().Body)
 		if err != nil {
 			return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
 		}

@@ -1,4 +1,4 @@
-package main
+package api
 
 import (
 	"github.com/ellypaws/inkbunny-app/cmd/crashy"
@@ -26,7 +26,7 @@ func deleteTicket(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, crashy.ErrorResponse{ErrorString: "invalid id"})
 	}
 
-	if err := database.DeleteTicket(i); err != nil {
+	if err := Database.DeleteTicket(i); err != nil {
 		return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
 	}
 
@@ -51,7 +51,7 @@ func deleteArtist(c echo.Context) error {
 		if artist.Username == "" {
 			return c.JSON(http.StatusBadRequest, crashy.ErrorResponse{ErrorString: "missing username", Debug: artists})
 		}
-		if err := database.DeleteArtist(artist.Username); err != nil {
+		if err := Database.DeleteArtist(artist.Username); err != nil {
 			return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
 		}
 	}
@@ -73,7 +73,7 @@ func deleteAuditor(c echo.Context) error {
 		if auditor.Username == "" {
 			return c.JSON(http.StatusBadRequest, crashy.ErrorResponse{ErrorString: "missing username", Debug: auditors})
 		}
-		if err := database.DeleteAuditor(auditor.UserID); err != nil {
+		if err := Database.DeleteAuditor(auditor.UserID); err != nil {
 			return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
 		}
 	}

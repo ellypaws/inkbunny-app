@@ -1,4 +1,4 @@
-package main
+package api
 
 import (
 	"bytes"
@@ -35,8 +35,8 @@ func TestLogin(t *testing.T) {
 	rec := httptest.NewRecorder()
 	c := e.NewContext(req, rec)
 
-	database = tempDB()
-	if !assert.NoError(t, db.Error(database)) {
+	Database = tempDB()
+	if !assert.NoError(t, db.Error(Database)) {
 		return
 	}
 

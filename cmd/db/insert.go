@@ -419,7 +419,7 @@ func SetSubmissionMeta(submission *Submission) {
 	if submission.Metadata.Params != nil && len(*submission.Metadata.Params) > 0 {
 		submission.Metadata.AISubmission = true
 	}
-	if strings.Contains(submission.Title, "AI") {
+	if aiRegex.MatchString(submission.Title) {
 		submission.Metadata.AITitle = true
 		submission.Metadata.AISubmission = true
 	}
@@ -438,7 +438,9 @@ func SetSubmissionMeta(submission *Submission) {
 	}
 }
 
-var payment = regexp.MustCompile(`(?i)\b(ko-?fi|paypal|patreon|subscribestar|donate)\b`)
+var aiRegex = regexp.MustCompile(`(?i)\b(ai|ia|ai generated|ai assisted|img2img|stable diffusion|comfyui)\b`)
+
+var payment = regexp.MustCompile(`(?i)\b(ko-?fi|paypal|patreon|subscribestar|donate|bitcoin|ethereum|monero)\b`)
 
 func TicketLabels(submission Submission) []TicketLabel {
 	labels := make(map[TicketLabel]bool)

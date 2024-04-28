@@ -162,7 +162,9 @@ func (r *Redis) Set(key string, item *Item, duration time.Duration) error {
 		if cmd.Err() != nil {
 			return fmt.Errorf("failed to set item: %w", cmd.Err())
 		}
-		(*redis.Client)(r).ExpireAt(ctx, key, time.Now().UTC().Add(duration))
+		if duration > 0 {
+			(*redis.Client)(r).ExpireAt(ctx, key, time.Now().UTC().Add(duration))
+		}
 
 		return nil
 	}

@@ -68,6 +68,22 @@ A demo app is available either at [https://inkbunny.keiau.space](https://inkbunn
 If you're building from source, you will need to install the dependencies:
 Download Go 1.22.2 or later from the [official website](https://golang.org/dl/).
 
+Set the environment variables for the server to run. You can set the following environment variables:
+
+```bash
+export PORT "your_port"
+export API_HOST "your_api_host"
+export SD_HOST "your_sd_host"
+export REDIS_HOST "your_redis_host"
+export REDIS_PASSWORD "your_redis_password"
+export REDIS_USER "your_redis_user" # when not set, uses 'default'
+```
+
+An optional Redis server can be used for caching.
+If not set, it will fall back to local memory cache.
+You can always override this behavior for most request by setting the `Cache-Control` header to `no-cache`.
+
+
 ```bash
 git clone https://github.com/ellypaws/inkbunny-app.git
 cd inkbunny-app/cmd/extension

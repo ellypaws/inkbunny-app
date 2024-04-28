@@ -66,8 +66,12 @@ export API_HOST "your_api_host"
 export SD_HOST "your_sd_host"
 export REDIS_HOST "your_redis_host"
 export REDIS_PASSWORD "your_redis_password"
-export REDIS_USER "your_redis_user"
+export REDIS_USER "your_redis_user" # when not set, uses 'default'
 ```
+
+An optional Redis server can be used for caching.
+If not set, it will fall back to local memory cache.
+You can always override this behavior for most request by setting the `Cache-Control` header to `no-cache`.
 
 ### Building from Source
 

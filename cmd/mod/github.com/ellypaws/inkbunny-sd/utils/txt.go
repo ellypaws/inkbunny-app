@@ -40,6 +40,7 @@ const (
 	IDCirn0       = 177167
 	IDHornybunny  = 12499
 	IDNeoncortex  = 14603
+	IDMethuzalach = 1089071
 )
 
 // AutoSnep is a Processor that parses yaml like raw txt where each two spaces is a new dict
@@ -182,6 +183,19 @@ func UseHornybunny() func(*Config) {
 				return false
 			}
 		}
+	}
+}
+
+func UseMethuzalach() func(*Config) {
+	return func(c *Config) {
+		c.KeyCondition = func(line string) bool {
+			return strings.HasPrefix(line, "Image")
+		}
+
+		model := regexp.MustCompile(`Model: [^\n]+`).FindString(c.Text)
+		c.Text = regexp.MustCompile(`Negative prompts:\s*`).ReplaceAllString(c.Text, "Negative Prompt: ")
+		c.Text = regexp.MustCompile(`\s*Seed: \D*?[,\s]`).ReplaceAllString(c.Text, "")
+		c.Text = regexp.MustCompile(`.*(Steps: \d+[^\n]*)`).ReplaceAllString(c.Text, `$1 `+model)
 	}
 }
 

@@ -247,6 +247,8 @@ func parameterHeuristics(c echo.Context, sub *db.Submission, textFile *db.File, 
 		params, err = utils.Common(utils.WithBytes(b.Blob), utils.UseCirn0())
 	case utils.IDHornybunny:
 		params, err = utils.Common(utils.WithBytes(b.Blob), utils.UseHornybunny())
+	case utils.IDMethuzalach:
+		params, err = utils.Common(utils.WithBytes(b.Blob), utils.UseMethuzalach())
 	default:
 		params, err = utils.Common(
 			// prepend "photo 1" to the input in case it's missing

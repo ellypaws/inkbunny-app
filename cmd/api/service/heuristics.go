@@ -59,7 +59,6 @@ func RetrieveParams(c echo.Context, wg *sync.WaitGroup, sub *db.Submission, cach
 			sub.Metadata.Params = metadata.Params
 			sub.Metadata.Objects = metadata.Objects
 
-			c.Logger().Printf("Human confidence now (params): %v", sub.Metadata.HumanConfidence)
 			return
 		}
 

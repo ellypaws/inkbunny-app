@@ -44,7 +44,6 @@ type Config struct {
 	Database          *db.Sqlite
 	Cache             cache.Cache
 	Host              *sd.Host
-	Detail            *Detail
 	Output            OutputType
 	Auditor           *db.Auditor
 	ApiHost           *url.URL
@@ -73,13 +72,10 @@ func processSubmission(c echo.Context, submission *api.Submission, config *Confi
 
 	sub := db.InkbunnySubmissionToDBSubmission(*submission)
 
-	var fileWaitGroup sync.WaitGroup
-	if len(submission.Files) > 0 {
-		fileWaitGroup.Add(1)
+	if sub.Metadata.AISubmission {
 		c.Logger().Infof("processing files for %s %s", sub.URL, sub.Title)
-		go parseFiles(c, &fileWaitGroup, &sub, config.Cache, config.Host, config.artists)
+		parseFiles(c, &sub, config.Cache, config.Host, config.artists)
 	}
-	fileWaitGroup.Wait()
 
 	//config.mutex.Lock()
 	//defer config.mutex.Unlock()
@@ -190,19 +186,19 @@ func sanitizeDescription(description string, apiHost *url.URL) string {
 	return description
 }
 
-func parseFiles(c echo.Context, wg *sync.WaitGroup, sub *db.Submission, cache cache.Cache, host *sd.Host, artists []db.Artist) {
-	defer wg.Done()
+func parseFiles(c echo.Context, sub *db.Submission, cache cache.Cache, host *sd.Host, artists []db.Artist) {
+	var wg sync.WaitGroup
 	if c.QueryParam("parameters") == "true" {
 		wg.Add(1)
-		go RetrieveParams(c, wg, sub, cache, artists)
+		go RetrieveParams(c, &wg, sub, cache, artists)
 	}
-	if c.QueryParam("interrogate") != "true" {
-		return
+	if c.QueryParam("interrogate") == "true" {
+		for i := range sub.Files {
+			wg.Add(1)
+			go RetrieveCaptions(c, &wg, sub, i, host)
+		}
 	}
-	for i := range sub.Files {
-		wg.Add(1)
-		go RetrieveCaptions(c, wg, sub, i, host)
-	}
+	wg.Wait()
 }
 
 func AuditorAsUsernameID(auditor *db.Auditor) api.UsernameID {

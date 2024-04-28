@@ -586,7 +586,7 @@ func GetReviewHandler(c echo.Context) error {
 		Host:              host,
 		Output:            output,
 		Auditor:           auditor,
-		ApiHost:           nil,
+		ApiHost:           apiHost,
 	})
 
 	if stream == "true" {

@@ -588,10 +588,6 @@ func GetReviewHandler(c echo.Context) error {
 		ApiHost:           ServerHost,
 	})
 
-	if stream == "true" {
-		return nil
-	}
-
 	switch output {
 	case service.OutputSubmissions, service.OutputFull, service.OutputBadges:
 		store = details
@@ -662,8 +658,16 @@ func GetReviewHandler(c echo.Context) error {
 
 	if c.Param("id") == "search" {
 		searchStore.Review = store
+		if stream == "true" {
+			return nil
+		}
 		return c.JSON(http.StatusOK, searchStore)
 	}
+
+	if stream == "true" {
+		return nil
+	}
+
 	return c.JSON(http.StatusOK, store)
 }
 

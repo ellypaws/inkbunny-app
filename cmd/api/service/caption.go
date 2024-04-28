@@ -42,6 +42,12 @@ func RetrieveCaptions(c echo.Context, wg *sync.WaitGroup, sub *db.Submission, i 
 		}
 		c.Logger().Debugf("Cache hit for %s", key)
 		sub.Files[i].Caption = result
+
+		sub.Metadata.HumanConfidence = max(sub.Metadata.HumanConfidence, result.HumanPercent())
+		if sub.Metadata.HumanConfidence > 0.5 {
+			sub.Metadata.DetectedHuman = true
+		}
+
 		return
 	}
 
@@ -76,7 +82,7 @@ func RetrieveCaptions(c echo.Context, wg *sync.WaitGroup, sub *db.Submission, i 
 	c.Logger().Debugf("finished captions for %v", f.FileURLScreen)
 
 	sub.Metadata.HumanConfidence = max(sub.Metadata.HumanConfidence, t.HumanPercent())
-	if t.HumanPercent() > 0.5 {
+	if sub.Metadata.HumanConfidence > 0.5 {
 		sub.Metadata.DetectedHuman = true
 	}
 

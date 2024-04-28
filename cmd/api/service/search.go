@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"github.com/ellypaws/inkbunny-app/api/cache"
 	"github.com/ellypaws/inkbunny-app/cmd/crashy"
-	"github.com/ellypaws/inkbunny-app/cmd/db"
 	"github.com/ellypaws/inkbunny/api"
 	"github.com/labstack/echo/v4"
 	"net/http"
@@ -15,7 +14,7 @@ import (
 
 const ReviewSearchFormat = "%s:review:%s:search:%s:%d?%s"
 
-func RetrieveReviewSearch(c echo.Context, sid string, output string, query url.Values, cacheToUse cache.Cache) (string, func(echo.Context) error) {
+func RetrieveReviewSearch(c echo.Context, sid string, output string, query url.Values, cacheToUse cache.Cache) (*api.SubmissionSearchResponse, func(echo.Context) error) {
 	var request = api.SubmissionSearchRequest{
 		Text:               "ai_generated",
 		SubmissionsPerPage: 10,
@@ -32,7 +31,7 @@ func RetrieveReviewSearch(c echo.Context, sid string, output string, query url.V
 	}
 	err := c.Bind(&bind)
 	if err != nil {
-		return "", cache.ErrFunc(http.StatusBadRequest, err)
+		return nil, cache.ErrFunc(http.StatusBadRequest, err)
 	}
 
 	request.SID = sid
@@ -50,14 +49,14 @@ func RetrieveReviewSearch(c echo.Context, sid string, output string, query url.V
 			ReviewSearchFormat,
 			echo.MIMEApplicationJSON,
 			output,
-			db.Hash(request.RID),
+			request.RID,
 			request.Page,
 			query.Encode(),
 		)
 		item, err := cacheToUse.Get(searchReviewKey)
 		if err == nil {
 			c.Logger().Infof("Cache hit for %s", searchReviewKey)
-			return "", func(c echo.Context) error { return c.Blob(http.StatusOK, item.MimeType, item.Blob) }
+			return nil, func(c echo.Context) error { return c.Blob(http.StatusOK, item.MimeType, item.Blob) }
 		}
 	}
 
@@ -67,7 +66,7 @@ func RetrieveReviewSearch(c echo.Context, sid string, output string, query url.V
 		for _, t := range strings.Split(*bind.Types, ",") {
 			i, err := strconv.Atoi(t)
 			if err != nil {
-				return "", cache.ErrFunc(http.StatusBadRequest, crashy.ErrorResponse{
+				return nil, cache.ErrFunc(http.StatusBadRequest, crashy.ErrorResponse{
 					ErrorString: fmt.Sprintf("invalid type: %s", t),
 					Debug:       err,
 				})
@@ -78,13 +77,8 @@ func RetrieveReviewSearch(c echo.Context, sid string, output string, query url.V
 
 	searchResponse, err := RetrieveSearch(c, request)
 	if err != nil {
-		return "", cache.ErrFunc(http.StatusInternalServerError, err)
+		return nil, cache.ErrFunc(http.StatusInternalServerError, err)
 	}
 
-	var ids = make([]string, len(searchResponse.Submissions))
-	for i, submission := range searchResponse.Submissions {
-		ids[i] = submission.SubmissionID
-	}
-
-	return strings.Join(ids, ","), nil
+	return &searchResponse, nil
 }

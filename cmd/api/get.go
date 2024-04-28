@@ -420,11 +420,6 @@ func GetReviewHandler(c echo.Context) error {
 		return c.JSON(http.StatusUnauthorized, crashy.Wrap(err))
 	}
 
-	type response struct {
-		Search api.SubmissionSearchResponse `json:"search"`
-		Review any                          `json:"review"`
-	}
-
 	output := c.QueryParam("output")
 	parameters := c.QueryParam("parameters")
 	interrogate := c.QueryParam("interrogate")
@@ -454,42 +449,62 @@ func GetReviewHandler(c echo.Context) error {
 		"interrogate": {interrogate},
 	}
 
+	type response struct {
+		Search *api.SubmissionSearchResponse `json:"search"`
+		Review any                           `json:"review"`
+	}
+
 	var submissionIDs = c.Param("id")
-	var searchResponse api.SubmissionSearchResponse
-	var searchStore any
+	var searchStore response
 	if submissionIDs == "search" {
 		var errFunc func(echo.Context) error
-		submissionIDs, errFunc = service.RetrieveReviewSearch(c, sid, output, query, cacheToUse)
+		searchStore.Search, errFunc = service.RetrieveReviewSearch(c, sid, output, query, cacheToUse)
 		if errFunc != nil {
 			return errFunc(c)
 		}
-		defer func(searchStore any) {
+
+		var ids = make([]string, len(searchStore.Search.Submissions))
+		for i, submission := range searchStore.Search.Submissions {
+			ids[i] = submission.SubmissionID
+		}
+
+		submissionIDs = strings.Join(ids, ",")
+
+		defer func(searchStore *response) {
 			if searchStore == nil {
 				return
 			}
+			if searchStore.Review == nil {
+				return
+			}
+
 			bin, err := json.Marshal(searchStore)
 			if err != nil {
 				c.Logger().Errorf("error marshaling review: %v", err)
 				return
 			}
+
 			searchReviewKey := fmt.Sprintf(
 				service.ReviewSearchFormat,
 				echo.MIMEApplicationJSON,
 				output,
-				searchResponse.RID,
-				searchResponse.Page,
+				searchStore.Search.RID,
+				searchStore.Search.Page,
 				query.Encode(),
 			)
+
 			err = cacheToUse.Set(searchReviewKey, &cache.Item{
 				Blob:     bin,
 				MimeType: echo.MIMEApplicationJSON,
 			}, cache.Week)
+
 			if err != nil {
 				c.Logger().Errorf("error caching review: %v", err)
 				return
 			}
-			c.Logger().Infof("Cached %s %s %dKiB", searchReviewKey, echo.MIMEApplicationJSON, len(bin)/units.KiB)
-		}(searchStore)
+
+			c.Logger().Infof("Cached %s %dKiB", searchReviewKey, len(bin)/units.KiB)
+		}(&searchStore)
 	}
 
 	if submissionIDs == "" || submissionIDs == "null" {
@@ -514,7 +529,7 @@ func GetReviewHandler(c echo.Context) error {
 				if err := json.Unmarshal(item.Blob, &store); err != nil {
 					return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
 				}
-				searchStore = response{searchResponse, store}
+				searchStore.Review = store
 				return c.JSON(http.StatusOK, searchStore)
 			}
 		}
@@ -654,7 +669,7 @@ func GetReviewHandler(c echo.Context) error {
 	}
 
 	if c.Param("id") == "search" {
-		searchStore = response{searchResponse, store}
+		searchStore.Review = store
 		return c.JSON(http.StatusOK, searchStore)
 	}
 	return c.JSON(http.StatusOK, store)

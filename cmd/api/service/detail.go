@@ -116,8 +116,6 @@ func processSubmission(c echo.Context, submission *api.Submission, config *Confi
 		ID:         api.IntString(sub.ID),
 		User:       user,
 		Submission: &sub,
-
-		DescriptionSanitized: sanitizeDescription(submission.DescriptionBBCodeParsed, config.ApiHost),
 	}
 
 	auditorAsUser := AuditorAsUsernameID(config.Auditor)
@@ -133,6 +131,7 @@ func processSubmission(c echo.Context, submission *api.Submission, config *Confi
 			}
 			detail.Images = append(detail.Images, &sub.Files[f])
 		}
+		detail.DescriptionSanitized = sanitizeDescription(submission.DescriptionBBCodeParsed, config.ApiHost)
 		fallthrough
 	case OutputSubmissions:
 		fallthrough

@@ -53,7 +53,7 @@ func RetrieveCaptions(c echo.Context, wg *sync.WaitGroup, sub *db.Submission, i 
 
 	item, errorFunc := cache.Retrieve(c, cacheToUse,
 		cache.Fetch{
-			Key:      key,
+			Key:      fmt.Sprintf("%s:%s", f.MimeType, f.FileURLScreen),
 			URL:      f.FileURLScreen,
 			MimeType: f.MimeType,
 		})

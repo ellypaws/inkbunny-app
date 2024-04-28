@@ -3,7 +3,7 @@ package api
 import (
 	"fmt"
 	"github.com/coocood/freecache"
-	"github.com/ellypaws/inkbunny-app/api/cache"
+	"github.com/ellypaws/inkbunny-app/cmd/api/cache"
 	"github.com/ellypaws/inkbunny-app/cmd/crashy"
 	"github.com/ellypaws/inkbunny-app/cmd/db"
 	"github.com/ellypaws/inkbunny/api"

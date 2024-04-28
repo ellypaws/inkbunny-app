@@ -1,8 +1,8 @@
 package library
 
 import (
-	"github.com/ellypaws/inkbunny-app/api/entities"
-	"github.com/ellypaws/inkbunny-app/api/paths"
+	"github.com/ellypaws/inkbunny-app/cmd/api/entities"
+	"github.com/ellypaws/inkbunny-app/cmd/api/paths"
 	"github.com/ellypaws/inkbunny/api"
 	"net/http"
 	"strings"

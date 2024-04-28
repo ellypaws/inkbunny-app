@@ -3,8 +3,8 @@ package service
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/ellypaws/inkbunny-app/api/cache"
-	"github.com/ellypaws/inkbunny-app/api/civitai"
+	"github.com/ellypaws/inkbunny-app/cmd/api/cache"
+	"github.com/ellypaws/inkbunny-app/cmd/api/civitai"
 	"github.com/ellypaws/inkbunny-app/cmd/crashy"
 	"github.com/ellypaws/inkbunny-app/cmd/db"
 	"github.com/ellypaws/inkbunny-sd/stable_diffusion"

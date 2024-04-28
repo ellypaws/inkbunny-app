@@ -2,8 +2,8 @@ package api
 
 import (
 	"fmt"
-	"github.com/ellypaws/inkbunny-app/api/cache"
-	"github.com/ellypaws/inkbunny-app/api/service"
+	"github.com/ellypaws/inkbunny-app/cmd/api/cache"
+	"github.com/ellypaws/inkbunny-app/cmd/api/service"
 	"github.com/ellypaws/inkbunny-app/cmd/crashy"
 	"github.com/labstack/echo/v4"
 	"io"

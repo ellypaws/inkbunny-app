@@ -3,7 +3,6 @@ package api
 import (
 	"bytes"
 	"encoding/json"
-	. "github.com/ellypaws/inkbunny-app/api/entities"
 	"github.com/ellypaws/inkbunny-app/cmd/app"
 	"github.com/ellypaws/inkbunny/api"
 	"github.com/labstack/echo/v4"

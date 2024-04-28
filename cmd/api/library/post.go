@@ -2,8 +2,8 @@ package library
 
 import (
 	"github.com/disintegration/imaging"
-	"github.com/ellypaws/inkbunny-app/api/entities"
-	"github.com/ellypaws/inkbunny-app/api/paths"
+	"github.com/ellypaws/inkbunny-app/cmd/api/entities"
+	"github.com/ellypaws/inkbunny-app/cmd/api/paths"
 	sd "github.com/ellypaws/inkbunny-sd/entities"
 	"github.com/ellypaws/inkbunny-sd/llm"
 	"github.com/ellypaws/inkbunny/api"

@@ -3,7 +3,7 @@ package main
 import (
 	_ "embed"
 	"encoding/json"
-	"github.com/ellypaws/inkbunny-app/api"
+	"github.com/ellypaws/inkbunny-app/cmd/api"
 	"github.com/ellypaws/inkbunny-app/cmd/db"
 	sd "github.com/ellypaws/inkbunny-sd/stable_diffusion"
 	"github.com/labstack/echo/v4"

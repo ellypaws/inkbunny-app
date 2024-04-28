@@ -1,7 +1,7 @@
 package civitai
 
 import (
-	"github.com/ellypaws/inkbunny-app/api/library"
+	"github.com/ellypaws/inkbunny-app/cmd/api/library"
 	"net/url"
 )
 

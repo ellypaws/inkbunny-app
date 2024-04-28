@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/ellypaws/inkbunny-app/api"
+	"github.com/ellypaws/inkbunny-app/cmd/api"
 	"github.com/ellypaws/inkbunny-app/cmd/db"
 	sd "github.com/ellypaws/inkbunny-sd/stable_diffusion"
 	"log"

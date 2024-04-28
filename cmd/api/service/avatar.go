@@ -2,7 +2,7 @@ package service
 
 import (
 	"fmt"
-	"github.com/ellypaws/inkbunny-app/api/cache"
+	"github.com/ellypaws/inkbunny-app/cmd/api/cache"
 	"github.com/ellypaws/inkbunny/api"
 	"github.com/labstack/echo/v4"
 )

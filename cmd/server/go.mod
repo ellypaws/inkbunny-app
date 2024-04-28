@@ -2,17 +2,12 @@ module github.com/ellypaws/inkbunny-app/server
 
 go 1.22.2
 
-replace github.com/ellypaws/inkbunny-app/cmd => ../
-
-replace github.com/ellypaws/inkbunny-app/api => ../api
-
-replace github.com/ellypaws/inkbunny-app/api/library => ../api/library
+replace github.com/ellypaws/inkbunny-app => ../..
 
 replace github.com/ellypaws/inkbunny-sd => ../mod/github.com/ellypaws/inkbunny-sd
 
 require (
-	github.com/ellypaws/inkbunny-app/api v0.0.0
-	github.com/ellypaws/inkbunny-app/cmd v0.0.0
+	github.com/ellypaws/inkbunny-app v0.0.0
 	github.com/ellypaws/inkbunny-sd v0.0.0
 )
 
@@ -22,7 +17,6 @@ require (
 	github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect
 	github.com/disintegration/imaging v1.6.2 // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
-	github.com/ellypaws/inkbunny-app/api/library v0.0.0 // indirect
 	github.com/ellypaws/inkbunny/api v0.0.0-20240411110242-d491ced97f23 // indirect
 	github.com/gitsight/go-echo-cache v1.0.1 // indirect
 	github.com/go-errors/errors v1.5.1 // indirect

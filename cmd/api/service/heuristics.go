@@ -9,18 +9,19 @@ import (
 	"github.com/ellypaws/inkbunny-sd/entities"
 	"github.com/ellypaws/inkbunny-sd/utils"
 	"github.com/labstack/echo/v4"
+	units "github.com/labstack/gommon/bytes"
 	"reflect"
 	"regexp"
 	"strings"
 	"sync"
 )
 
-func RetrieveParams(c echo.Context, wg *sync.WaitGroup, sub *db.Submission, cache cache.Cache, artists []db.Artist) {
+func RetrieveParams(c echo.Context, wg *sync.WaitGroup, sub *db.Submission, cacheToUse cache.Cache, artists []db.Artist) {
 	defer wg.Done()
 
 	key := fmt.Sprintf("%s:parameters:%d", echo.MIMEApplicationJSON, sub.ID)
 	if c.Request().Header.Get(echo.HeaderCacheControl) != "no-cache" {
-		item, err := cache.Get(key)
+		item, err := cacheToUse.Get(key)
 		if err == nil {
 			var metadata db.Metadata
 			err := json.Unmarshal(item.Blob, &metadata)
@@ -29,16 +30,62 @@ func RetrieveParams(c echo.Context, wg *sync.WaitGroup, sub *db.Submission, cach
 				return
 			}
 			c.Logger().Debugf("Cache hit for %s", key)
-			sub.Metadata.Objects = metadata.Objects
+
+			sub.Metadata.Generated = metadata.Generated
+			sub.Metadata.Assisted = metadata.Assisted
+			sub.Metadata.Img2Img = metadata.Img2Img
+			sub.Metadata.HasJSON = metadata.HasJSON
+			sub.Metadata.HasTxt = metadata.HasTxt
+			sub.Metadata.StableDiffusion = metadata.StableDiffusion
+			sub.Metadata.ComfyUI = metadata.ComfyUI
+			sub.Metadata.MultipleImages = metadata.MultipleImages
+			sub.Metadata.TaggedHuman = metadata.TaggedHuman
+
+			sub.Metadata.AITitle = metadata.AITitle
+			sub.Metadata.AIDescription = metadata.AIDescription
+			sub.Metadata.AIKeywords = metadata.AIKeywords
+			sub.Metadata.AIAccount = metadata.AIAccount
+			sub.Metadata.AISubmission = metadata.AISubmission
+			sub.Metadata.MissingPrompt = metadata.MissingPrompt
+			sub.Metadata.MissingModel = metadata.MissingModel
+			sub.Metadata.MissingTags = metadata.MissingTags
+			sub.Metadata.ArtistUsed = metadata.ArtistUsed
+			sub.Metadata.PrivateModel = metadata.PrivateModel
+			sub.Metadata.PrivateLora = metadata.PrivateLora
+			sub.Metadata.PrivateTool = metadata.PrivateTool
+			sub.Metadata.SoldArt = metadata.SoldArt
+			sub.Metadata.Generator = metadata.Generator
+
 			sub.Metadata.Params = metadata.Params
+			sub.Metadata.Objects = metadata.Objects
+
+			c.Logger().Printf("Human confidence now (params): %v", sub.Metadata.HumanConfidence)
 			return
 		}
 
 		c.Logger().Debugf("Cache miss for %s retrieving params...", key)
 	}
 
-	// TODO: cache.Set after processing
-	processParams(c, sub, cache, artists)
+	processParams(c, sub, cacheToUse, artists)
+	if sub.Metadata.Objects != nil || sub.Metadata.Params != nil {
+		sub.Metadata.HumanConfidence = 9999
+
+		bin, err := json.Marshal(sub.Metadata)
+		if err != nil {
+			c.Logger().Errorf("error marshaling params: %v", err)
+			return
+		}
+
+		err = cacheToUse.Set(key, &cache.Item{
+			Blob:     bin,
+			MimeType: echo.MIMEApplicationJSON,
+		}, cache.Week)
+		if err != nil {
+			c.Logger().Errorf("error caching params: %v", err)
+		} else {
+			c.Logger().Infof("Cached %s %dKiB", key, len(bin)/units.KiB)
+		}
+	}
 }
 
 func processParams(c echo.Context, sub *db.Submission, cacheToUse cache.Cache, artists []db.Artist) {

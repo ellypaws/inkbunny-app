@@ -77,6 +77,16 @@ func (r *TaggerResponse) HumanPercent() float64 {
 	return 0
 }
 
+func (c *CaptionEnum) HumanPercent() float64 {
+	if c.Tag == nil {
+		return 0
+	}
+	if p, ok := c.Tag[TagEnumHuman]; ok {
+		return p
+	}
+	return 0
+}
+
 func (r *TaggerResponse) CubPercent() float64 {
 	if r.Caption.Tag == nil {
 		return 0

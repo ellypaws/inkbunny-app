@@ -61,7 +61,6 @@ func ProcessResponse(c echo.Context, config *Config) []Detail {
 
 	for i, submission := range config.SubmissionDetails.Submissions {
 		config.wg.Add(1)
-		// TODO: Store in cache after processing
 		go processSubmission(c, &submission, config, &details[i])
 	}
 	config.wg.Wait()

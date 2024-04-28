@@ -8,6 +8,7 @@ import (
 	sd "github.com/ellypaws/inkbunny-sd/stable_diffusion"
 	"github.com/ellypaws/inkbunny/api"
 	"github.com/labstack/echo/v4"
+	units "github.com/labstack/gommon/bytes"
 	"net/http"
 	"net/url"
 	"regexp"
@@ -48,6 +49,8 @@ type Config struct {
 	Output            OutputType
 	Auditor           *db.Auditor
 	ApiHost           *url.URL
+	Query             string
+	Writer            http.Flusher
 
 	wg      sync.WaitGroup
 	mutex   sync.Mutex
@@ -158,15 +161,45 @@ func processSubmission(c echo.Context, submission *api.Submission, config *Confi
 	if c.QueryParam("stream") == "true" {
 		config.mutex.Lock()
 		defer config.mutex.Unlock()
+		c.Response().Header().Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+
 		enc := json.NewEncoder(c.Response())
 		if err := enc.Encode(detail); err != nil {
 			c.Logger().Errorf("error encoding submission %v: %v", sub.ID, err)
+			c.Response().WriteHeader(http.StatusInternalServerError)
+			return
 		}
 		c.Logger().Debugf("flushing %v", sub.ID)
-		c.Response().Header().Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
-		c.Response().WriteHeader(http.StatusOK)
-		c.Get("writer").(http.Flusher).Flush()
+
+		config.Writer.Flush()
 		c.Logger().Infof("finished processing %v", sub.ID)
+	}
+
+	go setCache(c, config, detail)
+}
+
+func setCache(c echo.Context, config *Config, detail *Detail) {
+	bin, err := json.Marshal(detail)
+	if err != nil {
+		c.Logger().Errorf("error marshaling submission %v: %v", detail.ID, err)
+		return
+	}
+
+	key := fmt.Sprintf(
+		"%s:review:%s:%d?%s",
+		echo.MIMEApplicationJSON,
+		config.Output,
+		detail.ID,
+		config.Query,
+	)
+	err = config.Cache.Set(key, &cache.Item{
+		Blob:     bin,
+		MimeType: echo.MIMEApplicationJSON,
+	}, cache.Week)
+	if err != nil {
+		c.Logger().Errorf("error caching caption: %v", err)
+	} else {
+		c.Logger().Infof("Cached %s %dKiB", key, len(bin)/units.KiB)
 	}
 }
 

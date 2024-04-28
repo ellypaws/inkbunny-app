@@ -76,6 +76,7 @@ type Fetch struct {
 const (
 	Indefinite = 0
 	Now        = time.Nanosecond
+	Hour       = time.Hour
 	Day        = 24 * time.Hour
 	Week       = 7 * Day
 	Month      = 30 * Day

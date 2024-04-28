@@ -422,7 +422,7 @@ func GetReviewHandler(c echo.Context) error {
 	output := c.QueryParam("output")
 	parameters := c.QueryParam("parameters")
 	interrogate := c.QueryParam("interrogate")
-	stream := c.QueryParam("stream")
+	stream := c.QueryParam("stream") == "true"
 
 	validOutputs := []service.OutputType{
 		service.OutputSingleTicket,
@@ -454,6 +454,12 @@ func GetReviewHandler(c echo.Context) error {
 	}
 
 	var submissionIDs = c.Param("id")
+	if submissionIDs == "" || submissionIDs == "null" {
+		return c.JSON(http.StatusBadRequest, crashy.ErrorResponse{ErrorString: "missing submission ID"})
+	}
+
+	var submissionIDSlice []string
+
 	var searchStore response
 	if submissionIDs == "search" {
 		var errFunc func(echo.Context) error
@@ -462,12 +468,13 @@ func GetReviewHandler(c echo.Context) error {
 			return errFunc(c)
 		}
 
-		var ids = make([]string, len(searchStore.Search.Submissions))
+		submissionIDSlice = make([]string, len(searchStore.Search.Submissions))
+
 		for i, submission := range searchStore.Search.Submissions {
-			ids[i] = submission.SubmissionID
+			submissionIDSlice[i] = submission.SubmissionID
 		}
 
-		submissionIDs = strings.Join(ids, ",")
+		submissionIDs = strings.Join(submissionIDSlice, ",")
 
 		defer func(searchStore *response) {
 			if searchStore == nil {
@@ -504,11 +511,14 @@ func GetReviewHandler(c echo.Context) error {
 
 			c.Logger().Infof("Cached %s %dKiB", searchReviewKey, len(bin)/units.KiB)
 		}(&searchStore)
+	} else {
+		submissionIDSlice = strings.Split(submissionIDs, ",")
 	}
 
-	if submissionIDs == "" || submissionIDs == "null" {
-		return c.JSON(http.StatusBadRequest, crashy.ErrorResponse{ErrorString: "missing submission ID"})
-	}
+	writer := c.Get("writer").(http.Flusher)
+
+	var processed []service.Detail
+	var missed []string
 
 	reviewKey := fmt.Sprintf(
 		"%s:review:%s:%s?%s",
@@ -517,6 +527,29 @@ func GetReviewHandler(c echo.Context) error {
 		submissionIDs,
 		query.Encode(),
 	)
+
+	var store any
+	defer func(store *any) {
+		if *store == nil {
+			return
+		}
+		bin, err := json.Marshal(store)
+		if err != nil {
+			c.Logger().Errorf("error marshaling review: %v", err)
+			return
+		}
+
+		err = cacheToUse.Set(reviewKey, &cache.Item{
+			Blob:     bin,
+			MimeType: echo.MIMEApplicationJSON,
+		}, cache.Hour)
+		if err != nil {
+			c.Logger().Errorf("error caching review: %v", err)
+			return
+		}
+		c.Logger().Infof("Cached %s %s %dKiB", reviewKey, echo.MIMEApplicationJSON, len(bin)/units.KiB)
+	}(&store)
+
 	if c.Request().Header.Get(echo.HeaderCacheControl) != "no-cache" {
 		item, errFunc := cacheToUse.Get(reviewKey)
 		if errFunc == nil {
@@ -533,30 +566,67 @@ func GetReviewHandler(c echo.Context) error {
 			}
 		}
 
+		for _, id := range submissionIDSlice {
+			key := fmt.Sprintf(
+				"%s:review:%s:%s?%s",
+				echo.MIMEApplicationJSON,
+				output,
+				id,
+				query.Encode(),
+			)
+			item, errFunc := cacheToUse.Get(key)
+			if errFunc == nil {
+				if stream {
+					c.Response().Header().Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+
+					if _, err := c.Response().Write(item.Blob); err != nil {
+						c.Logger().Errorf("error encoding submission %v: %v", id, err)
+						c.Response().WriteHeader(http.StatusInternalServerError)
+						return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
+					}
+					c.Logger().Debugf("flushing %v", id)
+
+					writer.Flush()
+					c.Logger().Infof("finished processing %v", id)
+				}
+
+				c.Logger().Infof("Cache hit for %s", reviewKey)
+
+				var detail service.Detail
+				if err := json.Unmarshal(item.Blob, &detail); err != nil {
+					return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
+				}
+				processed = append(processed, detail)
+				continue
+			}
+
+			missed = append(missed, id)
+		}
+
+		if len(missed) == 0 {
+			store = processed
+
+			if c.Param("id") == "search" {
+				searchStore.Review = store
+				if stream && output != service.OutputSingleTicket {
+					return nil
+				}
+				return c.JSON(http.StatusOK, searchStore)
+			}
+
+			if stream && output != service.OutputSingleTicket {
+				return nil
+			}
+
+			return c.JSON(http.StatusOK, store)
+		}
+
 		c.Logger().Debugf("Cache miss for %s retrieving review...", reviewKey)
 	}
 
-	var store any
-	defer func() {
-		if store == nil {
-			return
-		}
-		bin, err := json.Marshal(store)
-		if err != nil {
-			c.Logger().Errorf("error marshaling review: %v", err)
-			return
-		}
-
-		err = cacheToUse.Set(reviewKey, &cache.Item{
-			Blob:     bin,
-			MimeType: echo.MIMEApplicationJSON,
-		}, cache.Week)
-		if err != nil {
-			c.Logger().Errorf("error caching review: %v", err)
-			return
-		}
-		c.Logger().Infof("Cached %s %s %dKiB", reviewKey, echo.MIMEApplicationJSON, len(bin)/units.KiB)
-	}()
+	if len(missed) > 0 {
+		submissionIDs = strings.Join(missed, ",")
+	}
 
 	req := api.SubmissionDetailsRequest{
 		SID:                         sid,
@@ -586,7 +656,11 @@ func GetReviewHandler(c echo.Context) error {
 		Output:            output,
 		Auditor:           auditor,
 		ApiHost:           ServerHost,
+		Query:             query.Encode(),
+		Writer:            writer,
 	})
+
+	details = append(processed, details...)
 
 	switch output {
 	case service.OutputSubmissions, service.OutputFull, service.OutputBadges:
@@ -658,13 +732,13 @@ func GetReviewHandler(c echo.Context) error {
 
 	if c.Param("id") == "search" {
 		searchStore.Review = store
-		if stream == "true" {
+		if stream && output != service.OutputSingleTicket {
 			return nil
 		}
 		return c.JSON(http.StatusOK, searchStore)
 	}
 
-	if stream == "true" {
+	if stream && output != service.OutputSingleTicket {
 		return nil
 	}
 
@@ -741,6 +815,8 @@ func GetHeuristicsHandler(c echo.Context) error {
 	cacheToUse := cache.SwitchCache(c)
 	artists := Database.AllArtists()
 
+	writer := c.Get("writer").(http.Flusher)
+
 	var waitGroup sync.WaitGroup
 	var mutex sync.Locker
 	for _, sub := range submissionDetails.Submissions {
@@ -754,14 +830,17 @@ func GetHeuristicsHandler(c echo.Context) error {
 				mutex.Lock()
 				defer mutex.Unlock()
 				if c.QueryParam("stream") == "true" {
+					c.Response().Header().Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+
 					enc := json.NewEncoder(c.Response())
 					if err := enc.Encode(sub); err != nil {
 						c.Logger().Errorf("error encoding submission %v: %v", sub.ID, err)
+						c.Response().WriteHeader(http.StatusInternalServerError)
+						return
 					}
 					c.Logger().Debugf("flushing %v", sub.ID)
-					c.Response().Header().Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
-					c.Response().WriteHeader(http.StatusOK)
-					c.Get("writer").(http.Flusher).Flush()
+
+					writer.Flush()
 					c.Logger().Infof("finished processing %v", sub.ID)
 				}
 			}

@@ -9,12 +9,12 @@ var (
 	Patterns = map[string]*regexp.Regexp{
 		"steps":      regexp.MustCompile(`(?i)steps:? (?P<steps>\d+)`),
 		"sampler":    regexp.MustCompile(`(?i)sampler:? (?P<sampler>[\w+ ]+)`),
-		"cfg":        regexp.MustCompile(`(?i)cfg scale:? (?P<cfg>[\d.]+)`),
-		"seed":       regexp.MustCompile(`(?i)seed:? (?P<seed>\d+)`),
+		"cfg":        regexp.MustCompile(`(?i)cfg(?: scale:)?\s*(?P<cfg>[\d.]+)`),
+		"seed":       regexp.MustCompile(`(?i)seed:?\s*(?P<seed>\d+)`),
 		"width":      regexp.MustCompile(`(?i)size:? (?P<width>\d+)x\d+`),
 		"height":     regexp.MustCompile(`(?i)size:? \d+x(?P<height>\d+)`),
 		"hash":       regexp.MustCompile(`(?i)model hash:? (?P<hash>\w+)`),
-		"model":      regexp.MustCompile(`(?i)(?:model|checkpoint) ?[^h]:? (?P<model>[\w-]+)`),
+		"model":      regexp.MustCompile(`(?i)(?:model|checkpoint) ?[^h]:?\s*(?P<model>[^,\n]+)`),
 		"denoising":  regexp.MustCompile(`(?i)denoising strength:? (?P<denoising>[\d.]+)`),
 		"loraHashes": regexp.MustCompile(loraHashes),
 		"tiHashes":   regexp.MustCompile(tiHashes),
@@ -23,8 +23,8 @@ var (
 
 	allParams = regexp.MustCompile(`\s*(\w[\w \-/]+):\s*("(?:\\.|[^\\"])+"|[^,]*)(?:,|$)`)
 
-	positivePattern = regexp.MustCompile(`(?is)(?:(?:primary |pos(?:itive)? )?prompts?:?)\s*(.+)\s*negative(?: prompt:?)?`)
-	negativePattern = regexp.MustCompile(`(?is)(?:(?:neg(?:ative)?)(?: prompts?)?:?)\s*(.+)\s*(?:steps|sampler|model)`)
+	positivePattern = regexp.MustCompile(`(?is)(?:(?:primary |pos(?:itive)? )?prompts?:?)\s*(.+?)\s*negative(?: prompt:?)?`)
+	negativePattern = regexp.MustCompile(`(?is)(?:(?:neg(?:ative)?)(?: prompts?)?:?)\s*(.+?)\s*(?:steps|sampler|model|seed|cfg)`)
 	negativeEnd     = regexp.MustCompile(`(?is)(?:(?:neg(?:ative)?)(?: prompts?)?:?)\s*(.+)`)
 	bbCode          = regexp.MustCompile(`\[\/?[\w=]+\]`)
 

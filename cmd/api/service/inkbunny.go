@@ -64,6 +64,8 @@ func RetrieveSubmission(c echo.Context, req api.SubmissionDetailsRequest) (api.S
 	return submissionDetails, nil
 }
 
+var shortDuration = regexp.MustCompile(`\d+[smhdwy]`)
+
 func RetrieveSearch(c echo.Context, request api.SubmissionSearchRequest) (api.SubmissionSearchResponse, error) {
 	cacheToUse := cache.SwitchCache(c)
 
@@ -111,7 +113,7 @@ func RetrieveSearch(c echo.Context, request api.SubmissionSearchRequest) (api.Su
 	ttl := 15 * time.Minute
 	if searchResponse.RIDTTL != "" {
 		var d time.Duration
-		matches := regexp.MustCompile(`\d+[smhdwy]`).FindAllString(strings.ReplaceAll(searchResponse.RIDTTL, " ", ""), -1)
+		matches := shortDuration.FindAllString(strings.ReplaceAll(searchResponse.RIDTTL, " ", ""), -1)
 		for _, match := range matches {
 			i, err := strconv.Atoi(match[:len(match)-1])
 			if err != nil {

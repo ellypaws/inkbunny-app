@@ -186,16 +186,23 @@ func UseHornybunny() func(*Config) {
 	}
 }
 
+var (
+	methuzalachModel    = regexp.MustCompile(`Model: [^\n]+`)
+	methuzalachNegative = regexp.MustCompile(`Negative prompts:\s*`)
+	methuzalachSeed     = regexp.MustCompile(`\s*Seed: \D*?[,\s]`)
+	methuzalachSteps    = regexp.MustCompile(`.*(Steps: \d+[^\n]*)`)
+)
+
 func UseMethuzalach() func(*Config) {
 	return func(c *Config) {
 		c.KeyCondition = func(line string) bool {
 			return strings.HasPrefix(line, "Image")
 		}
 
-		model := regexp.MustCompile(`Model: [^\n]+`).FindString(c.Text)
-		c.Text = regexp.MustCompile(`Negative prompts:\s*`).ReplaceAllString(c.Text, "Negative Prompt: ")
-		c.Text = regexp.MustCompile(`\s*Seed: \D*?[,\s]`).ReplaceAllString(c.Text, "")
-		c.Text = regexp.MustCompile(`.*(Steps: \d+[^\n]*)`).ReplaceAllString(c.Text, `$1 `+model)
+		model := methuzalachModel.FindString(c.Text)
+		c.Text = methuzalachNegative.ReplaceAllString(c.Text, "Negative Prompt: ")
+		c.Text = methuzalachSeed.ReplaceAllString(c.Text, "")
+		c.Text = methuzalachSteps.ReplaceAllString(c.Text, `$1 `+model)
 	}
 }
 

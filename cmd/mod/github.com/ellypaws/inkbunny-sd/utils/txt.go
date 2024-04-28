@@ -94,6 +94,109 @@ func AutoSnep(opts ...func(*Config)) (Params, error) {
 	return chunks, nil
 }
 
+var seedLine = regexp.MustCompile(`seed: (\d+)`)
+
+func Cirn0(opts ...func(*Config)) (Params, error) {
+	var c Config
+	for _, f := range opts {
+		f(&c)
+	}
+	var chunks Params = make(Params)
+	scanner := bufio.NewScanner(strings.NewReader(c.Text))
+
+	var steps, sampler, cfg, model string
+	var key string
+	var lastKey string
+	var foundSeed bool
+	var foundNegative bool
+	for scanner.Scan() {
+		if err := scanner.Err(); err != nil {
+			return nil, err
+		}
+		line := scanner.Text()
+		line = strings.TrimSpace(line)
+
+		switch {
+		case len(line) == 0:
+			continue
+
+		case strings.HasPrefix(line, "sampler:"):
+			sampler = strings.TrimPrefix(line, "sampler: ")
+		case strings.HasPrefix(line, "cfg:"):
+			cfg = strings.TrimPrefix(line, "cfg: ")
+		case strings.HasPrefix(line, "steps:"):
+			steps = strings.TrimPrefix(line, "steps: ")
+		case strings.HasPrefix(line, "model:"):
+			model = strings.TrimPrefix(line, "model: ")
+
+		case strings.HasPrefix(line, "==="):
+			key = c.Filename + line
+			chunks[key] = make(PNGChunk)
+
+			lastKey = strings.Trim(line, "= ")
+
+		case strings.HasPrefix(line, "---"):
+			if len(lastKey) == 0 {
+				lastKey = "unknown"
+			}
+			key = fmt.Sprintf("--- %s%s ---", lastKey, strings.Trim(line, "- "))
+			chunks[key] = make(PNGChunk)
+
+		case len(key) == 0:
+			continue
+
+		case strings.HasPrefix(line, "keyword prompt:"):
+			continue
+
+		case foundNegative:
+			foundNegative = false
+			chunks[key][Parameters] += fmt.Sprintf("\nNegative Prompt: %s", line)
+
+		case strings.HasPrefix(line, "negative prompt:"):
+			foundNegative = true
+			continue
+
+		case seedLine.MatchString(line):
+			chunks[key][Parameters] += fmt.Sprintf(
+				"\nSteps: %s, Sampler: %s, CFG scale: %s, Seed: %s, Model: %s",
+				steps,
+				sampler,
+				cfg,
+				seedLine.FindStringSubmatch(line)[1],
+				model,
+			)
+			key = ""
+
+		case foundSeed:
+			foundSeed = false
+			chunks[key][Parameters] += fmt.Sprintf(
+				"\nSteps: %s, Sampler: %s, CFG scale: %s, Seed: %s, Model: %s",
+				steps,
+				sampler,
+				cfg,
+				line,
+				model,
+			)
+			key = ""
+
+		case strings.HasPrefix(line, "seed:"):
+			foundSeed = true
+
+		default:
+			if len(chunks[key][Parameters]) > 0 {
+				chunks[key][Parameters] += "\n"
+			}
+			chunks[key][Parameters] += line
+		}
+	}
+
+	if len(chunks) == 0 {
+		return nil, errors.New("no chunks found")
+	}
+
+	return chunks, nil
+}
+
 func UseDruge() func(*Config) {
 	return func(c *Config) {
 		c.KeyCondition = func(line string) bool {

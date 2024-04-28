@@ -239,7 +239,7 @@ func parameterHeuristics(c echo.Context, sub *db.Submission, textFile *db.File, 
 	case utils.IDFairyGarden:
 		params, err = utils.Common(utils.WithBytes(b.Blob), utils.UseFairyGarden())
 	case utils.IDCirn0:
-		params, err = utils.Common(utils.WithBytes(b.Blob), utils.UseCirn0())
+		params, err = utils.Cirn0(utils.WithBytes(b.Blob))
 	case utils.IDHornybunny:
 		params, err = utils.Common(utils.WithBytes(b.Blob), utils.UseHornybunny())
 	case utils.IDMethuzalach:

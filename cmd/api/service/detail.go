@@ -159,7 +159,7 @@ func processSubmission(c echo.Context, submission *api.Submission, config *Confi
 		config.mutex.Lock()
 		defer config.mutex.Unlock()
 		enc := json.NewEncoder(c.Response())
-		if err := enc.Encode(sub); err != nil {
+		if err := enc.Encode(detail); err != nil {
 			c.Logger().Errorf("error encoding submission %v: %v", sub.ID, err)
 		}
 		c.Logger().Debugf("flushing %v", sub.ID)

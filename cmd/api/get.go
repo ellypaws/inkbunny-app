@@ -593,14 +593,15 @@ func GetReviewHandler(c echo.Context) error {
 					c.Logger().Debugf("flushing %v", id)
 
 					writer.Flush()
+				} else {
+					c.Logger().Infof("Cache hit for %s", key)
 				}
-
-				c.Logger().Infof("Cache hit for %s", reviewKey)
 
 				var detail service.Detail
 				if err := json.Unmarshal(item.Blob, &detail); err != nil {
 					return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
 				}
+
 				processed = append(processed, detail)
 				continue
 			}

@@ -80,7 +80,7 @@ func init() {
 
 	envApiHost := os.Getenv("API_HOST")
 	if envApiHost == "" {
-		e.Logger.Warnf("API_HOST is not set, using default localhost:%s\n", port)
+		e.Logger.Warnf("env API_HOST is not set, using default localhost:%s\n", port)
 		api.ServerHost = &url.URL{
 			Scheme: "http",
 			Host:   "localhost:" + port,
@@ -99,7 +99,7 @@ func init() {
 		e.Logger.Warn("warning: host is not alive")
 	}
 
-	e.Logger.Printf("sd host: %s\n", sdHost)
+	e.Logger.Infof("sd host: %s\n", sdHost)
 
 	var err error
 	api.Database, err = db.New(nil)

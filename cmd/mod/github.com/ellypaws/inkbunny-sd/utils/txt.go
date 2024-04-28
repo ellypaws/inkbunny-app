@@ -263,6 +263,7 @@ func UseCirn0() func(*Config) {
 
 func UseHornybunny() func(*Config) {
 	return func(c *Config) {
+		c.Text = "(1)\n" + c.Text
 		c.KeyCondition = func(line string) bool {
 			return regexp.MustCompile(`^\(\d+\)$`).MatchString(line)
 		}

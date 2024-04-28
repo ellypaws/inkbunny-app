@@ -118,8 +118,6 @@ func processSubmission(c echo.Context, submission *api.Submission, config *Confi
 		Submission: &sub,
 	}
 
-	auditorAsUser := AuditorAsUsernameID(config.Auditor)
-
 	switch config.Output {
 	case OutputBadges:
 		detail.Ticket = new(db.Ticket)
@@ -141,13 +139,14 @@ func processSubmission(c echo.Context, submission *api.Submission, config *Confi
 			Responses: []db.Response{
 				{
 					SupportTeam: false,
-					User:        auditorAsUser,
+					User:        AuditorAsUsernameID(config.Auditor),
 					Date:        time.Now().UTC(),
 					Message:     "",
 				},
 			},
 		}
 	case OutputMultipleTickets:
+		auditorAsUser := AuditorAsUsernameID(config.Auditor)
 		detail.Ticket = &db.Ticket{
 			ID:         sub.ID,
 			Subject:    fmt.Sprintf("Review for %v", sub.URL),

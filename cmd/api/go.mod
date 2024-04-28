@@ -13,7 +13,7 @@ require (
 	github.com/disintegration/imaging v1.6.2
 	github.com/ellypaws/inkbunny-app/api/library v0.0.0
 	github.com/ellypaws/inkbunny-app/cmd v0.0.0
-	github.com/ellypaws/inkbunny-sd v0.0.0-20240421145525-f3b56afc12a5
+	github.com/ellypaws/inkbunny-sd v0.0.0
 	github.com/ellypaws/inkbunny/api v0.0.0-20240411110242-d491ced97f23
 	github.com/gitsight/go-echo-cache v1.0.1
 	github.com/go-errors/errors v1.5.1
@@ -48,7 +48,7 @@ require (
 	golang.org/x/time v0.5.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	modernc.org/gc/v3 v3.0.0-20240304020402-f0dba7c97c2b // indirect
-	modernc.org/libc v1.50.2 // indirect
+	modernc.org/libc v1.50.4 // indirect
 	modernc.org/mathutil v1.6.0 // indirect
 	modernc.org/memory v1.8.0 // indirect
 	modernc.org/sqlite v1.29.8 // indirect

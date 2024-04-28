@@ -5,7 +5,7 @@ go 1.22.1
 replace github.com/ellypaws/inkbunny-sd => ./mod/github.com/ellypaws/inkbunny-sd
 
 require (
-	github.com/ellypaws/inkbunny-sd v0.0.0-20240421145525-f3b56afc12a5
+	github.com/ellypaws/inkbunny-sd v0.0.0
 	github.com/ellypaws/inkbunny/api v0.0.0-20240411110242-d491ced97f23
 	github.com/go-errors/errors v1.5.1
 	github.com/stretchr/testify v1.9.0
@@ -26,7 +26,7 @@ require (
 	gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	modernc.org/gc/v3 v3.0.0-20240304020402-f0dba7c97c2b // indirect
-	modernc.org/libc v1.50.2 // indirect
+	modernc.org/libc v1.50.4 // indirect
 	modernc.org/mathutil v1.6.0 // indirect
 	modernc.org/memory v1.8.0 // indirect
 	modernc.org/strutil v1.2.0 // indirect

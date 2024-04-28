@@ -283,9 +283,9 @@ func GetPrompts(lines []string) (strings.Builder, strings.Builder) {
 		switch {
 		case len(line) == 0:
 			continue
-		case strings.HasPrefix(line, "Negative prompt:"):
+		case negativeStart.MatchString(line):
 			negativeFound = true
-			negative.WriteString(strings.TrimSpace(line[16:]))
+			negative.WriteString(strings.TrimSpace(line[len(negativeStart.FindString(line)):]))
 		case negativeFound:
 			if negative.Len() > 0 {
 				negative.WriteString("\n")

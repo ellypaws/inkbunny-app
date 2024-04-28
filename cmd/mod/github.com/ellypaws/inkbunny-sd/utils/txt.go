@@ -380,7 +380,7 @@ func Common(opts ...func(*Config)) (Params, error) {
 			key = ""
 			continue
 		}
-		if strings.HasPrefix(line, "Negative Prompt:") {
+		if negativeStart.MatchString(line) {
 			foundNegative = true
 			chunks[key][Parameters] += "\n" + line
 			continue

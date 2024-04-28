@@ -67,8 +67,6 @@ func RetrieveParams(c echo.Context, wg *sync.WaitGroup, sub *db.Submission, cach
 
 	processParams(c, sub, cacheToUse, artists)
 	if sub.Metadata.Objects != nil || sub.Metadata.Params != nil {
-		sub.Metadata.HumanConfidence = 9999
-
 		bin, err := json.Marshal(sub.Metadata)
 		if err != nil {
 			c.Logger().Errorf("error marshaling params: %v", err)

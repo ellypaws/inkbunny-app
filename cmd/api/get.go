@@ -19,7 +19,6 @@ import (
 	"github.com/redis/go-redis/v9"
 	"net/http"
 	"net/url"
-	"regexp"
 	"slices"
 	"strconv"
 	"strings"
@@ -593,13 +592,6 @@ func GetReviewHandler(c echo.Context) error {
 		return nil
 	}
 
-	for i, sub := range details {
-		details[i].Ticket.Labels = db.TicketLabels(*sub.Submission)
-		if output != service.OutputBadges {
-			details[i].Ticket.Responses[0].Message = submissionMessage(sub.Submission)
-		}
-	}
-
 	switch output {
 	case service.OutputSubmissions, service.OutputFull, service.OutputBadges:
 		store = details
@@ -673,152 +665,6 @@ func GetReviewHandler(c echo.Context) error {
 		return c.JSON(http.StatusOK, searchStore)
 	}
 	return c.JSON(http.StatusOK, store)
-}
-
-func submissionMessage(sub *db.Submission) string {
-	var sb strings.Builder
-	sb.WriteString(fmt.Sprintf("[u]AI Submission %d by @%s ", sub.ID, sub.Username))
-
-	flags := db.TicketLabels(*sub)
-	if len(flags) == 0 {
-		sb.WriteString("needs to be reviewed[/u]\n")
-	}
-	for i, flag := range flags {
-		switch i {
-		case 0:
-			switch flag {
-			case db.LabelArtistUsed:
-				sb.WriteString("has used an artist in the prompt[/u]\n")
-			case db.LabelMissingParams:
-				sb.WriteString("does not have any parameters[/u]\n")
-			case db.LabelMissingPrompt:
-				sb.WriteString("is missing the prompt[/u]\n")
-			case db.LabelMissingModel:
-				sb.WriteString("does not include the model information[/u]\n")
-			case db.LabelMissingSeed:
-				sb.WriteString("is missing the generation seed[/u]\n")
-			case db.LabelSoldArt:
-				sb.WriteString("is a selling content[/u]\n")
-			case db.LabelPrivateTool:
-				sb.WriteString(fmt.Sprintf("was generated using a private tool %s[/u]\n", sub.Metadata.Generator))
-			case db.LabelPrivateLora:
-				sb.WriteString("was generated using a private Lora model[/u]\n")
-			case db.LabelPrivateModel:
-				sb.WriteString("was generated using a private checkpoint model[/u]\n")
-			default:
-				sb.WriteString("is not following AI ACP[/u]\n")
-			}
-		case 1:
-			sb.WriteString("\n\nIn addition, the following flags were detected:")
-			fallthrough
-		default:
-			sb.WriteString("\n")
-			sb.WriteString(string(flag))
-		}
-	}
-
-	sb.WriteString(fmt.Sprintf("\n%s by @%s\n#M%d", sub.URL, sub.Username, sub.ID))
-
-	if len(sub.Metadata.ArtistUsed) > 0 {
-		sb.WriteString("\n\n")
-		sb.WriteString("The prompt may have used these artists: ")
-
-		for i, artist := range sub.Metadata.ArtistUsed {
-			if i > 0 {
-				sb.WriteString(", ")
-			}
-			sb.WriteString("[b]")
-			if artist.UserID != nil {
-				sb.WriteString(fmt.Sprintf("ib!%s[/b]", artist.Username))
-			} else {
-				sb.WriteString(artist.Username)
-				sb.WriteString("[/b]")
-			}
-			if i == len(sub.Metadata.ArtistUsed)-1 {
-				sb.WriteString("\n")
-			}
-		}
-
-		highlight := make(map[string]string)
-		for name, obj := range sub.Metadata.Objects {
-			meta := strings.ToLower(obj.Prompt + obj.NegativePrompt)
-
-			var replaced bool
-			for _, artist := range sub.Metadata.ArtistUsed {
-				re, err := regexp.Compile(fmt.Sprintf(`(?i)\b(%s)\b`, artist.Username))
-				if err != nil {
-					continue
-				}
-
-				if !replaced && re.MatchString(meta) {
-					replaced = true
-					highlight[name] = meta
-				}
-				if replaced {
-					highlight[name] = re.ReplaceAllStringFunc(highlight[name], func(s string) string {
-						if artist.UserID != nil {
-							return fmt.Sprintf("[b]>>> [u][name]%s[/name][/u] <<<[/b]", s)
-						}
-						return fmt.Sprintf("[b] >>> [color=#F78C6C][u]%s[/u][/color] <<< [/b]", s)
-					})
-				}
-			}
-		}
-
-		for title, prompt := range highlight {
-			var file *db.File
-			if slices.ContainsFunc(sub.Files, func(f db.File) bool {
-				if f.File.FileName == title {
-					file = &f
-					return true
-				}
-				return false
-			}) {
-				sb.WriteString(fmt.Sprintf("\nFile: [url=%s]%s[/url]", file.File.FileURLFull, file.File.FileName))
-			}
-			sb.WriteString(fmt.Sprintf("\n[q=%s]%s[/q]", title, prompt))
-		}
-	}
-
-	if sub.Metadata.MissingPrompt {
-		sb.WriteString("\n")
-		sb.WriteString("The submission is missing the prompt")
-	}
-
-	if len(sub.Metadata.AIKeywords) == 0 {
-		if sub.Metadata.AISubmission {
-			sb.WriteString("\n")
-			sb.WriteString("The submission was detected to have AI content, but was not tagged as such")
-		}
-	}
-
-	var added uint
-	for i, file := range sub.Files {
-		switch file.File.MimeType {
-		//case echo.MIMEApplicationJSON, echo.MIMETextPlain:
-		default:
-			if added == 0 {
-				sb.WriteString("\n[u]MD5 Checksums at the time of writing[/u]:")
-			}
-			sb.WriteString("\n")
-			sb.WriteString(fmt.Sprintf("Page %d: [url=%s]%s[/url] (%s)", i+1,
-				file.File.FileURLFull, file.File.FileName, file.File.FullFileMD5))
-			added++
-		}
-	}
-
-	if sub.Metadata.DetectedHuman {
-		sb.WriteString("\n")
-		if !sub.Metadata.TaggedHuman {
-			sb.WriteString("A human was detected in the submission but was not tagged\n")
-		} else {
-			sb.WriteString("A human was detected in the submission and was tagged\n")
-		}
-		sb.WriteString("The detection rate is: ")
-		sb.WriteString(fmt.Sprintf("%.2f", sub.Metadata.HumanConfidence))
-	}
-
-	return sb.String()
 }
 
 func maxConfidence(old, new *entities.TaggerResponse) *entities.TaggerResponse {

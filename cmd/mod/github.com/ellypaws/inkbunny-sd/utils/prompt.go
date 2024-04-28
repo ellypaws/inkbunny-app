@@ -16,6 +16,10 @@ func ExtractPositivePrompt(s string) string {
 		result = ExtractPositiveForward(s)
 	}
 
+	if result == "" {
+		result = Extract(s, positiveEnd)
+	}
+
 	return trim(result)
 }
 

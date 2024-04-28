@@ -24,6 +24,7 @@ var (
 	allParams = regexp.MustCompile(`\s*(\w[\w \-/]+):\s*("(?:\\.|[^\\"])+"|[^,]*)(?:,|$)`)
 
 	positivePattern = regexp.MustCompile(`(?is)(?:(?:primary |pos(?:itive)? )?prompts?:?)\s*(.+?)\s*negative(?: prompt:?)?`)
+	positiveEnd     = regexp.MustCompile(`(?is)(?:(?:primary |pos(?:itive)? )?prompts?:?)\s*(.+)`)
 	negativePattern = regexp.MustCompile(`(?is)(?:(?:neg(?:ative)?)(?: prompts?)?:?)\s*(.+?)\s*(?:steps|sampler|model|seed|cfg)`)
 	negativeEnd     = regexp.MustCompile(`(?is)(?:(?:neg(?:ative)?)(?: prompts?)?:?)\s*(.+)`)
 	bbCode          = regexp.MustCompile(`\[\/?[\w=]+\]`)

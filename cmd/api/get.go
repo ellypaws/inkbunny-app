@@ -584,10 +584,15 @@ func GetReviewHandler(c echo.Context) error {
 						c.Response().WriteHeader(http.StatusInternalServerError)
 						return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
 					}
+
+					if _, err = c.Response().Write([]byte("\n")); err != nil {
+						c.Logger().Errorf("error encoding submission %v: %v", id, err)
+						c.Response().WriteHeader(http.StatusInternalServerError)
+						return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
+					}
 					c.Logger().Debugf("flushing %v", id)
 
 					writer.Flush()
-					c.Logger().Infof("finished processing %v", id)
 				}
 
 				c.Logger().Infof("Cache hit for %s", reviewKey)
@@ -841,7 +846,6 @@ func GetHeuristicsHandler(c echo.Context) error {
 					c.Logger().Debugf("flushing %v", sub.ID)
 
 					writer.Flush()
-					c.Logger().Infof("finished processing %v", sub.ID)
 				}
 			}
 		}(&waitGroup, &submission)

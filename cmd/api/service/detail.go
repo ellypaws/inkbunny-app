@@ -172,7 +172,6 @@ func processSubmission(c echo.Context, submission *api.Submission, config *Confi
 		c.Logger().Debugf("flushing %v", sub.ID)
 
 		config.Writer.Flush()
-		c.Logger().Infof("finished processing %v", sub.ID)
 	}
 
 	go setCache(c, config, detail)

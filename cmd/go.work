@@ -7,4 +7,5 @@ use (
 	api/library
 	cli
 	extension
+	server
 )

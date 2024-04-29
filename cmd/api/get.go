@@ -502,7 +502,7 @@ func GetReviewHandler(c echo.Context) error {
 			err = cacheToUse.Set(searchReviewKey, &cache.Item{
 				Blob:     bin,
 				MimeType: echo.MIMEApplicationJSON,
-			}, cache.Week)
+			}, cache.Hour)
 
 			if err != nil {
 				c.Logger().Errorf("error caching review: %v", err)
@@ -587,6 +587,8 @@ func GetReviewHandler(c echo.Context) error {
 				c.Logger().Errorf("an error occurred while retrieving cache: %v", err)
 				return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
 			}
+
+			missed = append(missed, submissionIDSlice...)
 		}
 		for key, item := range items {
 			if id := ids[key]; item != nil {
@@ -624,7 +626,7 @@ func GetReviewHandler(c echo.Context) error {
 			missed = append(missed, ids[key])
 		}
 
-		if len(missed) == 0 {
+		if len(processed) > 0 && len(missed) == 0 {
 			store = processed
 
 			if c.Param("id") == "search" {

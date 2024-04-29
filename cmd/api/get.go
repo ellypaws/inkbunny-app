@@ -490,26 +490,9 @@ func GetReviewHandler(c echo.Context) error {
 	)
 
 	var store any
-	defer func(store *any) {
-		if *store == nil {
-			return
-		}
-		bin, err := json.Marshal(store)
-		if err != nil {
-			c.Logger().Errorf("error marshaling review: %v", err)
-			return
-		}
-
-		err = cacheToUse.Set(reviewKey, &cache.Item{
-			Blob:     bin,
-			MimeType: echo.MIMEApplicationJSON,
-		}, cache.Hour)
-		if err != nil {
-			c.Logger().Errorf("error caching review: %v", err)
-			return
-		}
-		c.Logger().Infof("Cached %s %s %dKiB", reviewKey, echo.MIMEApplicationJSON, len(bin)/units.KiB)
-	}(&store)
+	if c.Param("id") != "search" {
+		defer storeReview(c, reviewKey, &store)
+	}
 
 	if c.Request().Header.Get(echo.HeaderCacheControl) != "no-cache" {
 		item, errFunc := cacheToUse.Get(reviewKey)
@@ -727,6 +710,31 @@ func GetReviewHandler(c echo.Context) error {
 	}
 
 	return c.JSON(http.StatusOK, store)
+}
+
+func storeReview(c echo.Context, reviewKey string, store *any) {
+	if store == nil {
+		c.Logger().Warnf("trying to cache nil review for %s", reviewKey)
+		return
+	}
+	if *store == nil {
+		return
+	}
+	bin, err := json.Marshal(store)
+	if err != nil {
+		c.Logger().Errorf("error marshaling review: %v", err)
+		return
+	}
+
+	err = cache.SwitchCache(c).Set(reviewKey, &cache.Item{
+		Blob:     bin,
+		MimeType: echo.MIMEApplicationJSON,
+	}, cache.Hour)
+	if err != nil {
+		c.Logger().Errorf("error caching review: %v", err)
+		return
+	}
+	c.Logger().Infof("Cached %s %s %dKiB", reviewKey, echo.MIMEApplicationJSON, len(bin)/units.KiB)
 }
 
 func maxConfidence(old, new *entities.TaggerResponse) *entities.TaggerResponse {

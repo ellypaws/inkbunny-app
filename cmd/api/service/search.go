@@ -105,19 +105,16 @@ func StoreSearchReview(c echo.Context, query url.Values, store *SearchReview) {
 		return
 	}
 
-	output := c.QueryParam("output")
-	cacheToUse := cache.SwitchCache(c)
-
 	searchReviewKey := fmt.Sprintf(
 		ReviewSearchFormat,
 		echo.MIMEApplicationJSON,
-		output,
+		c.QueryParam("output"),
 		store.Search.RID,
 		store.Search.Page,
 		query.Encode(),
 	)
 
-	err = cacheToUse.Set(searchReviewKey, &cache.Item{
+	err = cache.SwitchCache(c).Set(searchReviewKey, &cache.Item{
 		Blob:     bin,
 		MimeType: echo.MIMEApplicationJSON,
 	}, cache.Hour)

@@ -448,11 +448,6 @@ func GetReviewHandler(c echo.Context) error {
 		"interrogate": {interrogate},
 	}
 
-	type response struct {
-		Search *api.SubmissionSearchResponse `json:"search"`
-		Review any                           `json:"review"`
-	}
-
 	var submissionIDs = c.Param("id")
 	if submissionIDs == "" || submissionIDs == "null" {
 		return c.JSON(http.StatusBadRequest, crashy.ErrorResponse{ErrorString: "missing submission ID"})
@@ -460,7 +455,7 @@ func GetReviewHandler(c echo.Context) error {
 
 	var submissionIDSlice []string
 
-	var searchStore response
+	var searchStore service.SearchReview
 	if submissionIDs == "search" {
 		var errFunc func(echo.Context) error
 		searchStore.Search, errFunc = service.RetrieveReviewSearch(c, sid, output, query, cacheToUse)
@@ -476,41 +471,7 @@ func GetReviewHandler(c echo.Context) error {
 
 		submissionIDs = strings.Join(submissionIDSlice, ",")
 
-		defer func(searchStore *response) {
-			if searchStore == nil {
-				return
-			}
-			if searchStore.Review == nil {
-				return
-			}
-
-			bin, err := json.Marshal(searchStore)
-			if err != nil {
-				c.Logger().Errorf("error marshaling review: %v", err)
-				return
-			}
-
-			searchReviewKey := fmt.Sprintf(
-				service.ReviewSearchFormat,
-				echo.MIMEApplicationJSON,
-				output,
-				searchStore.Search.RID,
-				searchStore.Search.Page,
-				query.Encode(),
-			)
-
-			err = cacheToUse.Set(searchReviewKey, &cache.Item{
-				Blob:     bin,
-				MimeType: echo.MIMEApplicationJSON,
-			}, cache.Hour)
-
-			if err != nil {
-				c.Logger().Errorf("error caching review: %v", err)
-				return
-			}
-
-			c.Logger().Infof("Cached %s %dKiB", searchReviewKey, len(bin)/units.KiB)
-		}(&searchStore)
+		defer service.StoreSearchReview(c, query, &searchStore)
 	} else {
 		submissionIDSlice = strings.Split(submissionIDs, ",")
 	}

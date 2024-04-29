@@ -60,6 +60,8 @@ A caption service using [github.com/picobyte/stable-diffusion-webui-wd14-tagger]
 
 Set the environment variables for the server to run. You can set the following environment variables:
 
+There is also an [extension server](../extension) with mostly just the review service running to use with a [userscript](https://gist.github.com/ellypaws/0f6c1a85875b551f7105998398f0b054) to return metadata badges or a ticket to review inside Inkbunny itself.
+
 ```bash
 export PORT "your_port"
 export API_HOST "your_api_host"

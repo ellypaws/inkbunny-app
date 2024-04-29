@@ -58,7 +58,7 @@ It constructs a prepared ticket based on the heuristics for you to audit and mod
 
 ![Ticket](doc/ticket.png)
 
-Additionally, there's a [full api server](../server/README.md) that provides additional tools.
+Additionally, there's a [full api server](../server) that provides additional tools.
 
 A demo app is available either at [https://inkbunny.keiau.space](https://inkbunny.keiau.space/app/audits) or in [retool](https://inkbunny.retool.com).
 ![Inkbunny Ticket Auditor](../server/doc/screenshot.png)

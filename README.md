@@ -2,7 +2,7 @@
   <img src="https://inkbunny.net/images81/elephant/logo/bunny.png" width="100" />
   <img src="https://inkbunny.net/images81/elephant/logo/text.png" width="300" />
   <br>
-  <h1 align="center">Inkbunny ML</h1>
+  <h1 align="center">Inkbunny Auditor</h1>
 </p>
 
 <p align="center">
@@ -43,157 +43,63 @@ This project is designed to detect AI-generated images made with stable diffusio
 the descriptions of submissions and extracts prompt details through a Language Learning Model (LLM). The processed data
 is then structured into a text-to-image format.
 
+By using crafted [heuristics](https://github.com/ellypaws/inkbunny-sd),
+as well as the potential to use an LLM to inference the parameters.
+A general purpose [API](cmd/api) library is available to integrate with your own program logic.
+
+There are three different projects that aim to help in auditing and moderating AI generated content.
+
+1. [Inkbunny AI Bridge](cmd/extension): A userscript server that constructs a prepared ticket based
+   on [heuristics](https://github.com/ellypaws/inkbunny-sd)
+   for you to audit and modify to then submit to Inkbunny.
+   ![Inkbunny AI Bridge](cmd/extension/doc/ticket.png)
+2. [Inkbunny ML](cmd/server): A general purpose [API](cmd/api) that features different tools to help in auditing and
+   moderating AI generated content.
+
+   It contains a database for managing tickets, auditors, artist lookup and auditing system.
+
+   It also provides both a local and Redis cache layer for performance.
+   The cache layer tries to be reasonably aggressive to make it performant and scalable.
+   ![Inkbunny ML](cmd/server/doc/screenshot.png)
+3. [CLI](cmd/cli): A command line interface that allows you to interact with the Inkbunny ML [API](cmd/api).
+   It provides a way to interact with the API without needing to use the web interface.
+   ![Inkbunny CLI](cmd/cli/doc/cli.gif)
+
 ## Usage
 
-You will be prompted for your Inkbunny username and password.
-Environment variables can also be used to set the SID directly if
-you [login manually](https://wiki.inkbunny.net/wiki/API#Login) and get the SID.
-You can login as a guest by entering "`guest`" (or leaving it blank) as the username and leaving the password blank.
+Prerequisites: Make sure you have api turned on in your Inkbunny account settings.
+You will need your API key and SID to use the Inkbunny API.
+You can change this in your [account settings](https://inkbunny.net/account.php#:~:text=API%20(External%20Scripting))
 
-```bash
-  Enter username [guest]:
-  Enter password (hidden): 
-  
-  Logged in as your_username, sid: your_sid
-  Enter submission IDs (comma separated) or a tag [tag:ai_generated]: your_submission_ids
-```
-
-It's also possible to search for tags such as "`tag:ai_generated`". Then this will return the submission IDs for you to
-check.
-If you leave the field empty, it will search for the tag "`tag:ai_generated`" by default.
-
-This will return 5 submissions with the tag "ai_generated" and prompt you to select one to process.
-
-After you've inputted submission IDs, it will ask if you want to use an LLM to infer parameters.
-If you select `n` (default), it will only use heuristics and simple regex to find the prompt.
-
-```bash
-  Use an LLM to infer parameters? (y/[n]): y
-  Inferencing from http://localhost:7869/v1/chat/completions
-  Inferencing text to image (1/3)
-  Accumulated tokens: 512
-  Text to image saved to text_to_image.json
-```
-
-Then finally it will save to a json file in the current directory. You will be prompted if you want to log out.
+You can read the individual readme files for each project to get started.
+An example usage for [Inkbunny AI Bridge](cmd/extension) is provided below.
 
 ### Building from Source
 
-Prerequisites: Make sure you have api turned on in your Inkbunny account settings. You will need your API key and SID to
-use the Inkbunny API. You can change this in
-your [account settings](https://inkbunny.net/account.php#:~:text=API%20(External%20Scripting))
-
 If you're building from source, you will need to install the dependencies:
-Download Go 1.22.0 or later from the [official website](https://golang.org/dl/).
+Download Go 1.22.2 or later from the [official website](https://golang.org/dl/).
+
+Set the environment variables for the server to run. You can set the following environment variables:
 
 ```bash
-git clone https://github.com/ellypaws/inkbunny-sd.git
-cd inkbunny-sd
+export PORT "your_port" # default is 1323
+export API_HOST "your_api_host"
+export SD_HOST "your_sd_host" # default is "http://localhost:7860"
+export REDIS_HOST "your_redis_host" # default is "localhost:6379", when not set, uses local memory cache
+export REDIS_PASSWORD "your_redis_password"
+export REDIS_USER "your_redis_user" # when not set, uses 'default'
+```
 
-go build .\cmd\
+An optional Redis server can be used for caching.
+If not set, it will fall back to local memory cache.
+You can always override this behavior for most request by setting the `Cache-Control` header to `no-cache`.
+
+```bash
+git clone https://github.com/ellypaws/inkbunny-app.git
+cd inkbunny-app/cmd/extension
+
+go build -o inkbunny-ai-bridge
+./inkbunny-ai-bridge
 ```
 
 You can also use the pre-built binaries from the [releases page](https://github.com/ellypaws/inkbunny-sd/releases).
-
-### Using Localhost
-
-```go
-package main
-
-import (
-	"github.com/ellypaws/inkbunny-sd/llm"
-	"log"
-	"net/url"
-)
-
-func main() {
-	localhost := llm.Localhost()
-
-	config := llm.Config{
-		APIKey: "if needed",
-		Endpoint: url.URL{
-			Scheme: "http",
-			Host:   "localhost:7860",
-			Path:   "/v1/chat/completions",
-		},
-	}
-
-	request := llm.DefaultRequest("your content here")
-	response, _ := config.Infer(request)
-	response, _ = localhost.Infer(request)
-
-	log.Println(response.Choices[0].Message.Content)
-}
-
-```
-
-### JSON System prompt
-
-You can prefill the system prompt by using the helper
-function [`PrefillSystemDump`](llm/defaults.go#L51)`(request entities.TextToImageRequest)`
-
-```go
-package main
-
-import (
-	"github.com/ellypaws/inkbunny-sd/entities"
-	"github.com/ellypaws/inkbunny-sd/utils"
-	"log"
-)
-
-func main() {
-	request := entities.TextToImageRequest{
-		Steps:       50,
-		SamplerName: "DPM++ 2M Karras",
-		OverrideSettings: entities.Config{
-			SDModelCheckpoint: &alternateModel,
-			SDCheckpointHash:  "70b33002f4",
-		},
-		CFGScale:          12,
-		DenoisingStrength: 0.45,
-		Prompt:            utils.ExtractPositivePrompt("description from submission"),
-		NegativePrompt:    utils.ExtractNegativePrompt("description from submission"),
-	}
-
-	message, err := PrefillSystemDump(request)
-	if err != nil {
-		log.Fatalf("Error prefilling system dump: %v", err)
-	}
-
-	log.Println(message)
-}
-
-```
-
-## Inkbunny API Library
-
-This project uses the Inkbunny API library to log in and get submission details. Here is a sample usage:
-
-```go
-package main
-
-import (
-	"github.com/ellypaws/inkbunny/api"
-	"log"
-)
-
-func main() {
-	user := &api.Credentials{
-		Username: "your_username",
-		Password: "your_password",
-	}
-
-	user, err := user.Login()
-	if err != nil {
-		log.Printf("Error logging in: %v", err)
-		return
-	}
-	
-	log.Printf("Logged in with session ID: %s", user.Sid)
-}
-
-```
-
-Altogether, we can use the [Inkbunny API library](https://github.com/ellypaws/inkbunny) to log in, get submission details, and then use the LLM to process the
-descriptions of the submissions.
-Then we can use the description to make an inference request to the LLM.

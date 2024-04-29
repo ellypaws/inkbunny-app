@@ -576,26 +576,30 @@ func GetReviewHandler(c echo.Context) error {
 			)
 			item, errFunc := cacheToUse.Get(key)
 			if errFunc == nil {
-				var detail service.Detail
-				if err := json.Unmarshal(item.Blob, &detail); err != nil {
-					return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
-				}
-
 				if stream {
 					c.Response().Header().Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
 
-					enc := json.NewEncoder(c.Response())
-					if err := enc.Encode(detail); err != nil {
+					if _, err := c.Response().Write(item.Blob); err != nil {
 						c.Logger().Errorf("error encoding submission %v: %v", id, err)
 						c.Response().WriteHeader(http.StatusInternalServerError)
 						return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
 					}
 
+					if _, err = c.Response().Write([]byte("\n")); err != nil {
+						c.Logger().Errorf("error encoding submission %v: %v", id, err)
+						c.Response().WriteHeader(http.StatusInternalServerError)
+						return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
+					}
 					c.Logger().Debugf("flushing %v", id)
 
 					writer.Flush()
 				} else {
 					c.Logger().Infof("Cache hit for %s", key)
+				}
+
+				var detail service.Detail
+				if err := json.Unmarshal(item.Blob, &detail); err != nil {
+					return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
 				}
 
 				processed = append(processed, detail)

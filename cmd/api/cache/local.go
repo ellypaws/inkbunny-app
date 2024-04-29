@@ -46,6 +46,21 @@ func (l *LocalCache) Get(key string) (*Item, error) {
 	return nil, redis.Nil
 }
 
+func (l *LocalCache) MGet(keys ...string) (map[string]*Item, error) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	items := make(map[string]*Item)
+	for _, key := range keys {
+		if item, found := l.items[key]; found {
+			item.Accessed()
+			items[key] = item
+		} else {
+			items[key] = nil
+		}
+	}
+	return items, nil
+}
+
 func (l *LocalCache) Set(key string, item *Item, duration time.Duration) error {
 	if !strings.HasPrefix(key, item.MimeType) {
 		key = fmt.Sprintf("%s:%s", item.MimeType, key)

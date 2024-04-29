@@ -21,6 +21,7 @@ import (
 
 type Cache interface {
 	Get(key string) (*Item, error)
+	MGet(keys ...string) (map[string]*Item, error)
 	Set(key string, item *Item, duration time.Duration) error
 }
 

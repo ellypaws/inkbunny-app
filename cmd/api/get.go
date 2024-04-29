@@ -566,16 +566,30 @@ func GetReviewHandler(c echo.Context) error {
 			}
 		}
 
-		for _, id := range submissionIDSlice {
-			key := fmt.Sprintf(
+		type key = string
+		ids := make(map[key]string)
+		keys := make([]string, len(submissionIDSlice))
+		for i, id := range submissionIDSlice {
+			keys[i] = fmt.Sprintf(
 				"%s:review:%s:%s?%s",
 				echo.MIMEApplicationJSON,
 				output,
 				id,
 				query.Encode(),
 			)
-			item, errFunc := cacheToUse.Get(key)
-			if errFunc == nil {
+
+			ids[keys[i]] = id
+		}
+
+		items, err := cacheToUse.MGet(keys...)
+		if err != nil {
+			if !errors.Is(err, redis.Nil) {
+				c.Logger().Errorf("an error occurred while retrieving cache: %v", err)
+				return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
+			}
+		}
+		for key, item := range items {
+			if id := ids[key]; item != nil {
 				if stream {
 					c.Response().Header().Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
 
@@ -599,6 +613,7 @@ func GetReviewHandler(c echo.Context) error {
 
 				var detail service.Detail
 				if err := json.Unmarshal(item.Blob, &detail); err != nil {
+					c.Logger().Errorf("error unmarshaling submission %v: %v", id, err)
 					return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
 				}
 
@@ -606,7 +621,7 @@ func GetReviewHandler(c echo.Context) error {
 				continue
 			}
 
-			missed = append(missed, id)
+			missed = append(missed, ids[key])
 		}
 
 		if len(missed) == 0 {

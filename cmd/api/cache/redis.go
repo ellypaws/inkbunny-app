@@ -145,6 +145,92 @@ func (r *Redis) Get(key string) (*Item, error) {
 	return &item, nil
 }
 
+func (r *Redis) MGet(keys ...string) (map[string]*Item, error) {
+	items := make(map[string]*Item)
+	var foundAny bool
+
+	for _, key := range keys {
+		if !strings.HasPrefix(key, echo.MIMEApplicationJSON) {
+			val, err := (*redis.Client)(r).Get(ctx, key).Bytes()
+			if errors.Is(err, redis.Nil) {
+				items[key] = nil
+				continue
+			}
+			if err != nil {
+				return nil, err
+			}
+			foundAny = true
+			var mimeType string
+			if strings.Contains(key, ":") {
+				mimeType = key[:strings.Index(key, ":")]
+			}
+			if strings.HasPrefix(mimeType, "http") {
+				m := MimeTypeFromURL(key)
+				if m != "" && mimeType != m {
+					log.Printf("warning: mime type mismatch %s %s", mimeType, m)
+					mimeType = m
+				}
+			}
+			if mimeType == "" {
+				log.Printf("warning: mime type not set for %s", key)
+				mimeType = echo.MIMEOctetStream
+			}
+
+			items[key] = &Item{
+				MimeType:   mimeType,
+				Blob:       val,
+				lastAccess: time.Now().UTC(),
+			}
+
+			continue
+		}
+
+		val, err := (*redis.Client)(r).JSONGet(ctx, key, "$").Result()
+		if errors.Is(err, redis.Nil) || len(val) == 0 {
+			items[key] = nil
+			continue
+		}
+		if err != nil {
+			return nil, err
+		}
+
+		if len(val) == 0 {
+			items[key] = nil
+			continue
+		}
+
+		var item Item = Item{
+			MimeType:   echo.MIMEApplicationJSON,
+			lastAccess: time.Now().UTC(),
+		}
+
+		var values []any
+		err = json.Unmarshal([]byte(val), &values)
+		if err != nil {
+			return nil, err
+		}
+
+		switch len(values) {
+		case 0:
+			items[key] = nil
+			continue
+		case 1:
+			item.Blob = []byte(val[1 : len(val)-1])
+		default:
+			item.Blob = []byte(val)
+		}
+
+		foundAny = true
+		items[key] = &item
+	}
+
+	if !foundAny {
+		return nil, fmt.Errorf("all keys not found %w", redis.Nil)
+	}
+
+	return items, nil
+}
+
 type JSONItem struct {
 	Blob       any       `json:"blob,omitempty"`
 	LastAccess time.Time `json:"last_access"`

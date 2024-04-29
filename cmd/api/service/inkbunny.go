@@ -9,7 +9,6 @@ import (
 	"github.com/ellypaws/inkbunny/api"
 	"github.com/labstack/echo/v4"
 	units "github.com/labstack/gommon/bytes"
-	"net/http"
 	"regexp"
 	"slices"
 	"strconv"
@@ -104,10 +103,10 @@ func RetrieveSearch(c echo.Context, request api.SubmissionSearchRequest) (api.Su
 	request.SID = user.Sid
 	searchResponse, err := user.SearchSubmissions(request)
 	if err != nil {
-		return searchResponse, c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
+		return searchResponse, crashy.ErrorResponse{ErrorString: "error searching submissions", Debug: err}
 	}
 	if len(searchResponse.Submissions) == 0 {
-		return searchResponse, c.JSON(http.StatusNotFound, crashy.ErrorResponse{ErrorString: "no submissions found"})
+		return searchResponse, crashy.ErrorResponse{ErrorString: "no submissions found"}
 	}
 
 	ttl := 15 * time.Minute
@@ -144,7 +143,7 @@ func RetrieveSearch(c echo.Context, request api.SubmissionSearchRequest) (api.Su
 		bin, err := json.Marshal(searchResponse)
 		if err != nil {
 			c.Logger().Errorf("error marshaling search response: %v", err)
-			return searchResponse, c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
+			return searchResponse, crashy.ErrorResponse{ErrorString: "error marshaling search response", Debug: err}
 		}
 
 		key := fmt.Sprintf("%s:inkbunny:search:%s:%s", echo.MIMEApplicationJSON, searchResponse.RID, request.Page)

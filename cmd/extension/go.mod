@@ -7,8 +7,8 @@ replace github.com/ellypaws/inkbunny-app => ../..
 replace github.com/ellypaws/inkbunny-sd => ../mod/github.com/ellypaws/inkbunny-sd
 
 require (
-	github.com/ellypaws/inkbunny-app v0.0.0
-	github.com/ellypaws/inkbunny-sd v0.0.0
+	github.com/ellypaws/inkbunny-app v0.0.0-00010101000000-000000000000
+	github.com/ellypaws/inkbunny-sd v0.0.0-20240430045340-8ae4823b535e
 	github.com/labstack/echo/v4 v4.12.0
 	github.com/labstack/gommon v0.4.2
 	github.com/muesli/termenv v0.15.2
@@ -27,7 +27,6 @@ require (
 	github.com/golang-jwt/jwt v3.2.2+incompatible // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/hashicorp/golang-lru/v2 v2.0.7 // indirect
-	github.com/kr/text v0.2.0 // indirect
 	github.com/lucasb-eyer/go-colorful v1.2.0 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect

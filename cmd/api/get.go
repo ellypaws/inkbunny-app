@@ -431,9 +431,9 @@ func GetReviewHandler(c echo.Context) error {
 
 	cacheToUse := cache.SwitchCache(c)
 	query := url.Values{
-		"sid":         {hashed},
-		"parameters":  {parameters},
 		"interrogate": {interrogate},
+		"parameters":  {parameters},
+		"sid":         {hashed},
 	}
 
 	var submissionIDs = c.Param("id")
@@ -599,7 +599,7 @@ func GetReviewHandler(c echo.Context) error {
 		Interrogate:       interrogate == "true",
 		Auditor:           auditor,
 		ApiHost:           ServerHost,
-		Query:             query.Encode(),
+		Query:             query,
 		Writer:            writer,
 	})
 
@@ -776,47 +776,75 @@ func GetReportHandler(c echo.Context) error {
 		return c.JSON(http.StatusNotFound, crashy.ErrorResponse{ErrorString: "no submissions found"})
 	}
 
-	submissionIDs := make([]string, len(submissions.Submissions))
-	for i, submission := range submissions.Submissions {
-		submissionIDs[i] = submission.SubmissionID
+	query := url.Values{
+		"interrogate": {""},
+		"parameters":  {"true"},
+		"sid":         {hashed},
 	}
 
-	req := api.SubmissionDetailsRequest{
-		SID:                         sid,
-		SubmissionIDs:               strings.Join(submissionIDs, ","),
-		OutputMode:                  "json",
-		ShowDescription:             true,
-		ShowDescriptionBbcodeParsed: true,
-	}
-	submissionDetails, err := service.RetrieveSubmission(c, req)
-	if err != nil {
-		c.Logger().Errorf("error retrieving submission details: %v", err)
-		return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
-	}
+	var missed []string
+	var processed []service.Detail
+	for _, submission := range submissions.Submissions {
+		key := fmt.Sprintf(
+			"%s:review:%s:%s?interrogate=&parameters=true&sid=%s",
+			echo.MIMEApplicationJSON,
+			service.OutputBadges,
+			submission.SubmissionID,
+			hashed,
+		)
+		item, errFunc := cacheToUse.Get(key)
+		if errFunc == nil {
+			var detail service.Detail
+			if err := json.Unmarshal(item.Blob, &detail); err != nil {
+				c.Logger().Errorf("error unmarshaling submission %v: %v", submission.SubmissionID, err)
+				return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
+			}
+			processed = append(processed, detail)
+			continue
+		}
 
-	if len(submissionDetails.Submissions) == 0 {
-		c.Logger().Warnf("no submissions found for %s", artist)
-		return c.JSON(http.StatusNotFound, crashy.ErrorResponse{ErrorString: "no submissions found"})
+		missed = append(missed, submission.SubmissionID)
 	}
 
 	auditor, err := GetCurrentAuditor(c)
 	if err != nil {
 		c.Logger().Warnf("anonymous user %v", err)
 	}
+	if len(missed) > 0 {
+		req := api.SubmissionDetailsRequest{
+			SID:                         sid,
+			SubmissionIDs:               strings.Join(missed, ","),
+			OutputMode:                  "json",
+			ShowDescription:             true,
+			ShowDescriptionBbcodeParsed: true,
+		}
+		submissionDetails, err := service.RetrieveSubmission(c, req)
+		if err != nil {
+			c.Logger().Errorf("error retrieving submission details: %v", err)
+			return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
+		}
 
-	details := service.ProcessResponse(c, &service.Config{
-		SubmissionDetails: submissionDetails,
-		Database:          Database,
-		Cache:             cacheToUse,
-		Host:              SDHost,
-		Output:            service.OutputBadges,
-		Parameters:        true,
-		Interrogate:       false,
-		Auditor:           auditor,
-		ApiHost:           ServerHost,
-		Query:             fmt.Sprintf("interrogate=parameters=true&sid=%s", hashed),
-		Writer:            c.Get("writer").(http.Flusher),
-	})
+		if len(submissionDetails.Submissions) == 0 {
+			c.Logger().Warnf("no submissions found for %s", artist)
+			return c.JSON(http.StatusNotFound, crashy.ErrorResponse{ErrorString: "no submissions found"})
+		}
+
+		details := service.ProcessResponse(c, &service.Config{
+			SubmissionDetails: submissionDetails,
+			Database:          Database,
+			Cache:             cacheToUse,
+			Host:              SDHost,
+			Output:            service.OutputBadges,
+			Parameters:        true,
+			Interrogate:       false,
+			Auditor:           auditor,
+			ApiHost:           ServerHost,
+			Query:             query,
+			Writer:            c.Get("writer").(http.Flusher),
+		})
+
+		processed = append(processed, details...)
+	}
 
 	type subInfo struct {
 		Title   string           `json:"title,omitempty"`
@@ -840,7 +868,7 @@ func GetReportHandler(c echo.Context) error {
 	}
 
 	out := output{
-		Audited:    len(submissionDetails.Submissions),
+		Audited:    len(processed),
 		ReportDate: time.Now().UTC(),
 	}
 
@@ -852,7 +880,7 @@ func GetReportHandler(c echo.Context) error {
 		}
 	}
 
-	for _, sub := range details {
+	for _, sub := range processed {
 		if !sub.Submission.Metadata.AISubmission {
 			continue
 		}
@@ -868,7 +896,7 @@ func GetReportHandler(c echo.Context) error {
 			Artists: sub.Submission.Metadata.ArtistUsed,
 		})
 	}
-	out.Ratio = float64(out.Violations) / float64(len(submissionDetails.Submissions))
+	out.Ratio = float64(out.Violations) / float64(len(processed))
 	out.Ratio = math.Round(out.Ratio*100) / 100
 
 	store = out

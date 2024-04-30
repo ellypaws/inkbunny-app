@@ -51,7 +51,7 @@ type Config struct {
 	Interrogate       bool
 	Auditor           *db.Auditor
 	ApiHost           *url.URL
-	Query             string
+	Query             url.Values
 	Writer            http.Flusher
 
 	wg      sync.WaitGroup
@@ -191,7 +191,7 @@ func setCache(c echo.Context, config *Config, detail *Detail) {
 		echo.MIMEApplicationJSON,
 		config.Output,
 		detail.ID,
-		config.Query,
+		config.Query.Encode(),
 	)
 	err = config.Cache.Set(key, &cache.Item{
 		Blob:     bin,

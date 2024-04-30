@@ -17,6 +17,7 @@ import (
 	"github.com/labstack/echo/v4"
 	units "github.com/labstack/gommon/bytes"
 	"github.com/redis/go-redis/v9"
+	"math"
 	"net/http"
 	"net/url"
 	"slices"
@@ -881,6 +882,8 @@ func GetReportHandler(c echo.Context) error {
 		})
 	}
 	out.Ratio = float64(out.Violations) / float64(len(submissionDetails.Submissions))
+	out.Ratio = math.Round(out.Ratio*100) / 100
+
 	store = out
 
 	return c.JSON(http.StatusOK, out)

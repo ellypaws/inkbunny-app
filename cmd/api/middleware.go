@@ -192,6 +192,8 @@ var staffMiddleware = []echo.MiddlewareFunc{LoggedInMiddleware, RequireAuditor}
 
 var reducedMiddleware = []echo.MiddlewareFunc{RequireSID, TryAuditor}
 
+var reportMiddleware = []echo.MiddlewareFunc{SIDMiddleware, TryAuditor}
+
 const timeToLive = 5 * time.Minute
 
 var timeToLiveString = fmt.Sprintf("max-age=%v", timeToLive.Seconds())

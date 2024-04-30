@@ -34,7 +34,7 @@ var getHandlers = pathHandler{
 	"/inkbunny/search":          handler{GetInkbunnySearch, append(loggedInMiddleware, WithRedis...)},
 	"/image":                    handler{GetImageHandler, append(staticMiddleware, SIDMiddleware)},
 	"/review/:id":               handler{GetReviewHandler, append(reducedMiddleware, WithRedis...)},
-	"/report/:id":               handler{GetReportHandler, append(WithRedis, SIDMiddleware)},
+	"/report/:id":               handler{GetReportHandler, append(reportMiddleware, WithRedis...)},
 	"/heuristics/:id":           handler{GetHeuristicsHandler, append(reducedMiddleware, WithRedis...)},
 	"/audits":                   handler{GetAuditHandler, staffMiddleware},
 	"/tickets":                  handler{GetTicketsHandler, staffMiddleware},
@@ -813,6 +813,11 @@ func GetReportHandler(c echo.Context) error {
 		return c.JSON(http.StatusNotFound, crashy.ErrorResponse{ErrorString: "no submissions found"})
 	}
 
+	auditor, err := GetCurrentAuditor(c)
+	if err != nil {
+		c.Logger().Warnf("anonymous user %v", err)
+	}
+
 	details := service.ProcessResponse(c, &service.Config{
 		SubmissionDetails: submissionDetails,
 		Database:          Database,
@@ -821,7 +826,7 @@ func GetReportHandler(c echo.Context) error {
 		Output:            service.OutputBadges,
 		Parameters:        true,
 		Interrogate:       false,
-		Auditor:           nil,
+		Auditor:           auditor,
 		ApiHost:           ServerHost,
 		Query:             fmt.Sprintf("interrogate=parameters=true&sid=%s", hashed),
 		Writer:            c.Get("writer").(http.Flusher),
@@ -833,7 +838,12 @@ func GetReportHandler(c echo.Context) error {
 		Artists []db.Artist      `json:"artists,omitempty"`
 	}
 
+	type user struct {
+		Role string `json:"role"`
+		db.Auditor
+	}
 	type output struct {
+		Auditor     *user     `json:"auditor,omitempty"`
 		Violations  int       `json:"violations"`
 		Ratio       float64   `json:"violation_ratio"`
 		Audited     int       `json:"total_audited"`
@@ -845,6 +855,14 @@ func GetReportHandler(c echo.Context) error {
 		Audited:    len(submissionDetails.Submissions),
 		ReportDate: time.Now().UTC(),
 	}
+
+	if auditor != nil {
+		out.Auditor = &user{
+			Role:    auditor.Role.String(),
+			Auditor: *auditor,
+		}
+	}
+
 	for _, sub := range details {
 		if !sub.Submission.Metadata.AISubmission {
 			continue

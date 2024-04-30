@@ -35,6 +35,10 @@ func main() {
 }
 
 var middlewares = []echo.MiddlewareFunc{
+	middleware.RemoveTrailingSlash(),
+	middleware.Gzip(),
+	middleware.Decompress(),
+	middleware.NonWWWRedirect(),
 	middleware.CORSWithConfig(middleware.CORSConfig{
 		AllowOrigins: []string{"*"},
 		AllowMethods: []string{echo.GET, echo.HEAD, echo.PUT, echo.PATCH, echo.POST, echo.DELETE},

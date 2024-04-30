@@ -13,6 +13,7 @@ import (
 	"net/url"
 	"os"
 	"strconv"
+	"strings"
 )
 
 var (
@@ -67,14 +68,12 @@ var extra = []func(e *echo.Echo){
 			{":", "#f4d6bc"},
 		}
 
-		styles := make([]any, len(colors))
-		for i, ansi := range colors {
-			styles[i] = termenv.String(ansi.text).Foreground(termenv.RGBColor(ansi.color)).String()
+		var coloredText strings.Builder
+		for _, ansi := range colors {
+			coloredText.WriteString(termenv.String(ansi.text).Foreground(termenv.RGBColor(ansi.color)).Bold().String())
 		}
 
-		coloredText := fmt.Sprintf("%s%s%s%s%s%s%s%s%s%s%s%s%s%s", styles...)
-
-		e.Logger.Infof("%s %s", coloredText, "https://inkbunny.net/Elly")
+		e.Logger.Infof("%s %s", coloredText.String(), "https://inkbunny.net/Elly")
 
 		e.Logger.Infof("     api host: %s", api.ServerHost)
 		e.Logger.Infof("      sd host: %s", api.SDHost)

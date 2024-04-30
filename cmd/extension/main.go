@@ -3,7 +3,6 @@ package main
 import (
 	_ "embed"
 	"encoding/json"
-	"fmt"
 	"github.com/ellypaws/inkbunny-app/cmd/api"
 	"github.com/ellypaws/inkbunny-app/cmd/db"
 	sd "github.com/ellypaws/inkbunny-sd/stable_diffusion"
@@ -13,6 +12,7 @@ import (
 	"github.com/muesli/termenv"
 	"net/url"
 	"os"
+	"strings"
 	"time"
 )
 
@@ -155,14 +155,12 @@ func init() {
 		{":", "#f4d6bc"},
 	}
 
-	styles := make([]any, len(colors))
-	for i, ansi := range colors {
-		styles[i] = termenv.String(ansi.text).Foreground(termenv.RGBColor(ansi.color)).String()
+	var coloredText strings.Builder
+	for _, ansi := range colors {
+		coloredText.WriteString(termenv.String(ansi.text).Foreground(termenv.RGBColor(ansi.color)).Bold().String())
 	}
 
-	coloredText := fmt.Sprintf("%s%s%s%s%s%s%s%s%s%s%s%s%s%s", styles...)
-
-	e.Logger.Infof("%s %s", coloredText, "https://inkbunny.net/Elly")
+	e.Logger.Infof("%s %s", coloredText.String(), "https://inkbunny.net/Elly")
 
 	e.Logger.Infof("     api host: %s", api.ServerHost)
 	if sdHost.Alive() {

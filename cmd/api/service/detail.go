@@ -373,5 +373,8 @@ func submissionMessage(sub *db.Submission) string {
 }
 
 func AuditorAsUsernameID(auditor *db.Auditor) api.UsernameID {
+	if auditor == nil {
+		return api.UsernameID{UserID: "0", Username: "guest"}
+	}
 	return api.UsernameID{UserID: strconv.FormatInt(auditor.UserID, 10), Username: auditor.Username}
 }

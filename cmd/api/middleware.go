@@ -56,33 +56,47 @@ var loggedInMiddleware = []echo.MiddlewareFunc{LoggedInMiddleware}
 
 func SIDMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
 	return func(c echo.Context) error {
-		sid, ok := c.Get("sid").(string)
-		if !ok || sid == "" {
-			xsid := c.Request().Header.Get("X-SID")
-			if xsid != "" {
-				sid = xsid
-			}
-		}
-		if sid == "" {
-			sidCookie, err := c.Cookie("sid")
-			if err == nil && sidCookie.Value != "" {
-				sid = sidCookie.Value
-			}
-		}
-		if sid == "" {
-			sid = c.QueryParam("sid")
-		}
-
-		c.Set("sid", sid)
-		id, err := Database.GetUserIDFromSID(sid)
-		if err == nil {
-			c.Set("id", id)
-		}
+		_ = fetchSID(c)
 		return next(c)
 	}
 }
 
-var sidMiddleware = []echo.MiddlewareFunc{SIDMiddleware}
+func fetchSID(c echo.Context) error {
+	sid, ok := c.Get("sid").(string)
+	if !ok || sid == "" {
+		xsid := c.Request().Header.Get("X-SID")
+		if xsid != "" {
+			sid = xsid
+		}
+	}
+	if sid == "" {
+		sidCookie, err := c.Cookie("sid")
+		if err == nil && sidCookie.Value != "" {
+			sid = sidCookie.Value
+		}
+	}
+	if sid == "" {
+		sid = c.QueryParam("sid")
+	}
+
+	c.Set("sid", sid)
+	id, err := Database.GetUserIDFromSID(sid)
+	if err == nil {
+		c.Set("id", id)
+	}
+	return nil
+}
+
+func RequireSID(next echo.HandlerFunc) echo.HandlerFunc {
+	return func(c echo.Context) error {
+		_ = fetchSID(c)
+		sid, ok := c.Get("sid").(string)
+		if !ok || len(sid) == 0 {
+			return c.JSON(http.StatusUnauthorized, crashy.ErrorResponse{ErrorString: "empty sid"})
+		}
+		return next(c)
+	}
+}
 
 func RequireAuditor(next echo.HandlerFunc) echo.HandlerFunc {
 	return func(c echo.Context) error {
@@ -106,6 +120,30 @@ func RequireAuditor(next echo.HandlerFunc) echo.HandlerFunc {
 	}
 }
 
+func TryAuditor(next echo.HandlerFunc) echo.HandlerFunc {
+	return func(c echo.Context) error {
+		_, id, err := GetSIDandID(c)
+		if err != nil {
+			c.Set("auditor", &AnonymousAuditor)
+			return next(c)
+		}
+
+		auditor, err := Database.GetAuditorByID(id)
+		if err != nil {
+			c.Set("auditor", &AnonymousAuditor)
+			return next(c)
+		}
+
+		if auditor.Username == "" {
+			c.Set("auditor", &AnonymousAuditor)
+			return next(c)
+		}
+
+		c.Set("auditor", &auditor)
+		return next(c)
+	}
+}
+
 func GetSIDandID(c echo.Context) (string, int64, error) {
 	sid, ok := c.Get("sid").(string)
 	if !ok || sid == "" {
@@ -119,6 +157,15 @@ func GetSIDandID(c echo.Context) (string, int64, error) {
 	return sid, id, nil
 }
 
+func GetSID(c echo.Context) (string, error) {
+	sid, ok := c.Get("sid").(string)
+	if !ok || sid == "" {
+		return "", crashy.ErrorResponse{ErrorString: "empty sid"}
+	}
+
+	return sid, nil
+}
+
 func GetCurrentAuditor(c echo.Context) (auditor *db.Auditor, err error) {
 	auditor, ok := c.Get("auditor").(*db.Auditor)
 	if !ok || auditor == nil {
@@ -128,19 +175,22 @@ func GetCurrentAuditor(c echo.Context) (auditor *db.Auditor, err error) {
 	return auditor, nil
 }
 
+var AnonymousAuditor = db.Auditor{
+	Username: "anonymous",
+	Role:     db.RoleAuditor,
+}
+
 func Anonymous(next echo.HandlerFunc) echo.HandlerFunc {
 	return func(c echo.Context) error {
-		auditor := db.Auditor{
-			Username: "anonymous",
-			Role:     db.RoleAuditor,
-		}
-		c.Set("auditor", &auditor)
+		c.Set("auditor", &AnonymousAuditor)
 		c.Set("id", int64(0))
 		return next(c)
 	}
 }
 
 var staffMiddleware = []echo.MiddlewareFunc{LoggedInMiddleware, RequireAuditor}
+
+var reducedMiddleware = []echo.MiddlewareFunc{RequireSID, TryAuditor}
 
 const timeToLive = 5 * time.Minute
 

@@ -33,8 +33,8 @@ var getHandlers = pathHandler{
 	"/inkbunny/submission/:ids": handler{GetInkbunnySubmission, withCache},
 	"/inkbunny/search":          handler{GetInkbunnySearch, append(loggedInMiddleware, WithRedis...)},
 	"/image":                    handler{GetImageHandler, append(staticMiddleware, SIDMiddleware)},
-	"/review/:id":               handler{GetReviewHandler, append(staffMiddleware, WithRedis...)},
-	"/heuristics/:id":           handler{GetHeuristicsHandler, append(loggedInMiddleware, WithRedis...)},
+	"/review/:id":               handler{GetReviewHandler, append(reducedMiddleware, WithRedis...)},
+	"/heuristics/:id":           handler{GetHeuristicsHandler, append(reducedMiddleware, WithRedis...)},
 	"/audits":                   handler{GetAuditHandler, staffMiddleware},
 	"/tickets":                  handler{GetTicketsHandler, staffMiddleware},
 	"/auditors":                 handler{GetAllAuditorsJHandler, staffMiddleware},
@@ -407,8 +407,9 @@ func GetAllAuditorsJHandler(c echo.Context) error {
 //   - Set query "stream" to "true" to receive multiple JSON objects
 //   - Set the param ":id" to "search" to combine search to immediately review
 func GetReviewHandler(c echo.Context) error {
-	sid, _, err := GetSIDandID(c)
+	sid, err := GetSID(c)
 	if err != nil {
+		c.Logger().Errorf("error getting sid: %v", err)
 		return c.JSON(http.StatusUnauthorized, crashy.Wrap(err))
 	}
 
@@ -416,7 +417,7 @@ func GetReviewHandler(c echo.Context) error {
 
 	auditor, err := GetCurrentAuditor(c)
 	if err != nil {
-		return c.JSON(http.StatusUnauthorized, crashy.Wrap(err))
+		c.Logger().Warnf("anonymous user %v", err)
 	}
 
 	output := c.QueryParam("output")
@@ -588,10 +589,12 @@ func GetReviewHandler(c echo.Context) error {
 	}
 	submissionDetails, err := service.RetrieveSubmission(c, req)
 	if err != nil {
+		c.Logger().Errorf("error retrieving submission details: %v", err)
 		return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
 	}
 
 	if len(submissionDetails.Submissions) == 0 {
+		c.Logger().Warnf("no submissions found for %s", submissionIDs)
 		return c.JSON(http.StatusNotFound, crashy.ErrorResponse{ErrorString: "no submissions found"})
 	}
 

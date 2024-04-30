@@ -47,6 +47,8 @@ type Config struct {
 	Cache             cache.Cache
 	Host              *sd.Host
 	Output            OutputType
+	Parameters        bool
+	Interrogate       bool
 	Auditor           *db.Auditor
 	ApiHost           *url.URL
 	Query             string
@@ -78,7 +80,7 @@ func processSubmission(c echo.Context, submission *api.Submission, config *Confi
 
 	if sub.Metadata.AISubmission {
 		c.Logger().Infof("processing files for %s %s", sub.URL, sub.Title)
-		parseFiles(c, &sub, config.Cache, config.Host, config.artists)
+		parseFiles(c, &sub, config)
 	}
 
 	//config.mutex.Lock()
@@ -211,16 +213,16 @@ func sanitizeDescription(description string, apiHost *url.URL) string {
 	return description
 }
 
-func parseFiles(c echo.Context, sub *db.Submission, cache cache.Cache, host *sd.Host, artists []db.Artist) {
+func parseFiles(c echo.Context, sub *db.Submission, config *Config) {
 	var wg sync.WaitGroup
-	if c.QueryParam("parameters") == "true" {
+	if config.Parameters {
 		wg.Add(1)
-		go RetrieveParams(c, &wg, sub, cache, artists)
+		go RetrieveParams(c, &wg, sub, config.Cache, config.artists)
 	}
-	if c.QueryParam("interrogate") == "true" {
+	if config.Interrogate {
 		for i := range sub.Files {
 			wg.Add(1)
-			go RetrieveCaptions(c, &wg, sub, i, host)
+			go RetrieveCaptions(c, &wg, sub, i, config.Host)
 		}
 	}
 	wg.Wait()

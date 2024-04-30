@@ -608,6 +608,8 @@ func GetReviewHandler(c echo.Context) error {
 		Cache:             cacheToUse,
 		Host:              SDHost,
 		Output:            output,
+		Parameters:        parameters == "true",
+		Interrogate:       interrogate == "true",
 		Auditor:           auditor,
 		ApiHost:           ServerHost,
 		Query:             query.Encode(),

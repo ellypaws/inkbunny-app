@@ -160,7 +160,8 @@ func init() {
 		coloredText.WriteString(termenv.String(ansi.text).Foreground(termenv.RGBColor(ansi.color)).Bold().String())
 	}
 
-	e.Logger.Infof("%s %s", coloredText.String(), "https://inkbunny.net/Elly")
+	e.Logger.Infof("%s %s", coloredText.String(), "https://github.com/ellypaws")
+	e.Logger.Infof("Post issues at %s", "https://github.com/ellypaws/inkbunny-app/issues")
 
 	e.Logger.Infof("     api host: %s", api.ServerHost)
 	if sdHost.Alive() {

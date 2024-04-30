@@ -479,7 +479,7 @@ func GetReviewHandler(c echo.Context) error {
 
 	var store any
 	if c.Param("id") != "search" {
-		defer storeReview(c, reviewKey, &store)
+		defer storeReview(c, reviewKey, &store, cache.Hour)
 	}
 
 	if c.Request().Header.Get(echo.HeaderCacheControl) != "no-cache" {
@@ -688,7 +688,7 @@ func GetReviewHandler(c echo.Context) error {
 	return c.JSON(http.StatusOK, store)
 }
 
-func storeReview(c echo.Context, reviewKey string, store *any) {
+func storeReview(c echo.Context, reviewKey string, store *any, duration time.Duration) {
 	if store == nil {
 		c.Logger().Warnf("trying to cache nil review for %s", reviewKey)
 		return
@@ -705,7 +705,7 @@ func storeReview(c echo.Context, reviewKey string, store *any) {
 	err = cache.SwitchCache(c).Set(reviewKey, &cache.Item{
 		Blob:     bin,
 		MimeType: echo.MIMEApplicationJSON,
-	}, cache.Hour)
+	}, duration)
 	if err != nil {
 		c.Logger().Errorf("error caching review: %v", err)
 		return
@@ -759,7 +759,7 @@ func GetReportHandler(c echo.Context) error {
 	hashed := db.Hash(sid)
 
 	var store any
-	defer storeReview(c, reportKey, &store)
+	defer storeReview(c, reportKey, &store, cache.Week)
 
 	submissions, err := service.RetrieveSearch(c, api.SubmissionSearchRequest{
 		SID:                sid,

@@ -826,8 +826,9 @@ func GetReportHandler(c echo.Context) error {
 	}
 
 	type user struct {
-		Role string `json:"role"`
 		db.Auditor
+		Role       string `json:"role"`
+		AuditCount int    `json:"audit_count,omitempty"`
 	}
 	type output struct {
 		Auditor     *user     `json:"auditor,omitempty"`
@@ -845,8 +846,9 @@ func GetReportHandler(c echo.Context) error {
 
 	if auditor != nil {
 		out.Auditor = &user{
-			Role:    auditor.Role.String(),
-			Auditor: *auditor,
+			Auditor:    *auditor,
+			Role:       auditor.Role.String(),
+			AuditCount: auditor.AuditCount,
 		}
 	}
 

@@ -34,7 +34,7 @@ var getHandlers = pathHandler{
 	"/inkbunny/search":          handler{GetInkbunnySearch, append(loggedInMiddleware, WithRedis...)},
 	"/image":                    handler{GetImageHandler, append(staticMiddleware, SIDMiddleware)},
 	"/review/:id":               handler{GetReviewHandler, append(reducedMiddleware, WithRedis...)},
-	"/report/:id":               handler{GetReportHandler, append(reducedMiddleware, WithRedis...)},
+	"/report/:id":               handler{GetReportHandler, append(WithRedis, SIDMiddleware)},
 	"/heuristics/:id":           handler{GetHeuristicsHandler, append(reducedMiddleware, WithRedis...)},
 	"/audits":                   handler{GetAuditHandler, staffMiddleware},
 	"/tickets":                  handler{GetTicketsHandler, staffMiddleware},
@@ -731,12 +731,6 @@ func storeReview(c echo.Context, reviewKey string, store *any) {
 // Set query "limit" to limit the number of submissions returned
 // Set query "text" to use a custom search term
 func GetReportHandler(c echo.Context) error {
-	sid, err := GetSID(c)
-	if err != nil {
-		return c.JSON(http.StatusUnauthorized, crashy.Wrap(err))
-	}
-
-	hashed := db.Hash(sid)
 	artist := c.Param("id")
 	cacheToUse := cache.SwitchCache(c)
 	limitQuery := c.QueryParam("limit")
@@ -769,6 +763,14 @@ func GetReportHandler(c echo.Context) error {
 			return c.JSON(http.StatusNotFound, crashy.ErrorResponse{ErrorString: "an error occurred while retrieving the report", Debug: errFunc})
 		}
 	}
+
+	sid, err := GetSID(c)
+	if err != nil {
+		c.Logger().Errorf("error getting sid: %v", err)
+		return c.JSON(http.StatusUnauthorized, crashy.ErrorResponse{ErrorString: "no report had been generated yet"})
+	}
+
+	hashed := db.Hash(sid)
 
 	var store any
 	defer storeReview(c, reportKey, &store)

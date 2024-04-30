@@ -753,7 +753,7 @@ func GetReportHandler(c echo.Context) error {
 	sid, err := GetSID(c)
 	if err != nil {
 		c.Logger().Errorf("error getting sid: %v", err)
-		return c.JSON(http.StatusUnauthorized, crashy.ErrorResponse{ErrorString: "no report had been generated yet"})
+		return c.JSON(http.StatusUnauthorized, crashy.ErrorResponse{ErrorString: "cannot generate a report for logged out user"})
 	}
 
 	hashed := db.Hash(sid)

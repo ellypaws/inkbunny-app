@@ -10,6 +10,7 @@ import (
 	level "github.com/labstack/gommon/log"
 	"github.com/muesli/termenv"
 	"log"
+	"net/http"
 	"net/url"
 	"os"
 	"strconv"
@@ -85,6 +86,21 @@ var extra = []func(e *echo.Echo){
 			e.Logger.Warnf("      sd host: %s (not running)", api.SDHost)
 		}
 	},
+	func(e *echo.Echo) {
+		e.GET("/", Hello, api.StaticMiddleware...)
+		e.GET("/robots.txt", robots, api.StaticMiddleware...)
+		e.GET("/favicon.ico", favicon, api.StaticMiddleware...)
+	},
+}
+
+func Hello(c echo.Context) error {
+	return c.Redirect(http.StatusTemporaryRedirect, "https://github.com/ellypaws/inkbunny-app")
+}
+func robots(c echo.Context) error {
+	return c.File("public/robots.txt")
+}
+func favicon(c echo.Context) error {
+	return c.File("public/16930_inkbunny_inkbunnylogo_trans_rev_outline.ico")
 }
 
 func init() {

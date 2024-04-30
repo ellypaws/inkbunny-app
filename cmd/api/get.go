@@ -28,42 +28,27 @@ import (
 )
 
 var getHandlers = pathHandler{
-	"/":                         handler{Hello, staticMiddleware},
 	"/inkbunny/description":     handler{GetInkbunnyDescription, withCache},
 	"/inkbunny/submission":      handler{GetInkbunnySubmission, withCache},
 	"/inkbunny/submission/:ids": handler{GetInkbunnySubmission, withCache},
 	"/inkbunny/search":          handler{GetInkbunnySearch, append(loggedInMiddleware, WithRedis...)},
-	"/image":                    handler{GetImageHandler, append(staticMiddleware, SIDMiddleware)},
+	"/image":                    handler{GetImageHandler, append(StaticMiddleware, SIDMiddleware)},
 	"/review/:id":               handler{GetReviewHandler, append(reducedMiddleware, WithRedis...)},
 	"/report/:id":               handler{GetReportHandler, append(reportMiddleware, WithRedis...)},
 	"/heuristics/:id":           handler{GetHeuristicsHandler, append(reducedMiddleware, WithRedis...)},
 	"/audits":                   handler{GetAuditHandler, staffMiddleware},
 	"/tickets":                  handler{GetTicketsHandler, staffMiddleware},
 	"/auditors":                 handler{GetAllAuditorsJHandler, staffMiddleware},
-	"/robots.txt":               handler{robots, staticMiddleware},
-	"/favicon.ico":              handler{favicon, staticMiddleware},
 	"/username/:username":       handler{GetUsernameHandler, append(loggedInMiddleware, WithRedis...)},
-	"/avatar/:username":         handler{GetAvatarHandler, staticMiddleware},
+	"/avatar/:username":         handler{GetAvatarHandler, StaticMiddleware},
 	"/artists":                  handler{GetArtistsHandler, append(loggedInMiddleware, WithRedis...)},
 	"/models":                   handler{GetModelsHandler, withCache},
 	"/models/:hash":             handler{GetModelsHandler, WithRedis},
 }
 
-func robots(c echo.Context) error {
-	return c.File("public/robots.txt")
-}
-
-func favicon(c echo.Context) error {
-	return c.File("public/16930_inkbunny_inkbunnylogo_trans_rev_outline.ico")
-}
-
 // Deprecated: use registerAs((*echo.Echo).GET, getHandlers) instead
 func registerGetRoutes(e *echo.Echo) {
 	registerAs(e.GET, getHandlers)
-}
-
-func Hello(c echo.Context) error {
-	return c.String(http.StatusOK, "Hello, World!")
 }
 
 // GetInkbunnyDescription returns the description of a submission using a DescriptionRequest

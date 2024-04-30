@@ -34,6 +34,7 @@ var getHandlers = pathHandler{
 	"/inkbunny/search":          handler{GetInkbunnySearch, append(loggedInMiddleware, WithRedis...)},
 	"/image":                    handler{GetImageHandler, append(staticMiddleware, SIDMiddleware)},
 	"/review/:id":               handler{GetReviewHandler, append(reducedMiddleware, WithRedis...)},
+	"/report/:id":               handler{GetReportHandler, append(reducedMiddleware, WithRedis...)},
 	"/heuristics/:id":           handler{GetHeuristicsHandler, append(reducedMiddleware, WithRedis...)},
 	"/audits":                   handler{GetAuditHandler, staffMiddleware},
 	"/tickets":                  handler{GetTicketsHandler, staffMiddleware},
@@ -724,6 +725,143 @@ func storeReview(c echo.Context, reviewKey string, store *any) {
 		return
 	}
 	c.Logger().Infof("Cached %s %s %dKiB", reviewKey, echo.MIMEApplicationJSON, len(bin)/units.KiB)
+}
+
+// GetReportHandler returns a report analysis of an artist
+// Set query "limit" to limit the number of submissions returned
+// Set query "text" to use a custom search term
+func GetReportHandler(c echo.Context) error {
+	sid, err := GetSID(c)
+	if err != nil {
+		return c.JSON(http.StatusUnauthorized, crashy.Wrap(err))
+	}
+
+	hashed := db.Hash(sid)
+	artist := c.Param("id")
+	cacheToUse := cache.SwitchCache(c)
+	limitQuery := c.QueryParam("limit")
+
+	var limit int
+	if limitQuery == "" {
+		limit = 10
+	} else {
+		var err error
+		limit, err = strconv.Atoi(limitQuery)
+		if err != nil {
+			return c.JSON(http.StatusBadRequest, crashy.ErrorResponse{ErrorString: "invalid limit", Debug: err})
+		}
+		limit = max(limit, 1)
+	}
+
+	reportKey := fmt.Sprintf(
+		"%s:report:%s?limit=%d",
+		echo.MIMEApplicationJSON,
+		artist,
+		limit,
+	)
+
+	if c.Request().Header.Get(echo.HeaderCacheControl) != "no-cache" {
+		item, errFunc := cacheToUse.Get(reportKey)
+		if errFunc == nil {
+			return c.Blob(http.StatusOK, item.MimeType, item.Blob)
+		}
+		if !errors.Is(errFunc, redis.Nil) {
+			return c.JSON(http.StatusNotFound, crashy.ErrorResponse{ErrorString: "an error occurred while retrieving the report", Debug: errFunc})
+		}
+	}
+
+	var store any
+	defer storeReview(c, reportKey, &store)
+
+	submissions, err := service.RetrieveSearch(c, api.SubmissionSearchRequest{
+		SID:                sid,
+		Username:           artist,
+		SubmissionsPerPage: api.IntString(limit),
+		SubmissionIDsOnly:  true,
+		KeywordID:          db.AIGeneratedID,
+	})
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
+	}
+
+	if len(submissions.Submissions) == 0 {
+		return c.JSON(http.StatusNotFound, crashy.ErrorResponse{ErrorString: "no submissions found"})
+	}
+
+	submissionIDs := make([]string, len(submissions.Submissions))
+	for i, submission := range submissions.Submissions {
+		submissionIDs[i] = submission.SubmissionID
+	}
+
+	req := api.SubmissionDetailsRequest{
+		SID:                         sid,
+		SubmissionIDs:               strings.Join(submissionIDs, ","),
+		OutputMode:                  "json",
+		ShowDescription:             true,
+		ShowDescriptionBbcodeParsed: true,
+	}
+	submissionDetails, err := service.RetrieveSubmission(c, req)
+	if err != nil {
+		c.Logger().Errorf("error retrieving submission details: %v", err)
+		return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
+	}
+
+	if len(submissionDetails.Submissions) == 0 {
+		c.Logger().Warnf("no submissions found for %s", artist)
+		return c.JSON(http.StatusNotFound, crashy.ErrorResponse{ErrorString: "no submissions found"})
+	}
+
+	details := service.ProcessResponse(c, &service.Config{
+		SubmissionDetails: submissionDetails,
+		Database:          Database,
+		Cache:             cacheToUse,
+		Host:              SDHost,
+		Output:            service.OutputBadges,
+		Parameters:        true,
+		Interrogate:       false,
+		Auditor:           nil,
+		ApiHost:           ServerHost,
+		Query:             fmt.Sprintf("interrogate=parameters=true&sid=%s", hashed),
+		Writer:            c.Get("writer").(http.Flusher),
+	})
+
+	type subInfo struct {
+		URL     string           `json:"url,omitempty"`
+		Flags   []db.TicketLabel `json:"flags,omitempty"`
+		Artists []db.Artist      `json:"artists,omitempty"`
+	}
+
+	type output struct {
+		Violations  int       `json:"violations"`
+		Ratio       float64   `json:"violation_ratio"`
+		Audited     int       `json:"total_audited"`
+		ReportDate  time.Time `json:"report_date"`
+		Submissions []subInfo `json:"submissions"`
+	}
+
+	out := output{
+		Audited:    len(submissionDetails.Submissions),
+		ReportDate: time.Now().UTC(),
+	}
+	for _, sub := range details {
+		if !sub.Submission.Metadata.AISubmission {
+			continue
+		}
+		if len(sub.Ticket.Labels) == 0 {
+			continue
+		}
+
+		out.Violations++
+		out.Submissions = append(out.Submissions, subInfo{
+			URL:     sub.Submission.URL,
+			Flags:   sub.Ticket.Labels,
+			Artists: sub.Submission.Metadata.ArtistUsed,
+		})
+	}
+	out.Ratio = float64(out.Violations) / float64(len(submissionDetails.Submissions))
+	store = out
+
+	return c.JSON(http.StatusOK, out)
 }
 
 func maxConfidence(old, new *entities.TaggerResponse) *entities.TaggerResponse {

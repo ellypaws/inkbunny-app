@@ -41,6 +41,10 @@
 
 This project is designed to detect AI-generated images made with stable diffusion in Inkbunny submissions. It processes files and descriptions and uses heuristics to determine if the submission follows the [guidelines](https://wiki.inkbunny.net/wiki/ACP#AI).
 
+By using crafted [heuristics](https://github.com/ellypaws/inkbunny-sd),
+as well as the potential to use an LLM to inference the parameters.
+A general purpose [API](../api) library is available to integrate with your own program logic.
+
 ## Installation Instructions
 
 ### Prerequisites
@@ -55,14 +59,14 @@ You will need to install a userscript manager extension in your web browser. You
 
 After installing a userscript manager, you can install the Inkbunny AI Bridge userscript.
 
-1. The current version of the [userscript](https://gist.github.com/ellypaws/0f6c1a85875b551f7105998398f0b054) is available in https://gist.github.com/ellypaws/0f6c1a85875b551f7105998398f0b054
-2. Click on the "Raw" button, your userscript manager will recognize this as a userscript and ask for confirmation to install it.
+1. The current version of the [userscript](https://github.com/ellypaws/inkbunny-extension/blob/main/scripts/Inkbunny%20AI%20bridge.user.js) is available in [https://github.com/ellypaws/inkbunny-extension](https://github.com/ellypaws/inkbunny-extension/tree/main/scripts)
+2. Click on the "[Raw](https://github.com/ellypaws/inkbunny-extension/raw/main/scripts/Inkbunny%20AI%20bridge.user.js)" button, your userscript manager will recognize this as a userscript and ask for confirmation to install it.
 3. Alternatively you can either download or copy the content of the userscript and paste it in your userscript manager.
 
-A simpler [userscript](https://gist.github.com/ellypaws/46cca708bd281b4f5f373f041bcb884e) is available if you do need the other features and only want the labelling, blurring or removal of AI generated images.
+A simpler [userscript](https://github.com/ellypaws/inkbunny-extension/blob/main/scripts/Inkbunny%20AI%20detector.user.js) is available if you do need the other features and only want the labelling, blurring or removal of AI generated images.
 
 Todo:
- - [ ] Fix blurring and removal of AI generated images (the old script does this but the new one is currently broken) 
+ - [x] Fix blurring and removal of AI generated images (the old script does this but the new one is currently broken) 
  - [ ] Allow editing of the prepared ticket
  - [ ] Highlight more relevant metadata and print generation objects (e.g. model, prompt, etc). Currently you can view this in the console debug.
  - [ ] Better styling
@@ -120,4 +124,4 @@ go build -o inkbunny-ai-bridge
 ./inkbunny-ai-bridge
 ```
 
-You can also use the pre-built binaries from the [releases page](https://github.com/ellypaws/inkbunny-sd/releases).
+You can also use the pre-built binaries from the [releases page](https://github.com/ellypaws/inkbunny-extension/releases).

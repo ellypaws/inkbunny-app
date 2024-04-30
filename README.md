@@ -49,7 +49,7 @@ A general purpose [API](cmd/api) library is available to integrate with your own
 
 There are three different projects that aim to help in auditing and moderating AI generated content.
 
-1. [Inkbunny AI Bridge](cmd/extension): A userscript server that constructs a prepared ticket based
+1. [Inkbunny AI Bridge](cmd/extension): A [userscript](https://github.com/ellypaws/inkbunny-extension/tree/main/scripts) server that constructs a prepared ticket based
    on [heuristics](https://github.com/ellypaws/inkbunny-sd)
    for you to audit and modify to then submit to Inkbunny.
    ![Inkbunny AI Bridge](cmd/extension/doc/ticket.png)
@@ -102,4 +102,4 @@ go build -o inkbunny-ai-bridge
 ./inkbunny-ai-bridge
 ```
 
-You can also use the pre-built binaries from the [releases page](https://github.com/ellypaws/inkbunny-sd/releases).
+You can also use the pre-built binaries from the [releases page](https://github.com/ellypaws/inkbunny-app/releases).

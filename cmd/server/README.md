@@ -41,6 +41,10 @@
 
 This project is designed to detect AI-generated images made with stable diffusion in Inkbunny submissions. It processes files and descriptions and uses heuristics to determine if the submission follows the [guidelines](https://wiki.inkbunny.net/wiki/ACP#AI).
 
+By using crafted [heuristics](https://github.com/ellypaws/inkbunny-sd),
+as well as the potential to use an LLM to inference the parameters.
+A general purpose [API](../api) library is available to integrate with your own program logic.
+
 ## Usage
 
 Prerequisites: Make sure you have api turned on in your Inkbunny account settings. You will need your API key and SID to
@@ -60,7 +64,7 @@ A caption service using [github.com/picobyte/stable-diffusion-webui-wd14-tagger]
 
 Set the environment variables for the server to run. You can set the following environment variables:
 
-There is also an [extension server](../extension) with mostly just the review service running to use with a [userscript](https://gist.github.com/ellypaws/0f6c1a85875b551f7105998398f0b054) to return metadata badges or a ticket to review inside Inkbunny itself.
+There is also an [extension server](../extension) with mostly just the review service running to use with a [userscript](https://github.com/ellypaws/inkbunny-extension/tree/main/scripts) to return metadata badges or a ticket to review inside Inkbunny itself.
 
 ```bash
 export PORT "your_port"
@@ -92,4 +96,4 @@ go build -o server
 ./server
 ```
 
-You can also use the pre-built binaries from the [releases page](https://github.com/ellypaws/inkbunny-sd/releases).
+You can also use the pre-built binaries from the [releases page](https://github.com/ellypaws/inkbunny-app/releases).

@@ -3,12 +3,14 @@ package main
 import (
 	_ "embed"
 	"encoding/json"
+	"fmt"
 	"github.com/ellypaws/inkbunny-app/cmd/api"
 	"github.com/ellypaws/inkbunny-app/cmd/db"
 	sd "github.com/ellypaws/inkbunny-sd/stable_diffusion"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	logger "github.com/labstack/gommon/log"
+	"github.com/muesli/termenv"
 	"net/url"
 	"os"
 	"time"
@@ -23,19 +25,11 @@ var (
 )
 
 func main() {
-	e.Use(middleware.LoggerWithConfig(
-		middleware.LoggerConfig{
-			Skipper:          nil,
-			Format:           `${time_custom}     	${status} ${method}  ${host}${uri} in ${latency_human} from ${remote_ip} ${error}` + "\n",
-			CustomTimeFormat: time.DateTime,
-		},
-	))
 	e.Use(middleware.Recover())
 
-	e.Use(middleware.CORSWithConfig(middleware.CORSConfig{
-		AllowOrigins: []string{"*"},
-		AllowMethods: []string{echo.GET, echo.POST},
-	}))
+	for _, m := range middlewares {
+		e.Use(m)
+	}
 
 	config := append(api.WithRedis,
 		[]echo.MiddlewareFunc{
@@ -48,7 +42,7 @@ func main() {
 
 	e.File("/favicon.ico", "../api/public/16930_inkbunny_inkbunnylogo_trans_rev_outline.ico")
 
-	e.Logger.Info("Starting...")
+	e.Logger.Infof("Starting server on port %s", port)
 	e.Logger.Fatal(e.Start(":" + port))
 }
 
@@ -57,6 +51,20 @@ var artistsJSON []byte
 
 //go:embed auditors.json
 var auditorsJSON []byte
+
+var middlewares = []echo.MiddlewareFunc{
+	middleware.LoggerWithConfig(
+		middleware.LoggerConfig{
+			Skipper:          nil,
+			Format:           `${time_custom}     	${status} ${method}  ${host}${uri} in ${latency_human} from ${remote_ip} ${error}` + "\n",
+			CustomTimeFormat: time.DateTime,
+		},
+	),
+	middleware.CORSWithConfig(middleware.CORSConfig{
+		AllowOrigins: []string{"*"},
+		AllowMethods: []string{echo.GET, echo.HEAD, echo.PUT, echo.PATCH, echo.POST, echo.DELETE},
+	}),
+}
 
 func init() {
 	e.Logger.SetLevel(logger.DEBUG)
@@ -93,14 +101,6 @@ func init() {
 		api.ServerHost = apiHost
 	}
 
-	e.Logger.Infof("api host: %s\n", api.ServerHost)
-
-	if sdHost == nil || !sdHost.Alive() {
-		e.Logger.Warn("warning: host is not alive")
-	}
-
-	e.Logger.Infof("sd host: %s\n", sdHost)
-
 	var err error
 	api.Database, err = db.New(nil)
 	if err != nil {
@@ -127,5 +127,43 @@ func init() {
 		if err != nil {
 			e.Logger.Fatal(err)
 		}
+	}
+
+	e.HideBanner = true
+
+	colors := []struct {
+		text  string
+		color string
+	}{
+		{"M", "#447294"},
+		{"a", "#4f7d9e"},
+		{"i", "#5987a8"},
+		{"n", "#6492b2"},
+		{"t", "#6f9cbd"},
+		{"a", "#7aa7c7"},
+		{"i", "#84b1d1"},
+		{"n", "#8fbcdb"},
+		{"e", "#a0c0d6"},
+		{"d", "#b1c5d1"},
+		{" ", "#c2c9cc"},
+		{"b", "#d2cdc6"},
+		{"y", "#e3d2c1"},
+		{":", "#f4d6bc"},
+	}
+
+	styles := make([]any, len(colors))
+	for i, ansi := range colors {
+		styles[i] = termenv.String(ansi.text).Foreground(termenv.RGBColor(ansi.color)).String()
+	}
+
+	coloredText := fmt.Sprintf("%s%s%s%s%s%s%s%s%s%s%s%s%s%s", styles...)
+
+	e.Logger.Infof("%s %s", coloredText, "https://inkbunny.net/Elly")
+
+	e.Logger.Infof("     api host: %s", api.ServerHost)
+	if sdHost.Alive() {
+		e.Logger.Infof("      sd host: %s", api.SDHost)
+	} else {
+		e.Logger.Warnf("      sd host: %s (not running)", api.SDHost)
 	}
 }

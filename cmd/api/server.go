@@ -1,6 +1,7 @@
 package api
 
 import (
+	"fmt"
 	"github.com/ellypaws/inkbunny-app/cmd/db"
 	sd "github.com/ellypaws/inkbunny-sd/stable_diffusion"
 	"github.com/labstack/echo/v4"
@@ -16,10 +17,20 @@ var (
 	ServerHost *url.URL
 )
 
-func Run(db *db.Sqlite, stableDiffusion *sd.Host, apiURL *url.URL, port string) {
-	Database = db
-	SDHost = stableDiffusion
-	ServerHost = apiURL
+type RunConfig struct {
+	Database    *db.Sqlite
+	SDHost      *sd.Host
+	ServerHost  *url.URL
+	Port        uint
+	LogLevel    logger.Lvl
+	Middlewares []echo.MiddlewareFunc
+	Extra       []func(e *echo.Echo)
+}
+
+func Run(config RunConfig) {
+	Database = config.Database
+	SDHost = config.SDHost
+	ServerHost = config.ServerHost
 
 	e := echo.New()
 
@@ -32,11 +43,6 @@ func Run(db *db.Sqlite, stableDiffusion *sd.Host, apiURL *url.URL, port string) 
 	))
 	e.Use(middleware.Recover())
 
-	e.Use(middleware.CORSWithConfig(middleware.CORSConfig{
-		AllowOrigins: []string{"*"},
-		AllowMethods: []string{echo.GET, echo.HEAD, echo.PUT, echo.PATCH, echo.POST, echo.DELETE},
-	}))
-
 	registerAs(e.GET, getHandlers)
 	registerAs(e.POST, postHandlers)
 	registerAs(e.HEAD, headHandlers)
@@ -44,10 +50,18 @@ func Run(db *db.Sqlite, stableDiffusion *sd.Host, apiURL *url.URL, port string) 
 	registerAs(e.PUT, putHandlers)
 	registerAs(e.PATCH, patchHandlers)
 
-	e.Logger.SetLevel(logger.DEBUG)
+	e.Logger.SetLevel(config.LogLevel)
 	e.Logger.SetHeader(`${time_rfc3339} ${level}	${short_file}:${line}	`)
 
-	e.Logger.Fatal(e.Start(":" + port))
+	for _, m := range config.Middlewares {
+		e.Use(m)
+	}
+
+	for _, f := range config.Extra {
+		f(e)
+	}
+
+	e.Logger.Fatal(e.Start(fmt.Sprintf(":%d", config.Port)))
 }
 
 type route = func(path string, h echo.HandlerFunc, m ...echo.MiddlewareFunc) *echo.Route

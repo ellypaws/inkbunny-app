@@ -27,7 +27,7 @@ import (
 )
 
 var getHandlers = pathHandler{
-	"/":                         handler{Hello, withCache},
+	"/":                         handler{Hello, staticMiddleware},
 	"/inkbunny/description":     handler{GetInkbunnyDescription, withCache},
 	"/inkbunny/submission":      handler{GetInkbunnySubmission, withCache},
 	"/inkbunny/submission/:ids": handler{GetInkbunnySubmission, withCache},

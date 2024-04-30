@@ -833,6 +833,7 @@ func GetReportHandler(c echo.Context) error {
 	})
 
 	type subInfo struct {
+		Title   string           `json:"title,omitempty"`
 		URL     string           `json:"url,omitempty"`
 		Flags   []db.TicketLabel `json:"flags,omitempty"`
 		Artists []db.Artist      `json:"artists,omitempty"`
@@ -873,6 +874,7 @@ func GetReportHandler(c echo.Context) error {
 
 		out.Violations++
 		out.Submissions = append(out.Submissions, subInfo{
+			Title:   sub.Submission.Title,
 			URL:     sub.Submission.URL,
 			Flags:   sub.Ticket.Labels,
 			Artists: sub.Submission.Metadata.ArtistUsed,

@@ -30,6 +30,9 @@ var (
 	negativeStart   = regexp.MustCompile(`(?i)^negative(?: prompts?)?:\s*`)
 	bbCode          = regexp.MustCompile(`\[\/?[\w=]+\]`)
 
+	negativeHasText = regexp.MustCompile(`(?i)^negative prompt: ?\S`)
+	stepsStart      = regexp.MustCompile(`(?i)^steps: ?\d`)
+
 	extractJson    = regexp.MustCompile(`(?ms){.*}`)
 	removeComments = regexp.MustCompile(`(?m)//.*$`)
 	fixParentheses = regexp.MustCompile(`\\+([()])`)

@@ -352,7 +352,7 @@ func Common(opts ...func(*Config)) (Params, error) {
 	scanner := bufio.NewScanner(strings.NewReader(c.Text))
 
 	var key string
-	var foundNegative bool
+	var foundNegative string
 	var extra string
 	for scanner.Scan() {
 		if err := scanner.Err(); err != nil {
@@ -374,14 +374,20 @@ func Common(opts ...func(*Config)) (Params, error) {
 		if len(key) == 0 {
 			continue
 		}
-		if foundNegative {
+		if len(foundNegative) > 0 {
+			if !negativeHasText.MatchString(line) {
+				chunks[key][Parameters] += line
+				continue
+			}
 			chunks[key][Parameters] += "\n" + line
-			foundNegative = false
-			key = ""
+			if stepsStart.MatchString(line) {
+				foundNegative = ""
+				key = ""
+			}
 			continue
 		}
 		if negativeStart.MatchString(line) {
-			foundNegative = true
+			foundNegative = line
 			chunks[key][Parameters] += "\n" + line
 			continue
 		}

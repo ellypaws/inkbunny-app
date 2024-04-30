@@ -92,7 +92,11 @@ func processParams(c echo.Context, sub *db.Submission, cacheToUse cache.Cache, a
 
 	var textFile *db.File
 
+	var found bool
 	for i, f := range sub.Files {
+		if found {
+			break
+		}
 		switch f.File.MimeType {
 		case echo.MIMEApplicationJSON:
 			if strings.Contains(f.File.FileName, "plugin") {
@@ -100,11 +104,11 @@ func processParams(c echo.Context, sub *db.Submission, cacheToUse cache.Cache, a
 			}
 			textFile = &sub.Files[i]
 			if strings.Contains(f.File.FileName, "workflow") {
-				break
+				found = true
 			}
 		case echo.MIMETextPlain:
 			textFile = &sub.Files[i]
-			break
+			found = true
 		}
 	}
 

@@ -10,7 +10,6 @@ import (
 	"io"
 	"os"
 	"regexp"
-	"strconv"
 	"strings"
 )
 
@@ -197,13 +196,17 @@ func Cirn0(opts ...func(*Config)) (Params, error) {
 	return chunks, nil
 }
 
+var drugeMatchDigit = regexp.MustCompile(`(?m)^\d+`)
+
 func UseDruge() func(*Config) {
 	return func(c *Config) {
 		c.KeyCondition = func(line string) bool {
-			_, err := strconv.Atoi(line)
-			return err == nil
+			return drugeMatchDigit.MatchString(line)
 		}
 		c.Filename = "druge_"
+		if !drugeMatchDigit.MatchString(c.Text) {
+			c.Text = "1\n" + c.Text
+		}
 	}
 }
 

@@ -216,11 +216,12 @@ func UseArtie() func(*Config) {
 	}
 }
 
+var aiBeanKey = regexp.MustCompile(`(?i)^(image )?\d+$`)
+
 func UseAIBean() func(*Config) {
 	return func(c *Config) {
 		c.KeyCondition = func(line string) bool {
-			_, err := strconv.Atoi(line)
-			return err == nil
+			return aiBeanKey.MatchString(line)
 		}
 		c.Filename = "AIBean_"
 		c.SkipCondition = func(line string) bool {

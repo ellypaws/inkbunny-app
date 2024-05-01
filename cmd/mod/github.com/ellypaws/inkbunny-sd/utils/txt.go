@@ -226,6 +226,9 @@ func UseAIBean() func(*Config) {
 		c.SkipCondition = func(line string) bool {
 			return line == "parameters"
 		}
+		if strings.HasPrefix(c.Text, "parameters") {
+			c.Text = "1" + strings.TrimPrefix(c.Text, "parameters")
+		}
 	}
 }
 

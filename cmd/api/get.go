@@ -35,6 +35,7 @@ var getHandlers = pathHandler{
 	"/image":                    handler{GetImageHandler, append(StaticMiddleware, SIDMiddleware)},
 	"/review/:id":               handler{GetReviewHandler, append(reducedMiddleware, WithRedis...)},
 	"/report/:id":               handler{GetReportHandler, append(reportMiddleware, WithRedis...)},
+	"/report/:id/:key":          handler{GetReportKeyHandler, append(reportMiddleware, WithRedis...)},
 	"/heuristics/:id":           handler{GetHeuristicsHandler, append(reducedMiddleware, WithRedis...)},
 	"/audits":                   handler{GetAuditHandler, staffMiddleware},
 	"/tickets":                  handler{GetTicketsHandler, staffMiddleware},
@@ -740,16 +741,6 @@ func GetReportHandler(c echo.Context) error {
 		limit,
 	)
 
-	if c.Request().Header.Get(echo.HeaderCacheControl) != "no-cache" {
-		item, errFunc := cacheToUse.Get(reportKey)
-		if errFunc == nil {
-			return c.Blob(http.StatusOK, item.MimeType, item.Blob)
-		}
-		if !errors.Is(errFunc, redis.Nil) {
-			return c.JSON(http.StatusNotFound, crashy.ErrorResponse{ErrorString: "an error occurred while retrieving the report", Debug: errFunc})
-		}
-	}
-
 	sid, err := GetSID(c)
 	if err != nil {
 		c.Logger().Errorf("error getting sid: %v", err)
@@ -757,9 +748,6 @@ func GetReportHandler(c echo.Context) error {
 	}
 
 	hashed := db.Hash(sid)
-
-	var store any
-	defer storeReview(c, reportKey, &store, cache.Week)
 
 	submissions, err := service.RetrieveSearch(c, api.SubmissionSearchRequest{
 		SID:                sid,
@@ -899,9 +887,44 @@ func GetReportHandler(c echo.Context) error {
 	out.Ratio = float64(out.Violations) / float64(len(processed))
 	out.Ratio = math.Round(out.Ratio*100) / 100
 
+	var store any
+	date := out.ReportDate.Format("2006-01-02")
+	reportKey = fmt.Sprintf(
+		"%s:report:%s:%s",
+		echo.MIMEApplicationJSON,
+		artist,
+		date,
+	)
+	defer storeReview(c, reportKey, &store, cache.Indefinite)
+
 	store = out
 
-	return c.JSON(http.StatusOK, out)
+	return c.Redirect(http.StatusTemporaryRedirect, fmt.Sprintf("/report/%s/%s", artist, date))
+}
+
+func GetReportKeyHandler(c echo.Context) error {
+	artist := c.Param("id")
+	key := c.Param("key")
+	cacheToUse := cache.SwitchCache(c)
+
+	reportKey := fmt.Sprintf(
+		"%s:report:%s:%s",
+		echo.MIMEApplicationJSON,
+		artist,
+		key,
+	)
+
+	if c.Request().Header.Get(echo.HeaderCacheControl) != "no-cache" {
+		item, errFunc := cacheToUse.Get(reportKey)
+		if errFunc == nil {
+			return c.Blob(http.StatusOK, item.MimeType, item.Blob)
+		}
+		if !errors.Is(errFunc, redis.Nil) {
+			return c.JSON(http.StatusNotFound, crashy.ErrorResponse{ErrorString: "an error occurred while retrieving the report", Debug: errFunc})
+		}
+	}
+
+	return c.JSON(http.StatusNotFound, crashy.ErrorResponse{ErrorString: "no report found"})
 }
 
 func maxConfidence(old, new *entities.TaggerResponse) *entities.TaggerResponse {

@@ -228,7 +228,9 @@ func UseAIBean() func(*Config) {
 			return line == "parameters"
 		}
 		if strings.HasPrefix(c.Text, "parameters") {
-			c.Text = "1" + strings.TrimPrefix(c.Text, "parameters")
+			c.Text = strings.Replace(c.Text, "parameters", "1", 1)
+		} else {
+			c.Text = "1\n" + c.Text
 		}
 	}
 }

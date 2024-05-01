@@ -10,7 +10,7 @@ var (
 		"steps":      regexp.MustCompile(`(?i)steps:? (?P<steps>\d+)`),
 		"sampler":    regexp.MustCompile(`(?i)sampler:? (?P<sampler>[\w+ ]+)`),
 		"cfg":        regexp.MustCompile(`(?i)cfg(?: scale:)?\s*(?P<cfg>[\d.]+)`),
-		"seed":       regexp.MustCompile(`(?i)seed:?\s*(?P<seed>\d+)`),
+		"seed":       regexp.MustCompile(`(?i)seeds?:?\s*(?P<seed>\d+)`),
 		"width":      regexp.MustCompile(`(?i)size:? (?P<width>\d+)x\d+`),
 		"height":     regexp.MustCompile(`(?i)size:? \d+x(?P<height>\d+)`),
 		"hash":       regexp.MustCompile(`(?i)model hash:? (?P<hash>\w+)`),

@@ -92,10 +92,8 @@ func RetrieveSearch(c echo.Context, request api.SubmissionSearchRequest) (api.Su
 		} else {
 			c.Logger().Infof("Cache miss for %s retrieving search...", key)
 		}
-	}
-
-	if !request.GetRID {
-		c.Logger().Warn("GetRID was explicitly set to false, overriding to true...")
+	} else if !request.GetRID {
+		c.Logger().Warn("GetRID was explicitly set to false but no RID is set, overriding to true...")
 		request.GetRID = true
 	}
 

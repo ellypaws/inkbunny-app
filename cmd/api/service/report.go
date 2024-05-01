@@ -115,7 +115,12 @@ func CreateTicketReport(auditor *db.Auditor, details []Detail, host *url.URL, st
 		IDs     []int64
 		Objects []map[string]entities.TextToImageRequest
 	}
+
 	for _, sub := range details {
+		if len(sub.Ticket.Labels) == 0 {
+			continue
+		}
+
 		for _, label := range sub.Ticket.Labels {
 			if !slices.Contains(info.Labels, label) {
 				info.Labels = append(info.Labels, label)
@@ -207,7 +212,7 @@ func CreateTicketReport(auditor *db.Auditor, details []Detail, host *url.URL, st
 
 	out := TicketReport{db.Ticket{
 		Subject: fmt.Sprintf("AI Submissions by %s - %d (%.2d%%) violations",
-			report.UsernameID.Username, report.Violations, int(report.Ratio*100)),
+			report.UsernameID.Username, report.Violations, report.Ratio*100),
 		DateOpened: time.Now().UTC(),
 		Status:     "triage",
 		Labels:     info.Labels,

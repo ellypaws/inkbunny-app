@@ -1,6 +1,7 @@
 package api
 
 import (
+	"bytes"
 	_ "embed"
 	"encoding/json"
 	"errors"
@@ -531,7 +532,7 @@ func GetReviewHandler(c echo.Context) error {
 				}
 
 				var detail service.Detail
-				if err := json.Unmarshal(item.Blob, &detail); err != nil {
+				if err := json.Unmarshal(bytes.Trim(item.Blob, "[]"), &detail); err != nil {
 					c.Logger().Errorf("error unmarshaling submission %v: %v", id, err)
 					return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
 				}

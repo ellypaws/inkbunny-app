@@ -917,14 +917,12 @@ func GetReportKeyHandler(c echo.Context) error {
 		key,
 	)
 
-	if c.Request().Header.Get(echo.HeaderCacheControl) != "no-cache" {
-		item, errFunc := cacheToUse.Get(reportKey)
-		if errFunc == nil {
-			return c.Blob(http.StatusOK, item.MimeType, item.Blob)
-		}
-		if !errors.Is(errFunc, redis.Nil) {
-			return c.JSON(http.StatusNotFound, crashy.ErrorResponse{ErrorString: "an error occurred while retrieving the report", Debug: errFunc})
-		}
+	item, errFunc := cacheToUse.Get(reportKey)
+	if errFunc == nil {
+		return c.Blob(http.StatusOK, item.MimeType, item.Blob)
+	}
+	if !errors.Is(errFunc, redis.Nil) {
+		return c.JSON(http.StatusNotFound, crashy.ErrorResponse{ErrorString: "an error occurred while retrieving the report", Debug: errFunc})
 	}
 
 	return c.JSON(http.StatusNotFound, crashy.ErrorResponse{ErrorString: "no report found"})

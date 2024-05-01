@@ -35,7 +35,7 @@ var getHandlers = pathHandler{
 	"/image":                    handler{GetImageHandler, append(StaticMiddleware, SIDMiddleware)},
 	"/review/:id":               handler{GetReviewHandler, append(reducedMiddleware, WithRedis...)},
 	"/report/:id":               handler{GetReportHandler, append(reportMiddleware, WithRedis...)},
-	"/report/:id/:key":          handler{GetReportKeyHandler, append(reportMiddleware, WithRedis...)},
+	"/report/:id/:key":          handler{GetReportKeyHandler, append(StaticMiddleware, SIDMiddleware)},
 	"/heuristics/:id":           handler{GetHeuristicsHandler, append(reducedMiddleware, WithRedis...)},
 	"/audits":                   handler{GetAuditHandler, staffMiddleware},
 	"/tickets":                  handler{GetTicketsHandler, staffMiddleware},
@@ -754,6 +754,7 @@ func GetReportHandler(c echo.Context) error {
 		Username:           artist,
 		SubmissionsPerPage: api.IntString(limit),
 		SubmissionIDsOnly:  true,
+		GetRID:             true,
 		KeywordID:          db.AIGeneratedID,
 	})
 	if err != nil {

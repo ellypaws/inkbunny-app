@@ -488,10 +488,6 @@ func GetReviewHandler(c echo.Context) error {
 	)
 
 	var store any
-	if c.Param("id") != "search" {
-		defer storeReview(c, reviewKey, &store, cache.Hour)
-	}
-
 	if c.Request().Header.Get(echo.HeaderCacheControl) != "no-cache" {
 		item, errFunc := cacheToUse.Get(reviewKey)
 		if errFunc == nil {
@@ -579,6 +575,10 @@ func GetReviewHandler(c echo.Context) error {
 		}
 
 		c.Logger().Debugf("Cache miss for %s retrieving review...", reviewKey)
+	}
+
+	if c.Param("id") != "search" {
+		defer storeReview(c, reviewKey, &store, cache.Hour)
 	}
 
 	if len(missed) > 0 {

@@ -547,6 +547,10 @@ func GetReviewHandler(c echo.Context) error {
 		if len(processed) > 0 && len(missed) == 0 {
 			store = processed
 
+			if output == service.OutputSingleTicket {
+				store = createSingleTicket(auditor, processed)
+			}
+
 			if c.Param("id") == "search" {
 				searchStore.Review = store
 				if stream && output != service.OutputSingleTicket {
@@ -619,60 +623,7 @@ func GetReviewHandler(c echo.Context) error {
 	case service.OutputSingleTicket:
 		fallthrough
 	default:
-		auditorAsUser := service.AuditorAsUsernameID(auditor)
-
-		var ticketLabels []db.TicketLabel
-		for _, sub := range details {
-			for _, label := range sub.Ticket.Labels {
-				if !slices.Contains(ticketLabels, label) {
-					ticketLabels = append(ticketLabels, label)
-				}
-			}
-		}
-		ticket := db.Ticket{
-			Subject:    "subject",
-			DateOpened: time.Now().UTC(),
-			Status:     "triage",
-			Labels:     ticketLabels,
-			Priority:   "low",
-			Closed:     false,
-			Responses: []db.Response{
-				{
-					SupportTeam: false,
-					User:        auditorAsUser,
-					Date:        time.Now().UTC(),
-					Message: func() string {
-						var sb strings.Builder
-						for _, sub := range details {
-							if sb.Len() > 0 {
-								sb.WriteString("\n\n[s]                    [/s]\n\n")
-							}
-							sb.WriteString(sub.Ticket.Responses[0].Message)
-						}
-						return sb.String()
-					}(),
-				},
-			},
-			SubmissionIDs: func() []int64 {
-				var ids []int64
-				for _, sub := range details {
-					ids = append(ids, int64(sub.ID))
-				}
-				return ids
-			}(),
-			AssignedID: &auditor.UserID,
-			UsersInvolved: db.Involved{
-				Reporter: auditorAsUser,
-				ReportedIDs: func() []api.UsernameID {
-					var ids []api.UsernameID
-					for _, sub := range details {
-						ids = append(ids, sub.User)
-					}
-					return ids
-				}(),
-			},
-		}
-		store = ticket
+		store = createSingleTicket(auditor, details)
 	}
 
 	if c.Param("id") == "search" {
@@ -688,6 +639,62 @@ func GetReviewHandler(c echo.Context) error {
 	}
 
 	return c.JSON(http.StatusOK, store)
+}
+
+func createSingleTicket(auditor *db.Auditor, details []service.Detail) db.Ticket {
+	auditorAsUser := service.AuditorAsUsernameID(auditor)
+
+	var ticketLabels []db.TicketLabel
+	for _, sub := range details {
+		for _, label := range sub.Ticket.Labels {
+			if !slices.Contains(ticketLabels, label) {
+				ticketLabels = append(ticketLabels, label)
+			}
+		}
+	}
+	return db.Ticket{
+		Subject:    "subject",
+		DateOpened: time.Now().UTC(),
+		Status:     "triage",
+		Labels:     ticketLabels,
+		Priority:   "low",
+		Closed:     false,
+		Responses: []db.Response{
+			{
+				SupportTeam: false,
+				User:        auditorAsUser,
+				Date:        time.Now().UTC(),
+				Message: func() string {
+					var sb strings.Builder
+					for _, sub := range details {
+						if sb.Len() > 0 {
+							sb.WriteString("\n\n[s]                    [/s]\n\n")
+						}
+						sb.WriteString(sub.Ticket.Responses[0].Message)
+					}
+					return sb.String()
+				}(),
+			},
+		},
+		SubmissionIDs: func() []int64 {
+			var ids []int64
+			for _, sub := range details {
+				ids = append(ids, int64(sub.ID))
+			}
+			return ids
+		}(),
+		AssignedID: &auditor.UserID,
+		UsersInvolved: db.Involved{
+			Reporter: auditorAsUser,
+			ReportedIDs: func() []api.UsernameID {
+				var ids []api.UsernameID
+				for _, sub := range details {
+					ids = append(ids, sub.User)
+				}
+				return ids
+			}(),
+		},
+	}
 }
 
 func storeReview(c echo.Context, reviewKey string, store *any, duration time.Duration) {

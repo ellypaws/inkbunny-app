@@ -772,23 +772,26 @@ func GetReportHandler(c echo.Context) error {
 
 	var missed []string
 	var processed []service.Detail
+
 	for _, submission := range submissions.Submissions {
-		key := fmt.Sprintf(
-			"%s:review:%s:%s?interrogate=&parameters=true&sid=%s",
-			echo.MIMEApplicationJSON,
-			service.OutputBadges,
-			submission.SubmissionID,
-			hashed,
-		)
-		item, errFunc := cacheToUse.Get(key)
-		if errFunc == nil {
-			var detail service.Detail
-			if err := json.Unmarshal(item.Blob, &detail); err != nil {
-				c.Logger().Errorf("error unmarshaling submission %v: %v", submission.SubmissionID, err)
-				return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
+		if c.Request().Header.Get(echo.HeaderCacheControl) != "no-cache" {
+			key := fmt.Sprintf(
+				"%s:review:%s:%s?interrogate=&parameters=true&sid=%s",
+				echo.MIMEApplicationJSON,
+				service.OutputBadges,
+				submission.SubmissionID,
+				hashed,
+			)
+			item, errFunc := cacheToUse.Get(key)
+			if errFunc == nil {
+				var detail service.Detail
+				if err := json.Unmarshal(item.Blob, &detail); err != nil {
+					c.Logger().Errorf("error unmarshaling submission %v: %v", submission.SubmissionID, err)
+					return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
+				}
+				processed = append(processed, detail)
+				continue
 			}
-			processed = append(processed, detail)
-			continue
 		}
 
 		missed = append(missed, submission.SubmissionID)

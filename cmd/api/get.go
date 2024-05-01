@@ -443,8 +443,23 @@ func GetReviewHandler(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, crashy.ErrorResponse{ErrorString: "missing submission ID"})
 	}
 
-	var submissionIDs = c.Param("id")
+	skipCache := c.Request().Header.Get(echo.HeaderCacheControl) == "no-cache"
 
+	if output == service.OutputReport && !skipCache {
+		item, err := cacheToUse.Get(fmt.Sprintf(
+			"%s:review:%s:%s?%s",
+			echo.MIMEApplicationJSON,
+			output,
+			idParam,
+			query.Encode(),
+		))
+		if err == nil {
+			c.Logger().Infof("Cache hit for %s", idParam)
+			return c.Blob(http.StatusOK, item.MimeType, item.Blob)
+		}
+	}
+
+	var submissionIDs = c.Param("id")
 	var submissionIDSlice []string
 
 	var searchStore service.SearchReview
@@ -488,19 +503,21 @@ func GetReviewHandler(c echo.Context) error {
 	)
 
 	var store any
-	if c.Request().Header.Get(echo.HeaderCacheControl) != "no-cache" {
-		item, errFunc := cacheToUse.Get(reviewKey)
-		if errFunc == nil {
-			c.Logger().Infof("Cache hit for %s", reviewKey)
-			if c.Param("id") != "search" {
-				return c.Blob(http.StatusOK, item.MimeType, item.Blob)
-			} else {
-				var store any
-				if err := json.Unmarshal(item.Blob, &store); err != nil {
-					return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
+	if !skipCache {
+		if output != service.OutputReport {
+			item, err := cacheToUse.Get(reviewKey)
+			if err == nil {
+				c.Logger().Infof("Cache hit for %s", reviewKey)
+				if c.Param("id") != "search" {
+					return c.Blob(http.StatusOK, item.MimeType, item.Blob)
+				} else {
+					var store any
+					if err := json.Unmarshal(item.Blob, &store); err != nil {
+						return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
+					}
+					searchStore.Review = store
+					return c.JSON(http.StatusOK, searchStore)
 				}
-				searchStore.Review = store
-				return c.JSON(http.StatusOK, searchStore)
 			}
 		}
 
@@ -512,8 +529,8 @@ func GetReviewHandler(c echo.Context) error {
 				id,
 				query.Encode(),
 			)
-			item, errFunc := cacheToUse.Get(key)
-			if errFunc == nil {
+			item, err := cacheToUse.Get(key)
+			if err == nil {
 				if stream {
 					c.Response().Header().Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
 

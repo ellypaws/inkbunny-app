@@ -216,7 +216,7 @@ func UseArtie() func(*Config) {
 	}
 }
 
-var aiBeanKey = regexp.MustCompile(`(?i)^(image )?\d+$`)
+var aiBeanKey = regexp.MustCompile(`(?i)^(image )?\d+`)
 
 func UseAIBean() func(*Config) {
 	return func(c *Config) {
@@ -227,11 +227,14 @@ func UseAIBean() func(*Config) {
 		c.SkipCondition = func(line string) bool {
 			return line == "parameters"
 		}
+		if aiBeanKey.MatchString(c.Text) {
+			return
+		}
 		if strings.HasPrefix(c.Text, "parameters") {
 			c.Text = strings.Replace(c.Text, "parameters", "1", 1)
-		} else {
-			c.Text = "1\n" + c.Text
+			return
 		}
+		c.Text = "1\n" + c.Text
 	}
 }
 

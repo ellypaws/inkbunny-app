@@ -33,6 +33,7 @@ type Detail struct {
 
 const (
 	OutputSingleTicket    OutputType = "single_ticket"
+	OutputReport          OutputType = "report"
 	OutputMultipleTickets OutputType = "multiple_tickets"
 	OutputSubmissions     OutputType = "submissions"
 	OutputFull            OutputType = "full"
@@ -113,6 +114,8 @@ func processSubmission(c echo.Context, submission *api.Submission, config *Confi
 	}
 
 	switch config.Output {
+	case OutputReport:
+		fallthrough
 	case OutputBadges:
 		detail.Ticket = &db.Ticket{
 			Labels: db.TicketLabels(sub),
@@ -135,7 +138,7 @@ func processSubmission(c echo.Context, submission *api.Submission, config *Confi
 		auditorAsUser := AuditorAsUsernameID(config.Auditor)
 		detail.Ticket = &db.Ticket{
 			ID:         sub.ID,
-			Subject:    fmt.Sprintf("Review for %v", sub.URL),
+			Subject:    ticketSubject(&sub),
 			DateOpened: time.Now().UTC(),
 			Status:     "triage",
 			Labels:     nil,
@@ -228,7 +231,7 @@ func parseFiles(c echo.Context, sub *db.Submission, config *Config) {
 	wg.Wait()
 }
 
-func submissionMessage(sub *db.Submission) string {
+func ticketSubject(sub *db.Submission) string {
 	var sb strings.Builder
 	sb.WriteString(fmt.Sprintf("[u]AI Submission %d by @%s ", sub.ID, sub.Username))
 
@@ -270,67 +273,19 @@ func submissionMessage(sub *db.Submission) string {
 		}
 	}
 
+	return sb.String()
+}
+
+func submissionMessage(sub *db.Submission) string {
+	var sb strings.Builder
+	sb.WriteString(ticketSubject(sub))
+
 	sb.WriteString(fmt.Sprintf("\n%s by @%s\n#M%d", sub.URL, sub.Username, sub.ID))
 
 	if len(sub.Metadata.ArtistUsed) > 0 {
 		sb.WriteString("\n\n")
 		sb.WriteString("The prompt may have used these artists: ")
-
-		for i, artist := range sub.Metadata.ArtistUsed {
-			if i > 0 {
-				sb.WriteString(", ")
-			}
-			sb.WriteString("[b]")
-			if artist.UserID != nil {
-				sb.WriteString(fmt.Sprintf("ib!%s[/b]", artist.Username))
-			} else {
-				sb.WriteString(artist.Username)
-				sb.WriteString("[/b]")
-			}
-			if i == len(sub.Metadata.ArtistUsed)-1 {
-				sb.WriteString("\n")
-			}
-		}
-
-		highlight := make(map[string]string)
-		for name, obj := range sub.Metadata.Objects {
-			meta := strings.ToLower(obj.Prompt + obj.NegativePrompt)
-
-			var replaced bool
-			for _, artist := range sub.Metadata.ArtistUsed {
-				re, err := regexp.Compile(fmt.Sprintf(`(?i)\b(%s)\b`, artist.Username))
-				if err != nil {
-					continue
-				}
-
-				if !replaced && re.MatchString(meta) {
-					replaced = true
-					highlight[name] = meta
-				}
-				if replaced {
-					highlight[name] = re.ReplaceAllStringFunc(highlight[name], func(s string) string {
-						if artist.UserID != nil {
-							return fmt.Sprintf("[b]>>> [u][name]%s[/name][/u] <<<[/b]", s)
-						}
-						return fmt.Sprintf("[b] >>> [color=#F78C6C][u]%s[/u][/color] <<< [/b]", s)
-					})
-				}
-			}
-		}
-
-		for title, prompt := range highlight {
-			var file *db.File
-			if slices.ContainsFunc(sub.Files, func(f db.File) bool {
-				if f.File.FileName == title {
-					file = &f
-					return true
-				}
-				return false
-			}) {
-				sb.WriteString(fmt.Sprintf("\nFile: [url=%s]%s[/url]", file.File.FileURLFull, file.File.FileName))
-			}
-			sb.WriteString(fmt.Sprintf("\n[q=%s]%s[/q]", title, prompt))
-		}
+		sb.WriteString(writeArtistUsed(sub))
 	}
 
 	if sub.Metadata.MissingPrompt {
@@ -346,7 +301,7 @@ func submissionMessage(sub *db.Submission) string {
 	}
 
 	var added uint
-	for i, file := range sub.Files {
+	for _, file := range sub.Files {
 		switch file.File.MimeType {
 		//case echo.MIMEApplicationJSON, echo.MIMETextPlain:
 		default:
@@ -354,7 +309,8 @@ func submissionMessage(sub *db.Submission) string {
 				sb.WriteString("\n[u]MD5 Checksums at the time of writing[/u]:")
 			}
 			sb.WriteString("\n")
-			sb.WriteString(fmt.Sprintf("Page %d: [url=%s]%s[/url] ([url=https://inkbunny.net/submissionsviewall.php?text=%s&md5=yes&mode=search]%s[/url])", i+1,
+			sb.WriteString(fmt.Sprintf("Page %d: [url=%s]%s[/url] ([url=https://inkbunny.net/submissionsviewall.php?text=%s&md5=yes&mode=search]%s[/url])",
+				file.File.SubmissionFileOrder,
 				file.File.FileURLFull, file.File.FileName, file.File.FullFileMD5, file.File.FullFileMD5))
 			added++
 		}
@@ -369,6 +325,71 @@ func submissionMessage(sub *db.Submission) string {
 		}
 		sb.WriteString("The detection rate is: ")
 		sb.WriteString(fmt.Sprintf("%.2f", sub.Metadata.HumanConfidence))
+	}
+
+	return sb.String()
+}
+
+func writeArtistUsed(sub *db.Submission) string {
+	var sb strings.Builder
+	if len(sub.Metadata.ArtistUsed) == 0 {
+		return ""
+	}
+
+	for i, artist := range sub.Metadata.ArtistUsed {
+		if i > 0 {
+			sb.WriteString(", ")
+		}
+		sb.WriteString("[b]")
+		if artist.UserID != nil {
+			sb.WriteString(fmt.Sprintf("ib!%s[/b]", artist.Username))
+		} else {
+			sb.WriteString(artist.Username)
+			sb.WriteString("[/b]")
+		}
+		if i == len(sub.Metadata.ArtistUsed)-1 {
+			sb.WriteString("\n")
+		}
+	}
+
+	highlight := make(map[string]string)
+	for name, obj := range sub.Metadata.Objects {
+		meta := strings.ToLower(obj.Prompt + obj.NegativePrompt)
+
+		var replaced bool
+		for _, artist := range sub.Metadata.ArtistUsed {
+			re, err := regexp.Compile(fmt.Sprintf(`(?i)\b(%s)\b`, artist.Username))
+			if err != nil {
+				continue
+			}
+
+			if !replaced && re.MatchString(meta) {
+				replaced = true
+				highlight[name] = meta
+			}
+			if replaced {
+				highlight[name] = re.ReplaceAllStringFunc(highlight[name], func(s string) string {
+					if artist.UserID != nil {
+						return fmt.Sprintf("[b]>>> [u][name]%s[/name][/u] <<<[/b]", s)
+					}
+					return fmt.Sprintf("[b] >>> [color=#F78C6C][u]%s[/u][/color] <<< [/b]", s)
+				})
+			}
+		}
+	}
+
+	for title, prompt := range highlight {
+		var file *db.File
+		if slices.ContainsFunc(sub.Files, func(f db.File) bool {
+			if f.File.FileName == title {
+				file = &f
+				return true
+			}
+			return false
+		}) {
+			sb.WriteString(fmt.Sprintf("\nFile: [url=%s]%s[/url]", file.File.FileURLFull, file.File.FileName))
+		}
+		sb.WriteString(fmt.Sprintf("\n[q=%s]%s[/q]", title, prompt))
 	}
 
 	return sb.String()

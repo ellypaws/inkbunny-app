@@ -18,7 +18,6 @@ import (
 	"github.com/labstack/echo/v4"
 	units "github.com/labstack/gommon/bytes"
 	"github.com/redis/go-redis/v9"
-	"math"
 	"net/http"
 	"net/url"
 	"slices"
@@ -416,6 +415,7 @@ func GetReviewHandler(c echo.Context) error {
 
 	validOutputs := []service.OutputType{
 		service.OutputSingleTicket,
+		service.OutputReport,
 		service.OutputMultipleTickets,
 		service.OutputSubmissions,
 		service.OutputFull,
@@ -438,15 +438,17 @@ func GetReviewHandler(c echo.Context) error {
 		"sid":         {hashed},
 	}
 
-	var submissionIDs = c.Param("id")
-	if submissionIDs == "" || submissionIDs == "null" {
+	idParam := c.Param("id")
+	if idParam == "" || idParam == "null" {
 		return c.JSON(http.StatusBadRequest, crashy.ErrorResponse{ErrorString: "missing submission ID"})
 	}
+
+	var submissionIDs = c.Param("id")
 
 	var submissionIDSlice []string
 
 	var searchStore service.SearchReview
-	if submissionIDs == "search" {
+	if submissionIDs == "search" || output == service.OutputReport {
 		var errFunc func(echo.Context) error
 		searchStore.Search, errFunc = service.RetrieveReviewSearch(c, sid, output, query, cacheToUse)
 		if errFunc != nil {
@@ -461,7 +463,9 @@ func GetReviewHandler(c echo.Context) error {
 
 		submissionIDs = strings.Join(submissionIDSlice, ",")
 
-		defer service.StoreSearchReview(c, query, &searchStore)
+		if output != service.OutputReport {
+			defer service.StoreSearchReview(c, query, &searchStore)
+		}
 	} else {
 		submissionIDSlice = strings.Split(submissionIDs, ",")
 	}
@@ -471,11 +475,15 @@ func GetReviewHandler(c echo.Context) error {
 	var processed []service.Detail
 	var missed []string
 
+	idKey := submissionIDs
+	if output == service.OutputReport {
+		idKey = idParam
+	}
 	reviewKey := fmt.Sprintf(
 		"%s:review:%s:%s?%s",
 		echo.MIMEApplicationJSON,
 		output,
-		submissionIDs,
+		idKey,
 		query.Encode(),
 	)
 
@@ -551,6 +559,10 @@ func GetReviewHandler(c echo.Context) error {
 				store = createSingleTicket(auditor, processed)
 			}
 
+			if output == service.OutputReport {
+				store = service.CreateTicketReport(auditor, processed, ServerHost, storeReport(c))
+			}
+
 			if c.Param("id") == "search" {
 				searchStore.Review = store
 				if stream && output != service.OutputSingleTicket {
@@ -620,6 +632,8 @@ func GetReviewHandler(c echo.Context) error {
 			tickets = append(tickets, *sub.Ticket)
 		}
 		store = tickets
+	case service.OutputReport:
+		store = service.CreateTicketReport(auditor, details, ServerHost, storeReport(c))
 	case service.OutputSingleTicket:
 		fallthrough
 	default:
@@ -697,21 +711,23 @@ func createSingleTicket(auditor *db.Auditor, details []service.Detail) db.Ticket
 	}
 }
 
-func storeReview(c echo.Context, reviewKey string, store *any, duration time.Duration) {
+func storeReview(c echo.Context, key string, store *any, duration time.Duration) {
 	if store == nil {
-		c.Logger().Warnf("trying to cache nil review for %s", reviewKey)
+		c.Logger().Warnf("trying to cache nil review for %s", key)
 		return
 	}
+
 	if *store == nil {
 		return
 	}
+
 	bin, err := json.Marshal(store)
 	if err != nil {
 		c.Logger().Errorf("error marshaling review: %v", err)
 		return
 	}
 
-	err = cache.SwitchCache(c).Set(reviewKey, &cache.Item{
+	err = cache.SwitchCache(c).Set(key, &cache.Item{
 		Blob:     bin,
 		MimeType: echo.MIMEApplicationJSON,
 	}, duration)
@@ -719,7 +735,20 @@ func storeReview(c echo.Context, reviewKey string, store *any, duration time.Dur
 		c.Logger().Errorf("error caching review: %v", err)
 		return
 	}
-	c.Logger().Infof("Cached %s %s %dKiB", reviewKey, echo.MIMEApplicationJSON, len(bin)/units.KiB)
+	c.Logger().Infof("Cached %s %s %dKiB", key, echo.MIMEApplicationJSON, len(bin)/units.KiB)
+}
+
+func storeReport(c echo.Context) func(ticket service.TicketReport) {
+	return func(ticket service.TicketReport) {
+		reportKey := fmt.Sprintf(
+			"%s:report:%s:%s",
+			echo.MIMEApplicationJSON,
+			c.Param("id"),
+			ticket.Report.ReportDate.Format("2006-01-02"),
+		)
+		report := any(ticket.Report)
+		go storeReview(c, reportKey, &report, cache.Indefinite)
+	}
 }
 
 // GetReportHandler returns a report analysis of an artist
@@ -846,81 +875,7 @@ func GetReportHandler(c echo.Context) error {
 		processed = append(processed, details...)
 	}
 
-	type file struct {
-		FileID      string `json:"file_id,omitempty"`
-		FileName    string `json:"file_name,omitempty"`
-		Page        int    `json:"page,omitempty"`
-		FullFileMD5 string `json:"full_file_md5,omitempty"`
-		FileURLFull string `json:"file_url_full,omitempty"`
-	}
-
-	type subInfo struct {
-		Title   string           `json:"title,omitempty"`
-		URL     string           `json:"url,omitempty"`
-		Flags   []db.TicketLabel `json:"flags,omitempty"`
-		Artists []db.Artist      `json:"artists,omitempty"`
-		Files   []file           `json:"files,omitempty"`
-	}
-
-	type user struct {
-		db.Auditor
-		Role       string `json:"role"`
-		AuditCount int    `json:"audit_count,omitempty"`
-	}
-
-	type output struct {
-		Auditor     *user     `json:"auditor,omitempty"`
-		Violations  int       `json:"violations"`
-		Ratio       float64   `json:"violation_ratio"`
-		Audited     int       `json:"total_audited"`
-		ReportDate  time.Time `json:"report_date"`
-		Submissions []subInfo `json:"submissions"`
-	}
-
-	out := output{
-		Audited:    len(processed),
-		ReportDate: time.Now().UTC(),
-	}
-
-	if auditor != nil {
-		out.Auditor = &user{
-			Auditor:    *auditor,
-			Role:       auditor.Role.String(),
-			AuditCount: auditor.AuditCount,
-		}
-	}
-
-	for _, sub := range processed {
-		if !sub.Submission.Metadata.AISubmission {
-			continue
-		}
-		if len(sub.Ticket.Labels) == 0 {
-			continue
-		}
-
-		out.Violations++
-
-		info := subInfo{
-			Title:   sub.Submission.Title,
-			URL:     sub.Submission.URL,
-			Flags:   sub.Ticket.Labels,
-			Artists: sub.Submission.Metadata.ArtistUsed,
-		}
-
-		for _, f := range sub.Submission.Files {
-			info.Files = append(info.Files, file{
-				FileID:      f.File.FileID,
-				FileName:    f.File.FileName,
-				Page:        int(f.File.SubmissionFileOrder),
-				FullFileMD5: f.File.FullFileMD5,
-				FileURLFull: f.File.FileURLFull,
-			})
-		}
-
-		out.Submissions = append(out.Submissions, info)
-	}
-	out.Ratio = float64(out.Violations) / float64(len(processed))
-	out.Ratio = math.Round(out.Ratio*100) / 100
+	out := service.CreateReport(processed, auditor)
 
 	var store any
 	date := out.ReportDate.Format("2006-01-02")
@@ -930,10 +885,9 @@ func GetReportHandler(c echo.Context) error {
 		artist,
 		date,
 	)
-	defer storeReview(c, reportKey, &store, cache.Indefinite)
-
 	store = out
 
+	go storeReview(c, reportKey, &store, cache.Indefinite)
 	return c.Redirect(http.StatusTemporaryRedirect, fmt.Sprintf("/report/%s/%s", artist, date))
 }
 

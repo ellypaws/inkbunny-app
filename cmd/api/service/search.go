@@ -46,6 +46,12 @@ func RetrieveReviewSearch(c echo.Context, sid string, output string, query url.V
 		request.Page = 1
 	}
 
+	if output == OutputReport {
+		if request.Username == "" {
+			request.Username = c.Param("id")
+		}
+	}
+
 	if request.RID != "" {
 		searchReviewKey := fmt.Sprintf(
 			ReviewSearchFormat,

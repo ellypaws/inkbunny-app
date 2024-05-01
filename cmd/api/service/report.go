@@ -177,7 +177,7 @@ func CreateTicketReport(auditor *db.Auditor, details []Detail, host *url.URL, st
 		} else {
 			message.WriteString("  ")
 		}
-		message.WriteString(fmt.Sprintf("#%d", id))
+		message.WriteString(fmt.Sprintf("#M%d", id))
 	}
 
 	if len(info.Artists) > 0 {

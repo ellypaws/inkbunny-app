@@ -839,11 +839,20 @@ func GetReportHandler(c echo.Context) error {
 		processed = append(processed, details...)
 	}
 
+	type file struct {
+		FileID      string `json:"file_id,omitempty"`
+		FileName    string `json:"file_name,omitempty"`
+		Page        int    `json:"page,omitempty"`
+		FullFileMD5 string `json:"full_file_md5,omitempty"`
+		FileURLFull string `json:"file_url_full,omitempty"`
+	}
+
 	type subInfo struct {
 		Title   string           `json:"title,omitempty"`
 		URL     string           `json:"url,omitempty"`
 		Flags   []db.TicketLabel `json:"flags,omitempty"`
 		Artists []db.Artist      `json:"artists,omitempty"`
+		Files   []file           `json:"files,omitempty"`
 	}
 
 	type user struct {
@@ -851,6 +860,7 @@ func GetReportHandler(c echo.Context) error {
 		Role       string `json:"role"`
 		AuditCount int    `json:"audit_count,omitempty"`
 	}
+
 	type output struct {
 		Auditor     *user     `json:"auditor,omitempty"`
 		Violations  int       `json:"violations"`
@@ -882,12 +892,25 @@ func GetReportHandler(c echo.Context) error {
 		}
 
 		out.Violations++
-		out.Submissions = append(out.Submissions, subInfo{
+
+		info := subInfo{
 			Title:   sub.Submission.Title,
 			URL:     sub.Submission.URL,
 			Flags:   sub.Ticket.Labels,
 			Artists: sub.Submission.Metadata.ArtistUsed,
-		})
+		}
+
+		for _, f := range sub.Submission.Files {
+			info.Files = append(info.Files, file{
+				FileID:      f.File.FileID,
+				FileName:    f.File.FileName,
+				Page:        int(f.File.SubmissionFileOrder),
+				FullFileMD5: f.File.FullFileMD5,
+				FileURLFull: f.File.FileURLFull,
+			})
+		}
+
+		out.Submissions = append(out.Submissions, info)
 	}
 	out.Ratio = float64(out.Violations) / float64(len(processed))
 	out.Ratio = math.Round(out.Ratio*100) / 100

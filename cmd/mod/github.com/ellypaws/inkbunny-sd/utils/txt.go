@@ -355,7 +355,7 @@ func Common(opts ...func(*Config)) (Params, error) {
 	scanner := bufio.NewScanner(strings.NewReader(c.Text))
 
 	var key string
-	var foundNegative string
+	var negativePrompt string
 	var extra string
 	for scanner.Scan() {
 		if err := scanner.Err(); err != nil {
@@ -377,20 +377,20 @@ func Common(opts ...func(*Config)) (Params, error) {
 		if len(key) == 0 {
 			continue
 		}
-		if len(foundNegative) > 0 {
-			if !negativeHasText.MatchString(line) {
+		if len(negativePrompt) > 0 {
+			if !negativeHasText.MatchString(negativePrompt) {
 				chunks[key][Parameters] += line
 				continue
 			}
 			chunks[key][Parameters] += "\n" + line
 			if stepsStart.MatchString(line) {
-				foundNegative = ""
+				negativePrompt = ""
 				key = ""
 			}
 			continue
 		}
 		if negativeStart.MatchString(line) {
-			foundNegative = line
+			negativePrompt = line
 			chunks[key][Parameters] += "\n" + line
 			continue
 		}

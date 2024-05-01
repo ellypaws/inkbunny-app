@@ -354,8 +354,8 @@ func submissionMessage(sub *db.Submission) string {
 				sb.WriteString("\n[u]MD5 Checksums at the time of writing[/u]:")
 			}
 			sb.WriteString("\n")
-			sb.WriteString(fmt.Sprintf("Page %d: [url=%s]%s[/url] (%s)", i+1,
-				file.File.FileURLFull, file.File.FileName, file.File.FullFileMD5))
+			sb.WriteString(fmt.Sprintf("Page %d: [url=%s]%s[/url] ([url=https://inkbunny.net/submissionsviewall.php?text=%s&md5=yes&mode=search]%s[/url])", i+1,
+				file.File.FileURLFull, file.File.FileName, file.File.FullFileMD5, file.File.FullFileMD5))
 			added++
 		}
 	}

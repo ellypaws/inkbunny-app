@@ -57,9 +57,11 @@ There are three different projects that aim to help in auditing and moderating A
    It also provides both a local and Redis cache layer for performance.
    The cache layer tries to be reasonably aggressive to make it performant and scalable.
    ![Inkbunny ML](cmd/server/doc/screenshot.png)
+   ![Inkbunny ML](cmd/server/doc/ticket.png)
 2. [Inkbunny AI Bridge](cmd/extension): A [userscript](https://github.com/ellypaws/inkbunny-extension/tree/main/scripts) server that constructs a prepared ticket based
    on [heuristics](https://github.com/ellypaws/inkbunny-sd)
    for you to audit and modify to then submit to Inkbunny.
+   ![Inkbunny AI Bridge](cmd/extension/doc/screenshot.png)
    ![Inkbunny AI Bridge](cmd/extension/doc/ticket.png)
 3. [CLI](cmd/cli): A command line interface that allows you to interact with the Inkbunny ML [API](cmd/api).
    It provides a way to interact with the API without needing to use the web interface.

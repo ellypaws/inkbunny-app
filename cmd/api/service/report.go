@@ -211,7 +211,7 @@ func CreateTicketReport(auditor *db.Auditor, details []Detail, host *url.URL, st
 		host, report.Username, report.ReportDate.Format("2006-01-02")))
 
 	out := TicketReport{db.Ticket{
-		Subject: fmt.Sprintf("AI Submissions by %s - %d (%.2d%%) violations",
+		Subject: fmt.Sprintf("AI Submissions by %s - %d (%.2f%%) violations",
 			report.UsernameID.Username, report.Violations, report.Ratio*100),
 		DateOpened: time.Now().UTC(),
 		Status:     "triage",

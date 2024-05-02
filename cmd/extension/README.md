@@ -47,11 +47,9 @@ A general purpose [API](../api) library is available to integrate with your own 
 
 ## Installation Instructions
 
-### Prerequisites
-
-Make sure you have api turned on in your Inkbunny account settings. You will need your API key and SID to
+> *Make sure you have api turned on in your Inkbunny account settings. You will need your API key and SID to
 use the Inkbunny API. You can change this in
-your [account settings](https://inkbunny.net/account.php#:~:text=API%20(External%20Scripting))
+your [account settings](https://inkbunny.net/account.php#:~:text=API%20(External%20Scripting))*
 
 You will need to install a userscript manager extension in your web browser. You can use tampermonkey, greasemonkey or any similar userscript extension.
 
@@ -82,7 +80,11 @@ After installing the userscript, you need to configure it to match your server U
 
 Now, the Inkbunny AI Bridge should be ready to use.
 
-### Inkbunny AI Bridge
+## Inkbunny AI Bridge
+
+The Inkbunny AI Bridge extends the functionality of your browser through a userscript that creates a ticket ready for your review. Based on advanced heuristics, the script prepares everything you need to ensure the content meets Inkbunny's standards.
+
+It displays a badge on each submission to quickly notify you of any potential flagged submission worth verifying.
 
 ![Inkbunny AI Bridge](doc/screenshot.png)
 

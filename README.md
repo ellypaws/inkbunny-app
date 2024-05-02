@@ -49,29 +49,43 @@ A general purpose [API](cmd/api) library is available to integrate with your own
 
 There are three different projects that aim to help in auditing and moderating AI generated content.
 
-1. [Inkbunny ML](cmd/server): A general purpose [API](cmd/api) that features different tools to help in auditing and
-   moderating AI generated content.
+## [Inkbunny ML](cmd/server): A General-Purpose [API](cmd/api)
+Inkbunny ML offers a comprehensive suite of tools designed for auditing and moderating AI-generated content. It includes an extensive database that manages everything from tickets and auditors to artist lookups and the auditing process itself.
 
-   It contains a database for managing tickets, auditors, artist lookup and auditing system.
+To boost performance, this module integrates a dual-layer caching system, utilizing both local and Redis caches. This strategy is crafted to deliver aggressive performance improvements and scalable results.
 
-   It also provides both a local and Redis cache layer for performance.
-   The cache layer tries to be reasonably aggressive to make it performant and scalable.
-   ![Inkbunny ML](cmd/server/doc/screenshot.png)
-   ![Inkbunny ML](cmd/server/doc/ticket.png)
-2. [Inkbunny AI Bridge](cmd/extension): A [userscript](https://github.com/ellypaws/inkbunny-extension/tree/main/scripts) server that constructs a prepared ticket based
-   on [heuristics](https://github.com/ellypaws/inkbunny-sd)
-   for you to audit and modify to then submit to Inkbunny.
-   ![Inkbunny AI Bridge](cmd/extension/doc/screenshot.png)
-   ![Inkbunny AI Bridge](cmd/extension/doc/ticket.png)
-3. [CLI](cmd/cli): A command line interface that allows you to interact with the Inkbunny ML [API](cmd/api).
-   It provides a way to interact with the API without needing to use the web interface.
-   ![Inkbunny CLI](cmd/cli/doc/cli.gif)
+![Inkbunny ML](cmd/server/doc/screenshot.png)
+<details>
+<summary>It can also pre-write a ticket</summary>
+The system simplifies your workflow by automatically generating a prepared ticket based on smart heuristics. This allows you to focus on the essential tasks of auditing and modifying the ticket before submission to Inkbunny.
+
+![Inkbunny ML](cmd/server/doc/ticket.png)
+</details>
+
+## [Inkbunny AI Bridge](cmd/extension): A [Userscript](https://github.com/ellypaws/inkbunny-extension/tree/main/scripts) Server
+The Inkbunny AI Bridge extends the functionality of your browser through a userscript that creates a ticket ready for your review. Based on advanced heuristics, the script prepares everything you need to ensure the content meets Inkbunny's standards.
+
+It displays a badge on each submission to quickly notify you of any potential flagged submission worth verifying.
+
+![Inkbunny AI Bridge](cmd/extension/doc/screenshot.png)
+
+<details>
+<summary>It constructs a prepared ticket based on the heuristics for you to audit and modify to then submit to Inkbunny.</summary>
+
+![Inkbunny AI Bridge](cmd/extension/doc/ticket.png)
+</details>
+
+#### [CLI](cmd/cli): Command Line Interface
+For those who prefer the directness of a command line, the CLI offers a robust interface for engaging with the Inkbunny ML API. It's an effective alternative to the web interface, providing all the necessary commands at your fingertips.
+
+![Inkbunny CLI](cmd/cli/doc/cli.gif)
+
 
 ## Usage
 
-Prerequisites: Make sure you have api turned on in your Inkbunny account settings.
-You will need your API key and SID to use the Inkbunny API.
-You can change this in your [account settings](https://inkbunny.net/account.php#:~:text=API%20(External%20Scripting))
+> *Make sure you have api turned on in your Inkbunny account settings. You will need your API key and SID to
+use the Inkbunny API. You can change this in
+your [account settings](https://inkbunny.net/account.php#:~:text=API%20(External%20Scripting))*
 
 You can read the individual readme files for each project to get started.
 An example usage for [Inkbunny AI Bridge](cmd/extension) is provided below.

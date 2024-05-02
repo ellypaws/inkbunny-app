@@ -47,14 +47,18 @@ A general purpose [API](../api) library is available to integrate with your own 
 
 ## Usage
 
-Prerequisites: Make sure you have api turned on in your Inkbunny account settings. You will need your API key and SID to
+> *Make sure you have api turned on in your Inkbunny account settings. You will need your API key and SID to
 use the Inkbunny API. You can change this in
-your [account settings](https://inkbunny.net/account.php#:~:text=API%20(External%20Scripting))
+your [account settings](https://inkbunny.net/account.php#:~:text=API%20(External%20Scripting))*
+
+Inkbunny ML offers a comprehensive suite of tools designed for auditing and moderating AI-generated content. It includes an extensive database that manages everything from tickets and auditors to artist lookups and the auditing process itself.
+
+To boost performance, this module integrates a dual-layer caching system, utilizing both local and Redis caches. This strategy is crafted to deliver aggressive performance improvements and scalable results.
 
 A demo app is available either at [https://inkbunny.keiau.space](https://inkbunny.keiau.space/app/audits) or in [retool](https://inkbunny.retool.com).
 ![Inkbunny Ticket Auditor](doc/screenshot.png)
 
-It constructs a prepared ticket based on the heuristics for you to audit and modify to then submit to Inkbunny.
+The system simplifies your workflow by automatically generating a prepared ticket based on smart heuristics. This allows you to focus on the essential tasks of auditing and modifying the ticket before submission to Inkbunny.
 
 ![Ticket](doc/ticket.png)
 

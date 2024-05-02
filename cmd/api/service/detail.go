@@ -141,7 +141,7 @@ func processSubmission(c echo.Context, submission *api.Submission, config *Confi
 			Subject:    ticketSubject(&sub),
 			DateOpened: time.Now().UTC(),
 			Status:     "triage",
-			Labels:     nil,
+			Labels:     db.TicketLabels(sub),
 			Priority:   "low",
 			Closed:     false,
 			Responses: []db.Response{

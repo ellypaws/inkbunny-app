@@ -5,7 +5,6 @@ import (
 	"github.com/ellypaws/inkbunny-app/cmd/db"
 	"github.com/ellypaws/inkbunny-sd/entities"
 	"github.com/ellypaws/inkbunny/api"
-	"math"
 	"net/url"
 	"slices"
 	"strconv"
@@ -92,7 +91,6 @@ func CreateReport(processed []Detail, auditor *db.Auditor) Report {
 	}
 	if len(processed) > 0 {
 		out.Ratio = float64(out.Violations) / float64(len(processed))
-		out.Ratio = math.Round(out.Ratio*100) / 100
 	}
 
 	return out

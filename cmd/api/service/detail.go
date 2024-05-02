@@ -354,8 +354,6 @@ func writeArtistUsed(sub *db.Submission) string {
 
 	highlight := make(map[string]string)
 	for name, obj := range sub.Metadata.Objects {
-		meta := strings.ToLower(obj.Prompt + obj.NegativePrompt)
-
 		var replaced bool
 		for _, artist := range sub.Metadata.ArtistUsed {
 			re, err := regexp.Compile(fmt.Sprintf(`(?i)\b(%s)\b`, artist.Username))
@@ -363,9 +361,15 @@ func writeArtistUsed(sub *db.Submission) string {
 				continue
 			}
 
-			if !replaced && re.MatchString(meta) {
-				replaced = true
-				highlight[name] = meta
+			if !replaced {
+				if re.MatchString(obj.Prompt) {
+					replaced = true
+					highlight[name] = obj.Prompt
+				}
+				if re.MatchString(obj.NegativePrompt) {
+					replaced = true
+					highlight[name] = fmt.Sprintf("%s\n(Found in negative prompt)\n%s", highlight[name], obj.NegativePrompt)
+				}
 			}
 			if replaced {
 				highlight[name] = re.ReplaceAllStringFunc(highlight[name], func(s string) string {

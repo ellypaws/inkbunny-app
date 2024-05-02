@@ -310,7 +310,7 @@ func submissionMessage(sub *db.Submission) string {
 			}
 			sb.WriteString("\n")
 			sb.WriteString(fmt.Sprintf("Page %d: [url=%s]%s[/url] ([url=https://inkbunny.net/submissionsviewall.php?text=%s&md5=yes&mode=search]%s[/url])",
-				file.File.SubmissionFileOrder,
+				file.File.SubmissionFileOrder+1,
 				file.File.FileURLFull, file.File.FileName, file.File.FullFileMD5, file.File.FullFileMD5))
 			added++
 		}
@@ -392,7 +392,7 @@ func writeArtistUsed(sub *db.Submission) string {
 			return false
 		}) {
 			sb.WriteString(fmt.Sprintf("\nFile %d: [url=%s]%s[/url] ([url=https://inkbunny.net/submissionsviewall.php?text=%s&md5=yes&mode=search]%s[/url]) https://inkbunny.net/s/%s",
-				file.File.SubmissionFileOrder, file.File.FileURLFull, file.File.FileName, file.File.FullFileMD5, file.File.FullFileMD5, file.File.SubmissionID))
+				file.File.SubmissionFileOrder+1, file.File.FileURLFull, file.File.FileName, file.File.FullFileMD5, file.File.FullFileMD5, file.File.SubmissionID))
 		}
 		sb.WriteString(fmt.Sprintf("\n[q=%s]%s[/q]", title, prompt))
 	}

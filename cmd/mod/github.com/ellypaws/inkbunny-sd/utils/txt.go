@@ -40,6 +40,7 @@ const (
 	IDHornybunny  = 12499
 	IDNeoncortex  = 14603
 	IDMethuzalach = 1089071
+	IDRNSDAI      = 1188211
 )
 
 // AutoSnep is a Processor that parses yaml like raw txt where each two spaces is a new dict

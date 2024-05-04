@@ -310,7 +310,14 @@ func paramsToObject(c echo.Context, sub *db.Submission) {
 
 func processDescriptionHeuristics(c echo.Context, sub *db.Submission) {
 	c.Logger().Debugf("processing description heuristics for %v", sub.URL)
-	heuristics, err := utils.DescriptionHeuristics(sub.Description)
+	var heuristics entities.TextToImageRequest
+	var err error
+	switch sub.UserID {
+	case utils.IDRNSDAI:
+		heuristics, err = utils.RNSDAIHeuristics(sub.Description)
+	default:
+		heuristics, err = utils.DescriptionHeuristics(sub.Description)
+	}
 	if err != nil {
 		c.Logger().Errorf("error processing description heuristics for %v: %v", sub.URL, err)
 		return

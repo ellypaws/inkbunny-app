@@ -21,6 +21,15 @@ var (
 		"version":    regexp.MustCompile(`(?i)version:? (?P<version>v[\w.-]+)`),
 	}
 
+	// RNSDAIPatterns are preset regexp.Regexp patterns for IDRNSDAI
+	RNSDAIPatterns = map[string]*regexp.Regexp{
+		"model":    regexp.MustCompile(`(?i)model[\s•]*\[b](?P<model>[^[]+)\[/b]`),
+		"seed":     regexp.MustCompile(`(?i)seeds[\s•]*\[(?P<seed>\d+)]?`),
+		"version":  regexp.MustCompile(`(?i)image generator[\s•]*[^:]+: v[\d.]+`),
+		"prompt":   regexp.MustCompile(`(?is)positive prompt:\[/b]\n(?P<prompt>.*?)\n\[/q]`),
+		"negative": regexp.MustCompile(`(?is)negative prompt:\[/b]\n(?P<negative>.*?)\n\[/q]`),
+	}
+
 	allParams = regexp.MustCompile(`\s*(\w[\w \-/]+):\s*("(?:\\.|[^\\"])+"|[^,]*)(?:,|$)`)
 
 	positivePattern = regexp.MustCompile(`(?is)(?:(?:primary |pos(?:itive)? )?prompts?:?)\s*(.+?)\s*negative(?: prompt:?)?`)

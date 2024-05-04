@@ -61,6 +61,26 @@ func DescriptionHeuristics(description string) (entities.TextToImageRequest, err
 	return request, nil
 }
 
+func RNSDAIHeuristics(description string) (entities.TextToImageRequest, error) {
+	results := ExtractAll(description, RNSDAIPatterns)
+
+	var request entities.TextToImageRequest
+
+	fieldsToSet := map[string]any{
+		"model":    &request.OverrideSettings.SDModelCheckpoint,
+		"seed":     &request.Seed,
+		"prompt":   &request.Prompt,
+		"negative": &request.NegativePrompt,
+	}
+
+	err := ResultsToFields(results, fieldsToSet)
+	if err != nil {
+		return request, err
+	}
+
+	return request, nil
+}
+
 // IncompleteParameters is returned when the parameters potentially are not enough to create a request.
 var IncompleteParameters = errors.New("incomplete parameters")
 

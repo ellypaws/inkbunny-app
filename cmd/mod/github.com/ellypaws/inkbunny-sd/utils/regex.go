@@ -37,6 +37,7 @@ var (
 	negativePattern = regexp.MustCompile(`(?is)(?:(?:neg(?:ative)?)(?: prompts?)?:?)\s*(.+?)\s*(?:steps|sampler|model|seed|cfg)`)
 	negativeEnd     = regexp.MustCompile(`(?is)(?:(?:neg(?:ative)?)(?: prompts?)?:?)\s*(.+)`)
 	negativeStart   = regexp.MustCompile(`(?i)^negative(?: prompts?)?:\s*`)
+	parametersStart = regexp.MustCompile(`(?im)^(parameters\n.*)`)
 	bbCode          = regexp.MustCompile(`\[\/?[\w=]+\]`)
 
 	negativeHasText = regexp.MustCompile(`(?i)^negative prompt: ?\S`)

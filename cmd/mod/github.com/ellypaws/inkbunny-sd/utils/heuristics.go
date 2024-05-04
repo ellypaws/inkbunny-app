@@ -12,26 +12,22 @@ import (
 func DescriptionHeuristics(description string) (entities.TextToImageRequest, error) {
 	description = RemoveBBCode(description)
 
-	for _, line := range strings.Split(description, "\n") {
-		if strings.HasPrefix(strings.ToLower(line), "parameters") {
-			params, err := Common(
-				WithString(description),
-				WithKeyCondition(func(line string) bool { return strings.HasPrefix(line, "parameters") }))
-			if err != nil {
-				return entities.TextToImageRequest{}, err
-			}
+	if description := parametersStart.FindString(description); description != "" {
+		params, err := Common(
+			WithString(description),
+			WithKeyCondition(func(line string) bool { return strings.HasPrefix(line, "parameters") }))
+		if err != nil {
+			return entities.TextToImageRequest{}, err
+		}
 
-			for _, param := range params {
-				if p, ok := param[Parameters]; ok {
-					heuristics, err := ParameterHeuristics(p)
-					if err != nil {
-						return entities.TextToImageRequest{}, err
-					}
-					return heuristics, nil
+		for _, param := range params {
+			if p, ok := param[Parameters]; ok {
+				heuristics, err := ParameterHeuristics(p)
+				if err != nil {
+					return entities.TextToImageRequest{}, err
 				}
+				return heuristics, nil
 			}
-
-			break
 		}
 	}
 

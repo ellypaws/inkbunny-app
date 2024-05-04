@@ -157,6 +157,16 @@ var aiRegex = regexp.MustCompile(`(?i)\b(ai|ia|ai generated|ai assisted|img2img|
 
 var payment = regexp.MustCompile(`(?i)\b(ko-?fi|paypal|patreon|subscribestar|donate|bitcoin|ethereum|monero)\b`)
 
+var sortedTicketLabels = []db.TicketLabel{
+	db.LabelArtistUsed,
+	db.LabelPrivateTool,
+	db.LabelMissingTags,
+	db.LabelMissingParams,
+	db.LabelMissingPrompt,
+	db.LabelMissingModel,
+	db.LabelMissingSeed,
+}
+
 func TicketLabels(submission db.Submission) []db.TicketLabel {
 	labels := make(map[db.TicketLabel]bool)
 	metadata := submission.Metadata
@@ -236,9 +246,21 @@ func TicketLabels(submission db.Submission) []db.TicketLabel {
 			}
 		}
 	}
+
 	out := make([]db.TicketLabel, 0, len(labels))
-	for label := range labels {
+	for _, label := range sortedTicketLabels {
+		if labels[label] {
+			out = append(out, label)
+			labels[label] = false
+		}
+	}
+
+	for label, ok := range labels {
+		if !ok {
+			continue
+		}
 		out = append(out, label)
 	}
+
 	return out
 }

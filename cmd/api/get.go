@@ -962,7 +962,7 @@ func maxConfidence(old, new *entities.TaggerResponse) *entities.TaggerResponse {
 
 // GetHeuristicsHandler returns the heuristics of a submission
 func GetHeuristicsHandler(c echo.Context) error {
-	sid, _, err := GetSIDandID(c)
+	sid, err := GetSID(c)
 	if err != nil {
 		return c.JSON(http.StatusUnauthorized, crashy.Wrap(err))
 	}
@@ -1015,19 +1015,17 @@ func GetHeuristicsHandler(c echo.Context) error {
 			if c.QueryParam("stream") == "true" {
 				mutex.Lock()
 				defer mutex.Unlock()
-				if c.QueryParam("stream") == "true" {
-					c.Response().Header().Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+				c.Response().Header().Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
 
-					enc := json.NewEncoder(c.Response())
-					if err := enc.Encode(sub); err != nil {
-						c.Logger().Errorf("error encoding submission %v: %v", sub.ID, err)
-						c.Response().WriteHeader(http.StatusInternalServerError)
-						return
-					}
-					c.Logger().Debugf("flushing %v", sub.ID)
-
-					writer.Flush()
+				enc := json.NewEncoder(c.Response())
+				if err := enc.Encode(sub); err != nil {
+					c.Logger().Errorf("error encoding submission %v: %v", sub.ID, err)
+					c.Response().WriteHeader(http.StatusInternalServerError)
+					return
 				}
+				c.Logger().Debugf("flushing %v", sub.ID)
+
+				writer.Flush()
 			}
 		}(&waitGroup, &submission)
 

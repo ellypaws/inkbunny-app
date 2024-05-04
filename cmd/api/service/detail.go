@@ -393,6 +393,8 @@ func writeArtistUsed(sub *db.Submission) string {
 		}) {
 			sb.WriteString(fmt.Sprintf("\nFile %d: [url=%s]%s[/url] ([url=https://inkbunny.net/submissionsviewall.php?text=%s&md5=yes&mode=search]%s[/url]) https://inkbunny.net/s/%s",
 				file.File.SubmissionFileOrder+1, file.File.FileURLFull, file.File.FileName, file.File.FullFileMD5, file.File.FullFileMD5, file.File.SubmissionID))
+		} else {
+			sb.WriteString(fmt.Sprintf("\nFrom description: [url=%s]%s[/url] %s", sub.URL, title, sub.URL))
 		}
 		sb.WriteString(fmt.Sprintf("\n[q=%s]%s[/q]", title, prompt))
 	}

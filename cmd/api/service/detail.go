@@ -261,6 +261,8 @@ func ticketSubject(sub *db.Submission) string {
 				sb.WriteString("was generated using a private Lora model[/u]\n")
 			case db.LabelPrivateModel:
 				sb.WriteString("was generated using a private checkpoint model[/u]\n")
+			case db.LabelMissingTags:
+				sb.WriteString("is missing the AI tags[/u]\n")
 			default:
 				sb.WriteString("is not following AI ACP[/u]\n")
 			}

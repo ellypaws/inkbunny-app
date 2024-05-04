@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/ellypaws/inkbunny-app/cmd/api/service"
 	"github.com/ellypaws/inkbunny-app/cmd/db"
 	"github.com/ellypaws/inkbunny-sd/entities"
 	"github.com/ellypaws/inkbunny-sd/utils"
@@ -455,14 +456,14 @@ func newTicket() {
 	var submissionsIDs []int64
 	var ticketLabels []db.TicketLabel
 	for i := range submissionDetails.Submissions {
-		submission := db.InkbunnySubmissionToDBSubmission(submissionDetails.Submissions[i])
+		submission := service.InkbunnySubmissionToDBSubmission(submissionDetails.Submissions[i])
 		err := sqlite.InsertSubmission(submission)
 		if err != nil {
 			log.Fatalf("could not insert submission: %v", err)
 		}
 		id, _ := strconv.ParseInt(submissionDetails.Submissions[i].SubmissionID, 10, 64)
 		submissionsIDs = append(submissionsIDs, id)
-		ticketLabels = append(ticketLabels, db.TicketLabels(submission)...)
+		ticketLabels = append(ticketLabels, service.TicketLabels(submission)...)
 	}
 
 	if len(submissionsIDs) == 0 {

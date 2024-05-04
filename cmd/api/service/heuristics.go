@@ -176,7 +176,7 @@ func processObjectMetadata(submission *db.Submission, artists []db.Artist) {
 			}
 		}
 
-		if tool := db.PrivateTools.FindString(meta); tool != "" {
+		if tool := PrivateTools.FindString(meta); tool != "" {
 			submission.Metadata.PrivateTool = true
 			submission.Metadata.Generator = tool
 		}

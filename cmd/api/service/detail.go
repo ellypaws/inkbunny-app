@@ -77,7 +77,7 @@ func ProcessResponse(c echo.Context, config *Config) []Detail {
 func processSubmission(c echo.Context, submission *api.Submission, config *Config, detail *Detail) {
 	defer config.wg.Done()
 
-	sub := db.InkbunnySubmissionToDBSubmission(*submission)
+	sub := InkbunnySubmissionToDBSubmission(*submission)
 
 	if sub.Metadata.AISubmission {
 		c.Logger().Infof("processing files for %s %s", sub.URL, sub.Title)
@@ -118,7 +118,7 @@ func processSubmission(c echo.Context, submission *api.Submission, config *Confi
 		fallthrough
 	case OutputBadges:
 		detail.Ticket = &db.Ticket{
-			Labels: db.TicketLabels(sub),
+			Labels: TicketLabels(sub),
 		}
 	case OutputFull:
 		detail.Inkbunny = submission
@@ -141,7 +141,7 @@ func processSubmission(c echo.Context, submission *api.Submission, config *Confi
 			Subject:    ticketSubject(&sub),
 			DateOpened: time.Now().UTC(),
 			Status:     "triage",
-			Labels:     db.TicketLabels(sub),
+			Labels:     TicketLabels(sub),
 			Priority:   "low",
 			Closed:     false,
 			Responses: []db.Response{
@@ -235,7 +235,7 @@ func ticketSubject(sub *db.Submission) string {
 	var sb strings.Builder
 	sb.WriteString(fmt.Sprintf("[u]AI Submission %d by @%s ", sub.ID, sub.Username))
 
-	flags := db.TicketLabels(*sub)
+	flags := TicketLabels(*sub)
 	if len(flags) == 0 {
 		sb.WriteString("needs to be reviewed[/u]\n")
 	}

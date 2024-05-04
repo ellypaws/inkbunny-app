@@ -68,7 +68,7 @@ func AutoSnep(opts ...func(*Config)) (Params, error) {
 		switch indentLevel {
 		case 0:
 			if strings.HasSuffix(line, ":") {
-				png = "AutoSnep_" + strings.TrimSuffix(line, ":")
+				png = c.Filename + strings.TrimSuffix(line, ":")
 				chunks[png] = make(PNGChunk)
 			}
 		case 2: // PNG text chunks:

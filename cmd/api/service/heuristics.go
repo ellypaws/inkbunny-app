@@ -240,29 +240,28 @@ func parameterHeuristics(c echo.Context, sub *db.Submission, textFile *db.File, 
 	c.Logger().Debugf("processing params for %s", f.FileName)
 	switch sub.UserID {
 	case utils.IDAutoSnep:
-		params, err = utils.AutoSnep(utils.WithBytes(b.Blob))
+		params, err = utils.AutoSnep(utils.WithBytes(b.Blob), utils.WithFilename(f.FileName))
 	case utils.IDDruge:
-		params, err = utils.Common(utils.WithBytes(b.Blob), utils.UseDruge())
+		params, err = utils.Common(utils.WithBytes(b.Blob), utils.UseDruge(), utils.WithFilename(f.FileName))
 	case utils.IDAIBean:
-		params, err = utils.Common(utils.WithBytes(b.Blob), utils.UseAIBean())
+		params, err = utils.Common(utils.WithBytes(b.Blob), utils.UseAIBean(), utils.WithFilename(f.FileName))
 	case utils.IDArtieDragon:
-		params, err = utils.Common(utils.WithBytes(b.Blob), utils.UseArtie())
+		params, err = utils.Common(utils.WithBytes(b.Blob), utils.UseArtie(), utils.WithFilename(f.FileName))
 	case 1125540:
 		params, err = utils.Common(
 			utils.WithBytes(b.Blob),
-			utils.WithFilename("picker52578_"),
+			utils.WithFilename(f.FileName),
 			utils.WithKeyCondition(func(line string) bool { return strings.HasPrefix(line, "File Name") }))
 	case utils.IDFairyGarden:
-		params, err = utils.Common(utils.WithBytes(b.Blob), utils.UseFairyGarden())
+		params, err = utils.Common(utils.WithBytes(b.Blob), utils.UseFairyGarden(), utils.WithFilename(f.FileName))
 	case utils.IDCirn0:
-		params, err = utils.Cirn0(utils.WithBytes(b.Blob))
+		params, err = utils.Cirn0(utils.WithBytes(b.Blob), utils.WithFilename(f.FileName))
 	case utils.IDHornybunny:
-		params, err = utils.Common(utils.WithBytes(b.Blob), utils.UseHornybunny())
+		params, err = utils.Common(utils.WithBytes(b.Blob), utils.UseHornybunny(), utils.WithFilename(f.FileName))
 	case utils.IDMethuzalach:
-		params, err = utils.Common(utils.WithBytes(b.Blob), utils.UseMethuzalach())
+		params, err = utils.Common(utils.WithBytes(b.Blob), utils.UseMethuzalach(), utils.WithFilename(f.FileName))
 	default:
 		params, err = utils.Common(
-			// prepend "photo 1" to the input in case it's missing
 			utils.WithBytes(bytes.Join([][]byte{[]byte(f.FileName), b.Blob}, []byte("\n"))),
 			utils.WithKeyCondition(func(line string) bool { return strings.HasPrefix(line, f.FileName) }))
 	}

@@ -385,7 +385,7 @@ func writeArtistUsed(sub *db.Submission) string {
 	for title, prompt := range highlight {
 		var file *db.File
 		if slices.ContainsFunc(sub.Files, func(f db.File) bool {
-			if f.File.FileName == title {
+			if strings.HasPrefix(title, f.File.FileName) {
 				file = &f
 				return true
 			}

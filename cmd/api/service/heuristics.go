@@ -12,6 +12,7 @@ import (
 	units "github.com/labstack/gommon/bytes"
 	"reflect"
 	"regexp"
+	"slices"
 	"strings"
 	"sync"
 )
@@ -144,6 +145,7 @@ func processParams(c echo.Context, sub *db.Submission, cacheToUse cache.Cache, a
 }
 
 var privateTools = regexp.MustCompile(`\b(midjourney|novelai|bing|dall[- ]?e|nijijourney|craiyon)\b`)
+var additionalArtists = regexp.MustCompile(`(?i)by ([^:,\])}>]+)`)
 
 // deferred call to set metadata flags after processing objects
 func processObjectMetadata(submission *db.Submission, artists []db.Artist) {
@@ -160,6 +162,18 @@ func processObjectMetadata(submission *db.Submission, artists []db.Artist) {
 			}
 			if re.MatchString(meta) {
 				submission.Metadata.ArtistUsed = append(submission.Metadata.ArtistUsed, artist)
+			}
+		}
+
+		additionalArtists := additionalArtists.FindAllStringSubmatch(meta, -1)
+		for _, match := range additionalArtists {
+			for _, artist := range strings.Split(match[1], "|") {
+				artist = strings.TrimPrefix(artist, "by ")
+				if !slices.ContainsFunc(submission.Metadata.ArtistUsed, func(stored db.Artist) bool {
+					return strings.EqualFold(stored.Username, artist)
+				}) {
+					submission.Metadata.ArtistUsed = append(submission.Metadata.ArtistUsed, db.Artist{Username: artist})
+				}
 			}
 		}
 

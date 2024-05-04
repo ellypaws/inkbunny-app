@@ -342,6 +342,8 @@ const (
 	AIArt             = "672082"
 )
 
+var PrivateTools = regexp.MustCompile(`\b(midjourney|novelai|bing|dall[- ]?e|nijijourney|craiyon)\b`)
+
 // SetSubmissionMeta modifies a submission's Metadata based on its Keywords and other fields.
 func SetSubmissionMeta(submission *Submission) {
 	if submission == nil {
@@ -385,6 +387,13 @@ func SetSubmissionMeta(submission *Submission) {
 			submission.Metadata.ComfyUI = true
 		}
 	}
+
+	if tool := PrivateTools.FindString(submission.Description); tool != "" {
+		submission.Metadata.AISubmission = true
+		submission.Metadata.PrivateTool = true
+		submission.Metadata.Generator = tool
+	}
+
 	var images int
 	for _, file := range submission.Files {
 		if strings.HasPrefix(file.File.MimeType, "image") {
@@ -474,6 +483,10 @@ func TicketLabels(submission Submission) []TicketLabel {
 
 		if submission.Updated.Before(Nov21) {
 			labels[LabelBeforeRuleRevision] = true
+		}
+
+		if metadata.PrivateTool {
+			labels[LabelPrivateTool] = true
 		}
 
 		const (

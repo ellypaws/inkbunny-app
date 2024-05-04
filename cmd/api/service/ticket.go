@@ -3,6 +3,7 @@ package service
 import (
 	"fmt"
 	"github.com/ellypaws/inkbunny-app/cmd/db"
+	"github.com/ellypaws/inkbunny-sd/utils"
 	"github.com/ellypaws/inkbunny/api"
 	"log"
 	"regexp"
@@ -148,6 +149,16 @@ func SetSubmissionMeta(submission *db.Submission) {
 		submission.Metadata.AIDescription = true
 		submission.Metadata.AISubmission = true
 	}
+
+	switch {
+	case submission.Metadata.AISubmission:
+		break
+	case utils.StepsStart.MatchString(submission.Description):
+		submission.Metadata.AISubmission = true
+	case utils.ParametersStart.MatchString(submission.Description):
+		submission.Metadata.AISubmission = true
+	}
+
 	if submission.Metadata.AISubmission && len(submission.Metadata.AIKeywords) == 0 {
 		submission.Metadata.MissingTags = true
 	}

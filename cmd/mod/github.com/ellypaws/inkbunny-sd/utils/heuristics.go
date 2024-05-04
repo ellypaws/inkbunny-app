@@ -12,7 +12,7 @@ import (
 func DescriptionHeuristics(description string) (entities.TextToImageRequest, error) {
 	description = RemoveBBCode(description)
 
-	if description := parametersStart.FindString(description); description != "" {
+	if description := ParametersStart.FindString(description); description != "" {
 		params, err := Common(
 			WithString(description),
 			WithKeyCondition(func(line string) bool { return strings.HasPrefix(line, "parameters") }))

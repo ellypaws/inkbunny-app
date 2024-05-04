@@ -180,7 +180,6 @@ func processObjectMetadata(submission *db.Submission, artists []db.Artist) {
 		if tool := privateTools.FindString(meta); tool != "" {
 			submission.Metadata.PrivateTool = true
 			submission.Metadata.Generator = tool
-			break
 		}
 
 		if obj.Prompt != "" {

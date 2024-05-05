@@ -47,7 +47,6 @@ type Report struct {
 
 func CreateReport(processed []Detail, auditor *db.Auditor) Report {
 	out := Report{
-		Audited:    len(processed),
 		ReportDate: time.Now().UTC(),
 	}
 
@@ -65,6 +64,9 @@ func CreateReport(processed []Detail, auditor *db.Auditor) Report {
 		if !sub.Submission.Metadata.AISubmission {
 			continue
 		}
+
+		out.Audited++
+
 		if len(sub.Ticket.Labels) == 0 {
 			continue
 		}

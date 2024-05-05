@@ -573,7 +573,9 @@ func GetReviewHandler(c echo.Context) error {
 			}
 
 			if output == service.OutputReport {
-				store = service.CreateTicketReport(auditor, processed, ServerHost, storeReport(c, Database))
+				report := service.CreateTicketReport(auditor, processed, ServerHost)
+				storeReport(c, Database, report)
+				store = report
 			}
 
 			if c.Param("id") == "search" {
@@ -650,7 +652,9 @@ func GetReviewHandler(c echo.Context) error {
 		}
 		store = tickets
 	case service.OutputReport:
-		store = service.CreateTicketReport(auditor, details, ServerHost, storeReport(c, Database))
+		report := service.CreateTicketReport(auditor, processed, ServerHost)
+		storeReport(c, Database, report)
+		store = report
 	case service.OutputSingleTicket:
 		fallthrough
 	default:
@@ -759,30 +763,29 @@ func storeReview(c echo.Context, key string, store *any, duration time.Duration,
 	c.Logger().Infof("Cached %s %s %dKiB", key, echo.MIMEApplicationJSON, len(bin)/units.KiB)
 }
 
-func storeReport(c echo.Context, database *db.Sqlite) func(ticket service.TicketReport) {
-	return func(ticket service.TicketReport) {
-		reportKey := fmt.Sprintf(
-			"%s:report:%s:%s",
-			echo.MIMEApplicationJSON,
-			c.Param("id"),
-			ticket.Report.ReportDate.Format("2006-01-02"),
-		)
-		report := any(ticket.Report)
-		bin, err := json.Marshal(report)
-		if err != nil {
-			c.Logger().Errorf("error marshaling report: %v", err)
-			return
-		}
-		storeReview(c, reportKey, &report, cache.Indefinite, bin...)
+func storeReport(c echo.Context, database *db.Sqlite, ticket service.TicketReport) {
+	reportKey := fmt.Sprintf(
+		"%s:report:%s:%s",
+		echo.MIMEApplicationJSON,
+		c.Param("id"),
+		ticket.Report.ReportDate.Format(db.TicketDateLayout),
+	)
+	report := any(ticket.Report)
+	bin, err := json.Marshal(report)
+	if err != nil {
+		c.Logger().Errorf("error marshaling report: %v", err)
+		return
+	}
+	storeReview(c, reportKey, &report, cache.Indefinite, bin...)
 
-		err = database.UpsertTicketReport(db.TicketReport{
-			Username:   ticket.Report.UsernameID.Username,
-			ReportDate: ticket.Report.ReportDate,
-			Report:     bin,
-		})
-		if err != nil {
-			c.Logger().Error("error upserting ticket report:", err)
-		}
+	err = database.UpsertTicketReport(db.TicketReport{
+		Username:   ticket.Report.UsernameID.Username,
+		ReportDate: ticket.Report.ReportDate,
+		Report:     bin,
+	})
+
+	if err != nil {
+		c.Logger().Error("error upserting ticket report:", err)
 	}
 }
 

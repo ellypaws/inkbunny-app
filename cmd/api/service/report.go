@@ -105,7 +105,7 @@ type TicketReport struct {
 	Report Report    `json:"report"`
 }
 
-func CreateTicketReport(auditor *db.Auditor, details []Detail, host *url.URL, store func(TicketReport)) TicketReport {
+func CreateTicketReport(auditor *db.Auditor, details []Detail, host *url.URL) TicketReport {
 	report := CreateReport(details, auditor)
 	auditorAsUser := AuditorAsUsernameID(auditor)
 
@@ -236,6 +236,5 @@ func CreateTicketReport(auditor *db.Auditor, details []Detail, host *url.URL, st
 		},
 	}, report}
 
-	store(out)
 	return out
 }

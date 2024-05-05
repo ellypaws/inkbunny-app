@@ -83,7 +83,7 @@ func CreateReport(processed []Detail, auditor *db.Auditor) Report {
 				FileID:       f.File.FileID,
 				FileName:     f.File.FileName,
 				SubmissionID: f.File.SubmissionID,
-				Page:         int(f.File.SubmissionFileOrder),
+				Page:         int(f.File.SubmissionFileOrder) + 1,
 				FullFileMD5:  f.File.FullFileMD5,
 				FileURLFull:  f.File.FileURLFull,
 			})

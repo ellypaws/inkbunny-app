@@ -922,7 +922,7 @@ func GetReportHandler(c echo.Context) error {
 	)
 	store = out
 
-	go storeReview(c, reportKey, &store, cache.Indefinite)
+	storeReview(c, reportKey, &store, cache.Indefinite)
 	return c.Redirect(http.StatusSeeOther, fmt.Sprintf("/report/%s/%s", artist, date))
 }
 

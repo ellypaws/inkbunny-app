@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"github.com/ellypaws/inkbunny-app/cmd/api/entities"
 	"github.com/ellypaws/inkbunny-app/cmd/db"
 	sd "github.com/ellypaws/inkbunny-sd/entities"
 	"github.com/ellypaws/inkbunny-sd/llm"
@@ -51,7 +52,7 @@ func TestLogin(t *testing.T) {
 
 func TestInference(t *testing.T) {
 	// Setup
-	request := InferenceRequest{
+	request := entities.InferenceRequest{
 		Config: llm.Localhost(),
 		Request: llm.Request{
 			Messages: []llm.Message{
@@ -85,7 +86,7 @@ func TestInference(t *testing.T) {
 
 func TestPrefill(t *testing.T) {
 	// Setup
-	prefillRequest := PrefillRequest{
+	prefillRequest := entities.PrefillRequest{
 		Description: `
 Generated with Stable Diffusion, seeded with a photo and Photoshopped a bit.
 
@@ -184,7 +185,7 @@ func TestInferenceComplete(t *testing.T) {
 	}
 
 	// Setup
-	inferenceRequest := InferenceRequest{
+	inferenceRequest := entities.InferenceRequest{
 		Config: llm.Localhost(),
 		Request: llm.Request{
 			Messages: []llm.Message{

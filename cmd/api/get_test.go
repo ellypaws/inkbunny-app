@@ -3,35 +3,19 @@ package api
 import (
 	"bytes"
 	"encoding/json"
+	"github.com/ellypaws/inkbunny-app/cmd/api/entities"
 	"github.com/ellypaws/inkbunny-app/cmd/app"
 	"github.com/ellypaws/inkbunny/api"
 	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
 	"net/http"
 	"net/http/httptest"
-	"strings"
 	"testing"
 )
 
-func TestHelloWorld(t *testing.T) {
-	// Setup
-	var userJSON string
-	e := echo.New()
-	req := httptest.NewRequest(http.MethodGet, "/", strings.NewReader(userJSON))
-	req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
-	rec := httptest.NewRecorder()
-	c := e.NewContext(req, rec)
-
-	// Assertions
-	if assert.NoError(t, Hello(c)) {
-		assert.Equal(t, http.StatusOK, rec.Code)
-		assert.Equal(t, "Hello, World!", rec.Body.String())
-	}
-}
-
 func TestGetInkbunnyDescription(t *testing.T) {
 	// Setup
-	request := DescriptionRequest{
+	request := entities.DescriptionRequest{
 		SID:           "session_id",
 		SubmissionIDs: "14576",
 	}
@@ -55,7 +39,7 @@ func TestGetInkbunnyDescription(t *testing.T) {
 	// Assertions
 	if assert.NoError(t, GetInkbunnyDescription(c)) {
 		assert.Equal(t, http.StatusOK, rec.Code)
-		var descriptionResponse []DescriptionResponse
+		var descriptionResponse []entities.DescriptionResponse
 		err := json.Unmarshal(rec.Body.Bytes(), &descriptionResponse)
 		assert.NoError(t, err)
 		assert.NotEmpty(t, descriptionResponse)

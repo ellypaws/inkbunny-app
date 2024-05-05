@@ -638,7 +638,7 @@ func GetReviewHandler(c echo.Context) error {
 		}
 		store = tickets
 	case service.OutputReport:
-		report := service.CreateTicketReport(auditor, processed, ServerHost)
+		report := service.CreateTicketReport(auditor, details, ServerHost)
 		storeReport(c, Database, report)
 		store = report
 	case service.OutputSingleTicket:

@@ -943,7 +943,7 @@ func GetReportKeyHandler(c echo.Context) error {
 
 			storeReview(c, reportKey, nil, cache.Indefinite, t.Report...)
 			return c.Redirect(
-				http.StatusTemporaryRedirect,
+				http.StatusFound,
 				fmt.Sprintf("/report/%s/%s", artist, t.ReportDate.Format(db.TicketDateLayout)),
 			)
 		}

@@ -69,17 +69,21 @@ func RetrieveReviewSearch(c echo.Context, sid string, output string, query url.V
 	}
 
 	if bind.Types != nil {
-		*bind.Types = strings.Trim(*bind.Types, "[]")
-		*bind.Types = strings.ReplaceAll(*bind.Types, `"`, "")
-		for _, t := range strings.Split(*bind.Types, ",") {
-			i, err := strconv.Atoi(t)
-			if err != nil {
-				return nil, cache.ErrFunc(http.StatusBadRequest, crashy.ErrorResponse{
-					ErrorString: fmt.Sprintf("invalid type: %s", t),
-					Debug:       err,
-				})
+		if *bind.Types == "" {
+			request.Type = nil
+		} else {
+			*bind.Types = strings.Trim(*bind.Types, "[]")
+			*bind.Types = strings.ReplaceAll(*bind.Types, `"`, "")
+			for _, t := range strings.Split(*bind.Types, ",") {
+				i, err := strconv.Atoi(t)
+				if err != nil {
+					return nil, cache.ErrFunc(http.StatusBadRequest, crashy.ErrorResponse{
+						ErrorString: fmt.Sprintf("invalid type: %s", t),
+						Debug:       err,
+					})
+				}
+				request.Type = append(request.Type, api.SubmissionType(i))
 			}
-			request.Type = append(request.Type, api.SubmissionType(i))
 		}
 	}
 

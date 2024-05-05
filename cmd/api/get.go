@@ -573,7 +573,7 @@ func GetReviewHandler(c echo.Context) error {
 			}
 
 			if output == service.OutputReport {
-				store = service.CreateTicketReport(auditor, processed, ServerHost, storeReport(c))
+				store = service.CreateTicketReport(auditor, processed, ServerHost, storeReport(c, Database))
 			}
 
 			if c.Param("id") == "search" {
@@ -650,7 +650,7 @@ func GetReviewHandler(c echo.Context) error {
 		}
 		store = tickets
 	case service.OutputReport:
-		store = service.CreateTicketReport(auditor, details, ServerHost, storeReport(c))
+		store = service.CreateTicketReport(auditor, details, ServerHost, storeReport(c, Database))
 	case service.OutputSingleTicket:
 		fallthrough
 	default:
@@ -728,23 +728,26 @@ func createSingleTicket(auditor *db.Auditor, details []service.Detail) db.Ticket
 	}
 }
 
-func storeReview(c echo.Context, key string, store *any, duration time.Duration) {
-	if store == nil {
-		c.Logger().Warnf("trying to cache nil review for %s", key)
-		return
+func storeReview(c echo.Context, key string, store *any, duration time.Duration, bin ...byte) {
+	if bin == nil {
+		if store == nil {
+			c.Logger().Warnf("trying to cache nil review for %s", key)
+			return
+		}
+
+		if *store == nil {
+			return
+		}
+
+		var err error
+		bin, err = json.Marshal(store)
+		if err != nil {
+			c.Logger().Errorf("error marshaling review: %v", err)
+			return
+		}
 	}
 
-	if *store == nil {
-		return
-	}
-
-	bin, err := json.Marshal(store)
-	if err != nil {
-		c.Logger().Errorf("error marshaling review: %v", err)
-		return
-	}
-
-	err = cache.SwitchCache(c).Set(key, &cache.Item{
+	err := cache.SwitchCache(c).Set(key, &cache.Item{
 		Blob:     bin,
 		MimeType: echo.MIMEApplicationJSON,
 	}, duration)
@@ -752,10 +755,11 @@ func storeReview(c echo.Context, key string, store *any, duration time.Duration)
 		c.Logger().Errorf("error caching review: %v", err)
 		return
 	}
+
 	c.Logger().Infof("Cached %s %s %dKiB", key, echo.MIMEApplicationJSON, len(bin)/units.KiB)
 }
 
-func storeReport(c echo.Context) func(ticket service.TicketReport) {
+func storeReport(c echo.Context, database *db.Sqlite) func(ticket service.TicketReport) {
 	return func(ticket service.TicketReport) {
 		reportKey := fmt.Sprintf(
 			"%s:report:%s:%s",
@@ -764,7 +768,21 @@ func storeReport(c echo.Context) func(ticket service.TicketReport) {
 			ticket.Report.ReportDate.Format("2006-01-02"),
 		)
 		report := any(ticket.Report)
-		go storeReview(c, reportKey, &report, cache.Indefinite)
+		bin, err := json.Marshal(report)
+		if err != nil {
+			c.Logger().Errorf("error marshaling report: %v", err)
+			return
+		}
+		go storeReview(c, reportKey, &report, cache.Indefinite, bin...)
+
+		err = database.UpsertTicketReport(db.TicketReport{
+			Username:   ticket.Report.UsernameID.Username,
+			ReportDate: ticket.Report.ReportDate,
+			Report:     bin,
+		})
+		if err != nil {
+			c.Logger().Error("error upserting ticket report:", err)
+		}
 	}
 }
 
@@ -926,6 +944,12 @@ func GetReportKeyHandler(c echo.Context) error {
 	}
 	if !errors.Is(errFunc, redis.Nil) {
 		return c.JSON(http.StatusNotFound, crashy.ErrorResponse{ErrorString: "an error occurred while retrieving the report", Debug: errFunc})
+	}
+
+	t, err := Database.GetTicketReportByKey(fmt.Sprintf("%s:%s", key, artist))
+	if err == nil {
+		go storeReview(c, reportKey, nil, cache.Indefinite, t.Report...)
+		return c.Blob(http.StatusOK, echo.MIMEApplicationJSON, t.Report)
 	}
 
 	return c.JSON(http.StatusNotFound, crashy.ErrorResponse{ErrorString: "no report found"})

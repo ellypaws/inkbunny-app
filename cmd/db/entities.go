@@ -418,3 +418,11 @@ type Artist struct {
 	Username string `json:"username" query:"username"`
 	UserID   *int64 `json:"user_id,omitempty" query:"user_id"`
 }
+
+const TicketDateLayout = "2006-01-02"
+
+type TicketReport struct {
+	Username   string
+	ReportDate time.Time
+	Report     []byte
+}

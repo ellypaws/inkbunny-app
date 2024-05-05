@@ -128,6 +128,13 @@ const (
 	// selectALlTickets statement for Ticket
 	selectAllTickets = `SELECT * FROM tickets;`
 
+	// selectTicketReport statement for TicketReport
+	selectTicketReport = `SELECT report FROM reports WHERE key = ?;`
+	// selectTicketsByArtist statement for TicketReport
+	selectTicketsByArtist = `SELECT username, report_date, report FROM reports WHERE username = ?;`
+	// selectLatestTicketReport statement for TicketReport
+	selectLatestTicketReport = `SELECT report FROM reports WHERE username = ? ORDER BY report_date DESC LIMIT 1;`
+
 	// selectAudits statement for Audit
 	selectAudits = `SELECT audit_id, submission_id FROM audits`
 
@@ -465,6 +472,64 @@ func (db Sqlite) ticketsByQuery(query string, args ...any) ([]Ticket, error) {
 	}
 
 	return tickets, nil
+}
+
+func (db Sqlite) GetTicketReportByKey(key string) (TicketReport, error) {
+	var report TicketReport
+	err := db.QueryRowContext(db.context, selectTicketReport, key).Scan(&report.Report)
+	if err != nil {
+		return report, err
+	}
+
+	return report, nil
+}
+
+func (db Sqlite) GetTicketReport(artist string, date time.Time) (TicketReport, error) {
+	var report TicketReport
+	err := db.QueryRowContext(
+		db.context,
+		selectTicketReport,
+		fmt.Sprintf(
+			"%s:%s",
+			date.UTC().Round(24*time.Hour).Format("2006-01-02"),
+			artist,
+		),
+	).Scan(&report.Report)
+	if err != nil {
+		return report, err
+	}
+
+	return report, nil
+}
+
+func (db Sqlite) GetTicketReports(artist string) ([]TicketReport, error) {
+	var reports []TicketReport
+	rows, err := db.QueryContext(db.context, selectTicketsByArtist, artist)
+	if err != nil {
+		return nil, fmt.Errorf("error: querying ticket reports: %w", err)
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var report TicketReport
+		err := rows.Scan(&report.Username, &report.ReportDate, &report.Report)
+		if err != nil {
+			return nil, fmt.Errorf("error: scanning ticket reports: %w", err)
+		}
+		reports = append(reports, report)
+	}
+
+	return reports, nil
+}
+
+func (db Sqlite) GetLatestTicketReport(artist string) (TicketReport, error) {
+	var report TicketReport
+	err := db.QueryRowContext(db.context, selectLatestTicketReport, artist).Scan(&report.Report)
+	if err != nil {
+		return report, err
+	}
+
+	return report, nil
 }
 
 // Scan scans the map of addresses to values and sets the values to the addresses.

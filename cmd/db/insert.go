@@ -121,6 +121,17 @@ const (
 	VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
 	`
 
+	//upsertTicketReport statement for TicketReport
+	upsertTicketReport = `
+	INSERT INTO reports (key, username, report_date, report)
+	VALUES (?, ?, ?, ?)
+	ON CONFLICT(key)
+		DO UPDATE SET
+					  username=excluded.username,
+					  report_date=excluded.report_date,
+					  report=excluded.report;
+	`
+
 	// deleteTicket statement for Ticket
 	deleteTicket = `DELETE FROM tickets WHERE ticket_id = ?;`
 
@@ -389,6 +400,18 @@ func (db Sqlite) UpsertTicket(ticket Ticket) (int64, error) {
 	}
 
 	return ticket.ID, nil
+}
+
+func (db Sqlite) UpsertTicketReport(ticket TicketReport) error {
+	_, err := db.ExecContext(db.context, upsertTicketReport,
+		fmt.Sprintf("%s:%s", ticket.ReportDate.UTC().Format(TicketDateLayout), ticket.Username),
+		ticket.Username, ticket.ReportDate.Unix(),
+		ticket.Report,
+	)
+	if err != nil {
+		return fmt.Errorf("error: upserting ticket report: %w", err)
+	}
+	return nil
 }
 
 func (db Sqlite) DeleteTicket(id int64) error {

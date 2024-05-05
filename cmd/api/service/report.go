@@ -13,11 +13,12 @@ import (
 )
 
 type File struct {
-	FileID      string `json:"file_id,omitempty"`
-	FileName    string `json:"file_name,omitempty"`
-	Page        int    `json:"page,omitempty"`
-	FullFileMD5 string `json:"full_file_md5,omitempty"`
-	FileURLFull string `json:"file_url_full,omitempty"`
+	FileID       string `json:"file_id,omitempty"`
+	FileName     string `json:"file_name,omitempty"`
+	SubmissionID string `json:"submission_id,omitempty"`
+	Page         int    `json:"page,omitempty"`
+	FullFileMD5  string `json:"full_file_md5,omitempty"`
+	FileURLFull  string `json:"file_url_full,omitempty"`
 }
 
 type SubInfo struct {
@@ -79,11 +80,12 @@ func CreateReport(processed []Detail, auditor *db.Auditor) Report {
 
 		for _, f := range sub.Submission.Files {
 			info.Files = append(info.Files, File{
-				FileID:      f.File.FileID,
-				FileName:    f.File.FileName,
-				Page:        int(f.File.SubmissionFileOrder),
-				FullFileMD5: f.File.FullFileMD5,
-				FileURLFull: f.File.FileURLFull,
+				FileID:       f.File.FileID,
+				FileName:     f.File.FileName,
+				SubmissionID: f.File.SubmissionID,
+				Page:         int(f.File.SubmissionFileOrder),
+				FullFileMD5:  f.File.FullFileMD5,
+				FileURLFull:  f.File.FileURLFull,
 			})
 		}
 

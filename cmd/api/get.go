@@ -931,6 +931,24 @@ func GetReportKeyHandler(c echo.Context) error {
 	key := c.Param("key")
 	cacheToUse := cache.SwitchCache(c)
 
+	if key == "latest" {
+		t, err := Database.GetLatestTicketReport(artist)
+		if err == nil {
+			reportKey := fmt.Sprintf(
+				"%s:report:%s:%s",
+				echo.MIMEApplicationJSON,
+				t.Username,
+				t.ReportDate.Format(db.TicketDateLayout),
+			)
+
+			storeReview(c, reportKey, nil, cache.Indefinite, t.Report...)
+			return c.Redirect(
+				http.StatusTemporaryRedirect,
+				fmt.Sprintf("/report/%s/%s", artist, t.ReportDate.Format(db.TicketDateLayout)),
+			)
+		}
+	}
+
 	reportKey := fmt.Sprintf(
 		"%s:report:%s:%s",
 		echo.MIMEApplicationJSON,

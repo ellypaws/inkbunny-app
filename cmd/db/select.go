@@ -133,7 +133,7 @@ const (
 	// selectTicketsByArtist statement for TicketReport
 	selectTicketsByArtist = `SELECT username, report_date, report FROM reports WHERE username = ?;`
 	// selectLatestTicketReport statement for TicketReport
-	selectLatestTicketReport = `SELECT report FROM reports WHERE username = ? ORDER BY report_date DESC LIMIT 1;`
+	selectLatestTicketReport = `SELECT username, report_date, report FROM reports WHERE username = ? ORDER BY report_date DESC LIMIT 1;`
 
 	// selectAudits statement for Audit
 	selectAudits = `SELECT audit_id, submission_id FROM audits`
@@ -524,10 +524,12 @@ func (db Sqlite) GetTicketReports(artist string) ([]TicketReport, error) {
 
 func (db Sqlite) GetLatestTicketReport(artist string) (TicketReport, error) {
 	var report TicketReport
-	err := db.QueryRowContext(db.context, selectLatestTicketReport, artist).Scan(&report.Report)
+	var timeInt int64
+	err := db.QueryRowContext(db.context, selectLatestTicketReport, artist).Scan(&report.Username, &timeInt, &report.Report)
 	if err != nil {
 		return report, err
 	}
+	report.ReportDate = time.Unix(timeInt, 0)
 
 	return report, nil
 }

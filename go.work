@@ -3,7 +3,7 @@ go 1.22.2
 use (
 	.
 	cmd/cli
-	cmd/mod/github.com/ellypaws/inkbunny-sd
 	cmd/extension
+	cmd/mod/github.com/ellypaws/inkbunny-sd
 	cmd/server
 )

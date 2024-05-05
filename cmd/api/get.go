@@ -773,7 +773,7 @@ func storeReport(c echo.Context, database *db.Sqlite) func(ticket service.Ticket
 			c.Logger().Errorf("error marshaling report: %v", err)
 			return
 		}
-		go storeReview(c, reportKey, &report, cache.Indefinite, bin...)
+		storeReview(c, reportKey, &report, cache.Indefinite, bin...)
 
 		err = database.UpsertTicketReport(db.TicketReport{
 			Username:   ticket.Report.UsernameID.Username,

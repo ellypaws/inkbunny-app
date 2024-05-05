@@ -14,13 +14,13 @@ import (
 var FileCache = &LocalCache{
 	items:    make(map[string]*Item),
 	maxSize:  256 * bytes.MiB,
-	maxItems: 20,
+	maxItems: 1024,
 }
 
 var TextCache = &LocalCache{
 	items:    make(map[string]*Item),
-	maxSize:  32 * bytes.MiB,
-	maxItems: 256,
+	maxSize:  256 * bytes.MiB,
+	maxItems: 2048,
 }
 
 type LocalCache struct {

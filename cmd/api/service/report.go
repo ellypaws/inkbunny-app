@@ -94,7 +94,7 @@ func CreateReport(processed []Detail, auditor *db.Auditor) Report {
 		out.Submissions = append(out.Submissions, info)
 	}
 	if len(processed) > 0 {
-		out.Ratio = float64(out.Violations) / float64(len(processed))
+		out.Ratio = float64(out.Violations) / float64(out.Audited)
 	}
 
 	return out

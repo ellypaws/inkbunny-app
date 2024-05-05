@@ -22,8 +22,8 @@ github.com/disintegration/imaging v1.6.2 h1:w1LecBlG2Lnp8B3jk5zSuNqd7b4DXhcjwek1
 github.com/disintegration/imaging v1.6.2/go.mod h1:44/5580QXChDfwIclfc/PCwrr44amcmDAg8hxG0Ewe4=
 github.com/dustin/go-humanize v1.0.1 h1:GzkhY7T5VNhEkwH0PVJgjz+fX1rhBrR7pRT3mDkpeCY=
 github.com/dustin/go-humanize v1.0.1/go.mod h1:Mu1zIs6XwVuF/gI1OepvI0qD18qycQx+mFykh5fBlto=
-github.com/ellypaws/inkbunny/api v0.0.0-20240505171403-467520c8e9fa h1:sWtnCIsrjxUb5bNcJFvBlVXbFLTH2UKWrs4hlo0WXbQ=
-github.com/ellypaws/inkbunny/api v0.0.0-20240505171403-467520c8e9fa/go.mod h1:wdWqyRSEoSVdu5FnUGv44PvqdLfKQfgaXvDQpZFJs3A=
+github.com/ellypaws/inkbunny/api v0.0.0-20240505180909-24d168283264 h1:RCQX8edCCy696u3KLXTXsA2BN3+nPcGiWuV8HIgWfJI=
+github.com/ellypaws/inkbunny/api v0.0.0-20240505180909-24d168283264/go.mod h1:wdWqyRSEoSVdu5FnUGv44PvqdLfKQfgaXvDQpZFJs3A=
 github.com/gitsight/go-echo-cache v1.0.1 h1:+xIrb6BLwX5gmYBq084NaDc4v7SUF7xTvjlAI1MJXlM=
 github.com/gitsight/go-echo-cache v1.0.1/go.mod h1:snPqGf9OCb+YtaPOi0jRthyJPljD2iT5KJBcfPCO2ec=
 github.com/go-errors/errors v1.5.1 h1:ZwEMSLRCapFLflTpT7NKaAc7ukJ8ZPEjzlxt8rPN8bk=

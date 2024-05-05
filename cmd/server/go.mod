@@ -21,7 +21,7 @@ require (
 	github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect
 	github.com/disintegration/imaging v1.6.2 // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
-	github.com/ellypaws/inkbunny/api v0.0.0-20240505171403-467520c8e9fa // indirect
+	github.com/ellypaws/inkbunny/api v0.0.0-20240505180909-24d168283264 // indirect
 	github.com/gitsight/go-echo-cache v1.0.1 // indirect
 	github.com/go-errors/errors v1.5.1 // indirect
 	github.com/golang-jwt/jwt v3.2.2+incompatible // indirect

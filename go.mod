@@ -6,7 +6,7 @@ require (
 	github.com/coocood/freecache v1.2.4
 	github.com/disintegration/imaging v1.6.2
 	github.com/ellypaws/inkbunny-sd v0.0.0-20240430150932-8005d100c6ec
-	github.com/ellypaws/inkbunny/api v0.0.0-20240505171403-467520c8e9fa
+	github.com/ellypaws/inkbunny/api v0.0.0-20240505180909-24d168283264
 	github.com/gitsight/go-echo-cache v1.0.1
 	github.com/go-errors/errors v1.5.1
 	github.com/labstack/echo/v4 v4.12.0

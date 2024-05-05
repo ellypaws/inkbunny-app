@@ -445,20 +445,6 @@ func GetReviewHandler(c echo.Context) error {
 
 	skipCache := c.Request().Header.Get(echo.HeaderCacheControl) == "no-cache"
 
-	if output == service.OutputReport && !skipCache {
-		item, err := cacheToUse.Get(fmt.Sprintf(
-			"%s:review:%s:%s?%s",
-			echo.MIMEApplicationJSON,
-			output,
-			idParam,
-			query.Encode(),
-		))
-		if err == nil {
-			c.Logger().Infof("Cache hit for %s", idParam)
-			return c.Blob(http.StatusOK, item.MimeType, item.Blob)
-		}
-	}
-
 	var submissionIDs = c.Param("id")
 	var submissionIDSlice []string
 
@@ -596,7 +582,7 @@ func GetReviewHandler(c echo.Context) error {
 		c.Logger().Debugf("Cache miss for %s retrieving review...", reviewKey)
 	}
 
-	if c.Param("id") != "search" {
+	if c.Param("id") != "search" && output != service.OutputReport {
 		defer storeReview(c, reviewKey, &store, cache.Hour)
 	}
 

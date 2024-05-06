@@ -155,7 +155,7 @@ func processObjectMetadata(submission *db.Submission, artists []db.Artist) {
 		submission.Metadata.AISubmission = true
 		meta := strings.ToLower(obj.Prompt + "\n" + obj.NegativePrompt)
 		for _, artist := range artists {
-			re, err := regexp.Compile(fmt.Sprintf(`\b%s\b`, strings.ToLower(artist.Username)))
+			re, err := regexp.Compile(fmt.Sprintf(`(?i)\b%s\b`, strings.ToLower(artist.Username)))
 			if err != nil {
 				continue
 			}

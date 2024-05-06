@@ -144,7 +144,7 @@ func processParams(c echo.Context, sub *db.Submission, cacheToUse cache.Cache, a
 	}
 }
 
-var additionalArtists = regexp.MustCompile(`(?i)by ([^:,\])}>]+)`)
+var additionalArtists = regexp.MustCompile(`(?i)by ([^:,\r\n\])}>]+)`)
 
 // deferred call to set metadata flags after processing objects
 func processObjectMetadata(submission *db.Submission, artists []db.Artist) {

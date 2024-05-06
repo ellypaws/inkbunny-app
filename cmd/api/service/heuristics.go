@@ -153,18 +153,17 @@ func processObjectMetadata(submission *db.Submission, artists []db.Artist) {
 
 	for _, obj := range submission.Metadata.Objects {
 		submission.Metadata.AISubmission = true
-		meta := strings.ToLower(obj.Prompt + "\n" + obj.NegativePrompt)
 		for _, artist := range artists {
 			re, err := regexp.Compile(fmt.Sprintf(`(?i)\b%s\b`, strings.ToLower(artist.Username)))
 			if err != nil {
 				continue
 			}
-			if re.MatchString(meta) {
+			if re.MatchString(obj.Prompt) {
 				submission.Metadata.ArtistUsed = append(submission.Metadata.ArtistUsed, artist)
 			}
 		}
 
-		additionalArtists := additionalArtists.FindAllStringSubmatch(meta, -1)
+		additionalArtists := additionalArtists.FindAllStringSubmatch(obj.Prompt, -1)
 		for _, match := range additionalArtists {
 			for _, artist := range strings.Split(strings.Join(match[1:], ""), "|") {
 				if !slices.ContainsFunc(submission.Metadata.ArtistUsed, func(stored db.Artist) bool {
@@ -175,7 +174,7 @@ func processObjectMetadata(submission *db.Submission, artists []db.Artist) {
 			}
 		}
 
-		if tool := PrivateTools.FindString(meta); tool != "" {
+		if tool := PrivateTools.FindString(obj.Prompt); tool != "" {
 			submission.Metadata.PrivateTool = true
 			submission.Metadata.Generator = tool
 		}

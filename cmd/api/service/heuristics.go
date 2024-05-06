@@ -293,6 +293,11 @@ func paramsToObject(c echo.Context, sub *db.Submission) {
 					c.Logger().Errorf("error processing heuristics for %v: %v", name, err)
 					return
 				}
+				if tool := PrivateTools.FindString(p); tool != "" {
+					sub.Metadata.AISubmission = true
+					sub.Metadata.PrivateTool = true
+					sub.Metadata.Generator = tool
+				}
 				if sub.Metadata.Objects == nil {
 					sub.Metadata.Objects = make(map[string]entities.TextToImageRequest)
 				}

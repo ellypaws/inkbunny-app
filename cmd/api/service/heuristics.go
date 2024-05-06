@@ -144,7 +144,7 @@ func processParams(c echo.Context, sub *db.Submission, cacheToUse cache.Cache, a
 	}
 }
 
-var additionalArtists = regexp.MustCompile(`(?i)\bby ([^:,\r\n\])}>]+)`)
+var additionalArtists = regexp.MustCompile(`(?im)[\[({<|:,]\s*by ([^:,\r\n\])}>]+)|^by ([^:,\r\n\])}>]+)`)
 
 // deferred call to set metadata flags after processing objects
 func processObjectMetadata(submission *db.Submission, artists []db.Artist) {
@@ -166,8 +166,7 @@ func processObjectMetadata(submission *db.Submission, artists []db.Artist) {
 
 		additionalArtists := additionalArtists.FindAllStringSubmatch(meta, -1)
 		for _, match := range additionalArtists {
-			for _, artist := range strings.Split(match[1], "|") {
-				artist = strings.TrimPrefix(artist, "by ")
+			for _, artist := range strings.Split(strings.Join(match[1:], ""), "|") {
 				if !slices.ContainsFunc(submission.Metadata.ArtistUsed, func(stored db.Artist) bool {
 					return strings.EqualFold(stored.Username, artist)
 				}) {

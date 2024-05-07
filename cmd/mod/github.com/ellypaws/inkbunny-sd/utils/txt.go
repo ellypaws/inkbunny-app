@@ -41,6 +41,7 @@ const (
 	IDNeoncortex  = 14603
 	IDMethuzalach = 1089071
 	IDRNSDAI      = 1188211
+	IDSoph        = 229969
 )
 
 // AutoSnep is a Processor that parses yaml like raw txt where each two spaces is a new dict
@@ -197,6 +198,73 @@ func Cirn0(opts ...func(*Config)) (Params, error) {
 	return chunks, nil
 }
 
+// SophStartKey is intended to check if the content contains a key in the format of ./file: for IDSoph.
+// Otherwise, use Common and UseSoph to extract PNGChunk as normal.
+var SophStartKey = regexp.MustCompile(`(?m)^\./[^:]*:$`)
+
+// SophStartInvokeAI checks if the content contains any JSON objects for IDSoph.
+// Otherwise, use Common and UseSoph to extract PNGChunk as normal.
+var SophStartInvokeAI = regexp.MustCompile(`(?m)^{$`)
+
+// Soph is a Processor that parses the InvokeAI format by IDSoph.
+// Check if the content follows the InvokeAI format using SophStartKey.
+func Soph(opts ...func(*Config)) (map[string]entities.TextToImageRequest, error) {
+	var c Config
+	for _, f := range opts {
+		f(&c)
+	}
+	if len(c.Text) == 0 {
+		return nil, errors.New("empty text")
+	}
+
+	scanner := bufio.NewScanner(bytes.NewReader([]byte(c.Text)))
+
+	var invokeAI = make(map[string]entities.InvokeAI)
+	var invokeBuffer bytes.Buffer
+	var counter int
+	var key string
+	for scanner.Scan() {
+		line := scanner.Bytes()
+		switch {
+		case len(line) == 0:
+			continue
+		case bytes.HasPrefix(scanner.Bytes(), []byte("./")):
+			key = string(line)
+			continue
+		case bytes.Equal(line, []byte(`{`)):
+			invokeBuffer.Write(line)
+		case bytes.Equal(line, []byte(`}`)):
+			invokeBuffer.Write(line)
+			var i entities.InvokeAI
+			if err := json.Unmarshal(invokeBuffer.Bytes(), &i); err != nil {
+				return nil, err
+			}
+			if len(key) == 0 {
+				counter++
+				key = fmt.Sprintf("%s_%d", c.Filename, counter)
+			}
+			invokeAI[key] = i
+			invokeBuffer.Reset()
+			key = ""
+		case invokeBuffer.Len() > 0:
+			invokeBuffer.Write(line)
+		default:
+			continue
+		}
+	}
+
+	if len(invokeAI) == 0 {
+		return nil, errors.New("no chunks found")
+	}
+
+	var objects = make(map[string]entities.TextToImageRequest)
+	for k, v := range invokeAI {
+		objects[k] = v.Convert()
+	}
+
+	return objects, nil
+}
+
 var drugeMatchDigit = regexp.MustCompile(`(?m)^\d+`)
 
 func UseDruge() func(*Config) {
@@ -320,6 +388,18 @@ func UseMethuzalach() func(*Config) {
 		c.Text = methuzalachNegative.ReplaceAllString(c.Text, "Negative Prompt: ")
 		c.Text = methuzalachSeed.ReplaceAllString(c.Text, "")
 		c.Text = methuzalachSteps.ReplaceAllString(c.Text, `$1 `+model)
+	}
+}
+
+func UseSoph() func(*Config) {
+	return func(c *Config) {
+		c.KeyCondition = func(line string) bool {
+			return strings.HasPrefix(line, c.Filename)
+		}
+		c.Text = c.Filename + "\n" + c.Text
+		c.SkipCondition = func(line string) bool {
+			return strings.HasPrefix(line, "<comment: ")
+		}
 	}
 }
 

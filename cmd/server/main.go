@@ -87,7 +87,7 @@ var extra = []func(e *echo.Echo){
 		}
 	},
 	func(e *echo.Echo) {
-		e.GET("/", Hello, api.StaticMiddleware...)
+		e.GET("/", redirect, api.StaticMiddleware...)
 		e.GET("/*", echo.StaticDirectoryHandler(
 			echo.MustSubFS(e.Filesystem, "public"),
 			false,
@@ -95,7 +95,7 @@ var extra = []func(e *echo.Echo){
 	},
 }
 
-func Hello(c echo.Context) error {
+func redirect(c echo.Context) error {
 	return c.Redirect(http.StatusTemporaryRedirect, "https://github.com/ellypaws/inkbunny-app")
 }
 

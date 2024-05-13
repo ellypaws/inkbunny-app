@@ -1,6 +1,6 @@
 module github.com/ellypaws/inkbunny-sd
 
-go 1.22
+go 1.22.3
 
 require (
 	github.com/ellypaws/inkbunny/api v0.0.0-20240505180909-24d168283264

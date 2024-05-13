@@ -1,6 +1,6 @@
 module github.com/ellypaws/inkbunny-app/cmd/cli
 
-go 1.22.2
+go 1.22.3
 
 replace github.com/ellypaws/inkbunny-app => ../..
 

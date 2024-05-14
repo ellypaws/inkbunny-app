@@ -90,11 +90,6 @@ your [account settings](https://inkbunny.net/account.php#:~:text=API%20(External
 You can read the individual readme files for each project to get started.
 An example usage for [Inkbunny AI Bridge](cmd/extension) is provided below.
 
-### Building from Source
-
-If you're building from source, you will need to install the dependencies:
-Download Go 1.22.2 or later from the [official website](https://golang.org/dl/).
-
 Set the environment variables for the server to run. You can set the following environment variables:
 
 ```bash
@@ -110,12 +105,26 @@ An optional Redis server can be used for caching.
 If not set, it will fall back to local memory cache.
 You can always override this behavior for most request by setting the `Cache-Control` header to `no-cache`.
 
+### Building from Source
+
+If you're building from source, you will need to install the dependencies:
+Download Go 1.22.3 or later from the [official website](https://golang.org/dl/).
+
+> When cloning from the repository, make sure to use `--recurse-submodules` to initialize inkbunny-sd.
+
 ```bash
-git clone https://github.com/ellypaws/inkbunny-app.git
+git clone --recurse-submodules https://github.com/ellypaws/inkbunny-app.git
 cd inkbunny-app/cmd/extension
 
 go build -o inkbunny-ai-bridge
 ./inkbunny-ai-bridge
+```
+
+And when pulling, make sure to update the submodules:
+
+```bash
+git pull
+git submodule update --init --recursive
 ```
 
 You can also use the pre-built binaries from the [releases page](https://github.com/ellypaws/inkbunny-app/releases).

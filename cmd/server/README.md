@@ -70,6 +70,17 @@ Set the environment variables for the server to run. You can set the following e
 
 There is also an [extension server](../extension) with mostly just the review service running to use with a [userscript](https://github.com/ellypaws/inkbunny-extension/tree/main/scripts) to return metadata badges or a ticket to review inside Inkbunny itself.
 
+## Usage
+
+> *Make sure you have api turned on in your Inkbunny account settings. You will need your API key and SID to
+use the Inkbunny API. You can change this in
+your [account settings](https://inkbunny.net/account.php#:~:text=API%20(External%20Scripting))*
+
+You can read the individual readme files for each project to get started.
+An example usage for [Inkbunny AI Bridge](cmd/extension) is provided below.
+
+Set the environment variables for the server to run. You can set the following environment variables:
+
 ```bash
 export PORT "your_port"
 export API_HOST "your_api_host"
@@ -85,19 +96,24 @@ You can always override this behavior for most request by setting the `Cache-Con
 
 ### Building from Source
 
-Prerequisites: Make sure you have api turned on in your Inkbunny account settings. You will need your API key and SID to
-use the Inkbunny API. You can change this in
-your [account settings](https://inkbunny.net/account.php#:~:text=API%20(External%20Scripting))
-
 If you're building from source, you will need to install the dependencies:
-Download Go 1.22.2 or later from the [official website](https://golang.org/dl/).
+Download Go 1.22.3 or later from the [official website](https://golang.org/dl/).
+
+> When cloning from the repository, make sure to use `--recurse-submodules` to initialize inkbunny-sd.
 
 ```bash
-git clone https://github.com/ellypaws/inkbunny-app.git
+git clone --recurse-submodules https://github.com/ellypaws/inkbunny-app.git
 cd inkbunny-app/cmd/server
 
 go build -o server
 ./server
+```
+
+And when pulling, make sure to update the submodules:
+
+```bash
+git pull
+git submodule update --init --recursive
 ```
 
 You can also use the pre-built binaries from the [releases page](https://github.com/ellypaws/inkbunny-app/releases).

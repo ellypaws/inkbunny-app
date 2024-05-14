@@ -10,6 +10,7 @@ import (
 	"github.com/labstack/echo/v4/middleware"
 	logger "github.com/labstack/gommon/log"
 	"github.com/muesli/termenv"
+	"net/http"
 	"net/url"
 	"os"
 	"strings"
@@ -40,10 +41,18 @@ func main() {
 	e.GET("/review/:id", api.GetReviewHandler, config...)
 	e.POST("/review/:id", api.GetReviewHandler, config...)
 
-	e.File("/favicon.ico", "../api/public/16930_inkbunny_inkbunnylogo_trans_rev_outline.ico")
+	e.GET("/", redirect, api.StaticMiddleware...)
+	e.GET("/*", echo.StaticDirectoryHandler(
+		echo.MustSubFS(e.Filesystem, "../api/public"),
+		false,
+	), api.StaticMiddleware...)
 
 	e.Logger.Infof("Starting server on port %s", port)
 	e.Logger.Fatal(e.Start(":" + port))
+}
+
+func redirect(c echo.Context) error {
+	return c.Redirect(http.StatusTemporaryRedirect, "https://github.com/ellypaws/inkbunny-app")
 }
 
 //go:embed artists.json

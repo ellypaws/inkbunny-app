@@ -47,12 +47,53 @@ func main() {
 		false,
 	), api.StaticMiddleware...)
 
+	startupMessage(e)
 	e.Logger.Infof("Starting server on port %s", port)
 	e.Logger.Fatal(e.Start(":" + port))
 }
 
 func redirect(c echo.Context) error {
 	return c.Redirect(http.StatusTemporaryRedirect, "https://github.com/ellypaws/inkbunny-app")
+}
+
+func startupMessage(e *echo.Echo) {
+	e.HideBanner = true
+	colors := []struct {
+		text  string
+		color string
+	}{
+		{"M", "#447294"},
+		{"a", "#4f7d9e"},
+		{"i", "#5987a8"},
+		{"n", "#6492b2"},
+		{"t", "#6f9cbd"},
+		{"a", "#7aa7c7"},
+		{"i", "#84b1d1"},
+		{"n", "#8fbcdb"},
+		{"e", "#a0c0d6"},
+		{"d", "#b1c5d1"},
+		{" ", "#c2c9cc"},
+		{"b", "#d2cdc6"},
+		{"y", "#e3d2c1"},
+		{":", "#f4d6bc"},
+	}
+
+	var coloredText strings.Builder
+	for _, ansi := range colors {
+		coloredText.WriteString(termenv.String(ansi.text).Foreground(termenv.RGBColor(ansi.color)).Bold().String())
+	}
+
+	e.Logger.Infof("%s %s", coloredText.String(), "https://github.com/ellypaws")
+	e.Logger.Infof("Post issues at %s", "https://github.com/ellypaws/inkbunny-app/issues")
+
+	e.Logger.Infof("     api host: %s", api.ServerHost)
+	e.Logger.Infof("      sd host: %s", api.SDHost)
+
+	if api.SDHost.Alive() {
+		e.Logger.Infof("      sd host: %s", api.SDHost)
+	} else {
+		e.Logger.Warnf("      sd host: %s (not running)", api.SDHost)
+	}
 }
 
 //go:embed artists.json
@@ -140,42 +181,5 @@ func init() {
 		if err != nil {
 			e.Logger.Fatal(err)
 		}
-	}
-
-	e.HideBanner = true
-
-	colors := []struct {
-		text  string
-		color string
-	}{
-		{"M", "#447294"},
-		{"a", "#4f7d9e"},
-		{"i", "#5987a8"},
-		{"n", "#6492b2"},
-		{"t", "#6f9cbd"},
-		{"a", "#7aa7c7"},
-		{"i", "#84b1d1"},
-		{"n", "#8fbcdb"},
-		{"e", "#a0c0d6"},
-		{"d", "#b1c5d1"},
-		{" ", "#c2c9cc"},
-		{"b", "#d2cdc6"},
-		{"y", "#e3d2c1"},
-		{":", "#f4d6bc"},
-	}
-
-	var coloredText strings.Builder
-	for _, ansi := range colors {
-		coloredText.WriteString(termenv.String(ansi.text).Foreground(termenv.RGBColor(ansi.color)).Bold().String())
-	}
-
-	e.Logger.Infof("%s %s", coloredText.String(), "https://github.com/ellypaws")
-	e.Logger.Infof("Post issues at %s", "https://github.com/ellypaws/inkbunny-app/issues")
-
-	e.Logger.Infof("     api host: %s", api.ServerHost)
-	if sdHost.Alive() {
-		e.Logger.Infof("      sd host: %s", api.SDHost)
-	} else {
-		e.Logger.Warnf("      sd host: %s (not running)", api.SDHost)
 	}
 }

@@ -267,10 +267,10 @@ func ticketSubject(sub *db.Submission) string {
 				sb.WriteString("is not following AI ACP[/u]\n")
 			}
 		case 1:
-			sb.WriteString("\n\nIn addition, the following flags were detected:")
-			fallthrough
+			sb.WriteString("\n\nIn addition, the following flags were detected:\n")
+			sb.WriteString(string(flag))
 		default:
-			sb.WriteString("\n")
+			sb.WriteString(", ")
 			sb.WriteString(string(flag))
 		}
 	}

@@ -78,17 +78,18 @@ func CreateReport(processed []Detail, auditor *db.Auditor) Report {
 			URL:     sub.Submission.URL,
 			Flags:   sub.Ticket.Labels,
 			Artists: sub.Submission.Metadata.ArtistUsed,
+			Files:   make([]File, len(sub.Submission.Files)),
 		}
 
-		for _, f := range sub.Submission.Files {
-			info.Files = append(info.Files, File{
+		for i, f := range sub.Submission.Files {
+			info.Files[i] = File{
 				FileID:       f.File.FileID,
 				FileName:     f.File.FileName,
 				SubmissionID: f.File.SubmissionID,
 				Page:         int(f.File.SubmissionFileOrder) + 1,
 				FullFileMD5:  f.File.FullFileMD5,
 				FileURLFull:  f.File.FileURLFull,
-			})
+			}
 		}
 
 		out.Submissions = append(out.Submissions, info)

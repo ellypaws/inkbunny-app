@@ -912,12 +912,12 @@ func GetReportHandler(c echo.Context) error {
 	store = out
 
 	storeReview(c, reportKey, &store, cache.Indefinite)
-	return c.Redirect(http.StatusSeeOther, fmt.Sprintf("/report/%s/%s", artist, date))
+	return c.Redirect(http.StatusSeeOther, fmt.Sprintf("/report/%s/%s.json", artist, date))
 }
 
 func GetReportKeyHandler(c echo.Context) error {
 	artist := c.Param("id")
-	key := c.Param("key")
+	key := strings.TrimSuffix(c.Param("key"), ".json")
 	cacheToUse := cache.SwitchCache(c)
 
 	if key == "latest" {
@@ -933,7 +933,7 @@ func GetReportKeyHandler(c echo.Context) error {
 			storeReview(c, reportKey, nil, cache.Indefinite, t.Report...)
 			return c.Redirect(
 				http.StatusFound,
-				fmt.Sprintf("/report/%s/%s", artist, t.ReportDate.Format(db.TicketDateLayout)),
+				fmt.Sprintf("/report/%s/%s.json", artist, t.ReportDate.Format(db.TicketDateLayout)),
 			)
 		}
 	}

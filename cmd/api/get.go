@@ -826,12 +826,6 @@ func GetReportHandler(c echo.Context) error {
 		return c.JSON(http.StatusNotFound, crashy.ErrorResponse{ErrorString: "no submissions found"})
 	}
 
-	query := url.Values{
-		"interrogate": {""},
-		"parameters":  {"true"},
-		"sid":         {hashed},
-	}
-
 	var missed []string
 	var processed []service.Detail
 
@@ -892,8 +886,12 @@ func GetReportHandler(c echo.Context) error {
 			Interrogate:       false,
 			Auditor:           auditor,
 			ApiHost:           ServerHost,
-			Query:             query,
-			Writer:            c.Get("writer").(http.Flusher),
+			Query: url.Values{
+				"interrogate": {""},
+				"parameters":  {"true"},
+				"sid":         {hashed},
+			},
+			Writer: c.Get("writer").(http.Flusher),
 		})
 
 		processed = append(processed, details...)

@@ -28,7 +28,14 @@ type Detail struct {
 	Ticket     *db.Ticket      `json:"ticket,omitempty"`
 	Images     []*db.File      `json:"images,omitempty"`
 
+	Extra
+}
+
+type Extra struct {
 	DescriptionSanitized string `json:"description_sanitized,omitempty"`
+	ThumbnailURL         string `json:"thumbnail_url,omitempty"`
+	ThumbnailWidth       int    `json:"thumbnail_width,omitempty"`
+	ThumbnailHeight      int    `json:"thumbnail_height,omitempty"`
 }
 
 const (
@@ -115,6 +122,11 @@ func processSubmission(c echo.Context, submission *api.Submission, config *Confi
 
 	switch config.Output {
 	case OutputReport:
+		detail.Extra = Extra{
+			ThumbnailURL:    submission.ThumbnailURLMediumNonCustom,
+			ThumbnailWidth:  int(submission.ThumbMediumNonCustomX),
+			ThumbnailHeight: int(submission.ThumbMediumNonCustomY),
+		}
 		fallthrough
 	case OutputBadges:
 		detail.Ticket = &db.Ticket{
@@ -128,7 +140,7 @@ func processSubmission(c echo.Context, submission *api.Submission, config *Confi
 			}
 			detail.Images = append(detail.Images, &sub.Files[f])
 		}
-		detail.DescriptionSanitized = sanitizeDescription(submission.DescriptionBBCodeParsed, config.ApiHost)
+		detail.Extra.DescriptionSanitized = sanitizeDescription(submission.DescriptionBBCodeParsed, config.ApiHost)
 		fallthrough
 	case OutputSubmissions:
 		fallthrough

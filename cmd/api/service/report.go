@@ -102,8 +102,18 @@ func CreateReport(processed []Detail, auditor *db.Auditor) Report {
 }
 
 type TicketReport struct {
-	Ticket db.Ticket `json:"ticket"`
-	Report Report    `json:"report"`
+	Ticket     db.Ticket   `json:"ticket"`
+	Report     Report      `json:"report"`
+	Thumbnails []Thumbnail `json:"thumbnails"`
+}
+
+type Thumbnail struct {
+	SubmissionID int64  `json:"id,omitempty"`
+	Title        string `json:"title,omitempty"`
+	PageCount    int    `json:"pagecount,omitempty"`
+	URL          string `json:"thumbnail_url,omitempty"`
+	Width        int    `json:"thumbnail_width,omitempty"`
+	Height       int    `json:"thumbnail_height,omitempty"`
 }
 
 func CreateTicketReport(auditor *db.Auditor, details []Detail, host *url.URL) TicketReport {
@@ -117,6 +127,7 @@ func CreateTicketReport(auditor *db.Auditor, details []Detail, host *url.URL) Ti
 		Artists []api.UsernameID
 		IDs     []int64
 		Objects []map[string]entities.TextToImageRequest
+		Thumbs  []Thumbnail
 	}
 
 	for _, sub := range details {
@@ -154,6 +165,15 @@ func CreateTicketReport(auditor *db.Auditor, details []Detail, host *url.URL) Ti
 		if sub.Submission.Metadata.Objects != nil {
 			info.Objects = append(info.Objects, sub.Submission.Metadata.Objects)
 		}
+
+		info.Thumbs = append(info.Thumbs, Thumbnail{
+			SubmissionID: sub.Submission.ID,
+			Title:        sub.Submission.Title,
+			PageCount:    len(sub.Submission.Files),
+			URL:          sub.Extra.ThumbnailURL,
+			Width:        sub.Extra.ThumbnailWidth,
+			Height:       sub.Extra.ThumbnailHeight,
+		})
 	}
 
 	var message strings.Builder
@@ -234,7 +254,8 @@ func CreateTicketReport(auditor *db.Auditor, details []Detail, host *url.URL) Ti
 			Reporter:    auditorAsUser,
 			ReportedIDs: info.Artists,
 		},
-	}, report}
+	}, report,
+		info.Thumbs}
 
 	return out
 }

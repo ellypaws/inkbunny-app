@@ -140,6 +140,9 @@ go build -o inkbunny-ai-bridge
 And when pulling, make sure to update the submodules:
 
 ```bash
+git pull --recurse-submodules
+
+# or if you forgot to clone with submodules
 git pull
 git submodule update --init --recursive
 ```

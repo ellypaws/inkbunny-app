@@ -17,6 +17,7 @@ type File struct {
 	FileName     string `json:"file_name,omitempty"`
 	SubmissionID string `json:"submission_id,omitempty"`
 	Page         int    `json:"page,omitempty"`
+	InitialMD5   string `json:"initial_md5,omitempty"`
 	FullFileMD5  string `json:"full_file_md5,omitempty"`
 	FileURLFull  string `json:"file_url_full,omitempty"`
 }
@@ -87,6 +88,7 @@ func CreateReport(processed []Detail, auditor *db.Auditor) Report {
 				FileName:     f.File.FileName,
 				SubmissionID: f.File.SubmissionID,
 				Page:         int(f.File.SubmissionFileOrder) + 1,
+				InitialMD5:   f.File.InitialFileMD5,
 				FullFileMD5:  f.File.FullFileMD5,
 				FileURLFull:  f.File.FileURLFull,
 			}

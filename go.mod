@@ -5,7 +5,7 @@ go 1.22.3
 require (
 	github.com/coocood/freecache v1.2.4
 	github.com/disintegration/imaging v1.6.2
-	github.com/ellypaws/inkbunny-sd v0.0.0-20240522181818-e072bb3953ee
+	github.com/ellypaws/inkbunny-sd v0.0.0-20240523080049-7529875c4c7d
 	github.com/ellypaws/inkbunny/api v0.0.0-20240505180909-24d168283264
 	github.com/gitsight/go-echo-cache v1.0.1
 	github.com/go-errors/errors v1.5.1

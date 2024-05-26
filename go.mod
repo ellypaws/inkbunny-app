@@ -2,7 +2,7 @@ module github.com/ellypaws/inkbunny-app
 
 go 1.22.3
 
-replace github.com/ellypaws/inkbunny-sd => /cmd/mod/github.com/ellypaws/inkbunny-sd
+replace github.com/ellypaws/inkbunny-sd => ./cmd/mod/github.com/ellypaws/inkbunny-sd
 
 require (
 	github.com/coocood/freecache v1.2.4

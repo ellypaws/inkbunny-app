@@ -7,7 +7,7 @@ replace github.com/ellypaws/inkbunny-sd => /cmd/mod/github.com/ellypaws/inkbunny
 require (
 	github.com/coocood/freecache v1.2.4
 	github.com/disintegration/imaging v1.6.2
-	github.com/ellypaws/inkbunny-sd v0.0.0-20240526145940-946d43b59a11
+	github.com/ellypaws/inkbunny-sd v0.0.0-20240526180506-13a58042b93b
 	github.com/ellypaws/inkbunny/api v0.0.0-20240521065300-7d34160ddf2d
 	github.com/gitsight/go-echo-cache v1.0.1
 	github.com/go-errors/errors v1.5.1

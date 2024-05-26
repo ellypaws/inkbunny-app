@@ -116,6 +116,14 @@ type Thumbnail struct {
 	URL          string `json:"thumbnail_url,omitempty"`
 	Width        int    `json:"thumbnail_width,omitempty"`
 	Height       int    `json:"thumbnail_height,omitempty"`
+	Metadata     Meta   `json:"metadata,omitempty"`
+}
+
+type Meta struct {
+	Generated bool             `json:"generated"`
+	Assisted  bool             `json:"assisted"`
+	Flags     []db.TicketLabel `json:"flags,omitempty"`
+	Artists   []db.Artist      `json:"artists,omitempty"`
 }
 
 func CreateTicketReport(auditor *db.Auditor, details []Detail, host *url.URL) TicketReport {
@@ -175,6 +183,12 @@ func CreateTicketReport(auditor *db.Auditor, details []Detail, host *url.URL) Ti
 			URL:          sub.Extra.ThumbnailURL,
 			Width:        sub.Extra.ThumbnailWidth,
 			Height:       sub.Extra.ThumbnailHeight,
+			Metadata: Meta{
+				Generated: sub.Submission.Metadata.Generated,
+				Assisted:  sub.Submission.Metadata.Assisted,
+				Flags:     sub.Ticket.Labels,
+				Artists:   sub.Submission.Metadata.ArtistUsed,
+			},
 		})
 	}
 

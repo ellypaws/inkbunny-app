@@ -220,8 +220,10 @@ func TicketLabels(submission db.Submission) []db.TicketLabel {
 			prompt = "prompt"
 			model  = "model"
 			seed   = "seed"
+			steps  = "steps"
+			cfg    = "cfg"
 		)
-		hint := [3]struct {
+		hint := [5]struct {
 			label   string
 			missing bool
 			partial bool
@@ -229,6 +231,8 @@ func TicketLabels(submission db.Submission) []db.TicketLabel {
 			{label: prompt},
 			{label: model},
 			{label: seed},
+			{label: steps},
+			{label: cfg},
 		}
 		for _, obj := range metadata.Objects {
 			if obj.Prompt == "" {
@@ -245,6 +249,16 @@ func TicketLabels(submission db.Submission) []db.TicketLabel {
 				hint[2].missing = true
 			} else {
 				hint[2].partial = true
+			}
+			if obj.Steps == 0 {
+				hint[3].missing = true
+			} else {
+				hint[3].partial = true
+			}
+			if obj.CFGScale == 0.0 {
+				hint[4].missing = true
+			} else {
+				hint[4].partial = true
 			}
 		}
 		for _, v := range hint {

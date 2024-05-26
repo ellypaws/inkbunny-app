@@ -13,18 +13,22 @@ import (
 )
 
 type File struct {
-	FileID       string `json:"file_id,omitempty"`
-	FileName     string `json:"file_name,omitempty"`
-	SubmissionID string `json:"submission_id,omitempty"`
-	Page         int    `json:"page,omitempty"`
-	InitialMD5   string `json:"initial_md5,omitempty"`
-	FullFileMD5  string `json:"full_file_md5,omitempty"`
-	FileURLFull  string `json:"file_url_full,omitempty"`
+	FileID       *string `json:"file_id,omitempty"`
+	FileName     *string `json:"file_name,omitempty"`
+	SubmissionID *string `json:"submission_id,omitempty"`
+	Page         int     `json:"page,omitempty"`
+	InitialMD5   *string `json:"initial_md5,omitempty"`
+	FullFileMD5  *string `json:"full_file_md5,omitempty"`
+	FileURLFull  *string `json:"file_url_full,omitempty"`
 }
 
 type SubInfo struct {
-	Title   string           `json:"title,omitempty"`
-	URL     string           `json:"url,omitempty"`
+	Title *string `json:"title,omitempty"`
+	URL   *string `json:"url,omitempty"`
+
+	Generated *bool `json:"generated,omitempty"`
+	Assisted  *bool `json:"assisted,omitempty"`
+
 	Flags   []db.TicketLabel `json:"flags,omitempty"`
 	Artists []db.Artist      `json:"artists,omitempty"`
 	Files   []File           `json:"files,omitempty"`
@@ -75,22 +79,25 @@ func CreateReport(processed []Detail, auditor *db.Auditor) Report {
 		out.Violations++
 
 		info := SubInfo{
-			Title:   sub.Submission.Title,
-			URL:     sub.Submission.URL,
+			Title:   &sub.Submission.Title,
+			URL:     &sub.Submission.URL,
 			Flags:   sub.Ticket.Labels,
 			Artists: sub.Submission.Metadata.ArtistUsed,
 			Files:   make([]File, len(sub.Submission.Files)),
+
+			Generated: &sub.Submission.Metadata.Generated,
+			Assisted:  &sub.Submission.Metadata.Assisted,
 		}
 
 		for i, f := range sub.Submission.Files {
 			info.Files[i] = File{
-				FileID:       f.File.FileID,
-				FileName:     f.File.FileName,
-				SubmissionID: f.File.SubmissionID,
+				FileID:       &f.File.FileID,
+				FileName:     &f.File.FileName,
+				SubmissionID: &f.File.SubmissionID,
 				Page:         int(f.File.SubmissionFileOrder) + 1,
-				InitialMD5:   f.File.InitialFileMD5,
-				FullFileMD5:  f.File.FullFileMD5,
-				FileURLFull:  f.File.FileURLFull,
+				InitialMD5:   &f.File.InitialFileMD5,
+				FullFileMD5:  &f.File.FullFileMD5,
+				FileURLFull:  &f.File.FileURLFull,
 			}
 		}
 
@@ -110,20 +117,14 @@ type TicketReport struct {
 }
 
 type Thumbnail struct {
-	SubmissionID int64  `json:"id,omitempty"`
-	Title        string `json:"title,omitempty"`
-	PageCount    int    `json:"pagecount,omitempty"`
-	URL          string `json:"thumbnail_url,omitempty"`
-	Width        int    `json:"thumbnail_width,omitempty"`
-	Height       int    `json:"thumbnail_height,omitempty"`
-	Metadata     Meta   `json:"metadata,omitempty"`
-}
-
-type Meta struct {
-	Generated bool             `json:"generated"`
-	Assisted  bool             `json:"assisted"`
-	Flags     []db.TicketLabel `json:"flags,omitempty"`
-	Artists   []db.Artist      `json:"artists,omitempty"`
+	SubmissionID *int64  `json:"id,omitempty"`
+	Title        *string `json:"title,omitempty"`
+	PageCount    int     `json:"pagecount,omitempty"`
+	URL          *string `json:"thumbnail_url,omitempty"`
+	Width        *int    `json:"thumbnail_width,omitempty"`
+	Height       *int    `json:"thumbnail_height,omitempty"`
+	Generated    *bool   `json:"generated,omitempty"`
+	Assisted     *bool   `json:"assisted,omitempty"`
 }
 
 func CreateTicketReport(auditor *db.Auditor, details []Detail, host *url.URL) TicketReport {
@@ -177,18 +178,12 @@ func CreateTicketReport(auditor *db.Auditor, details []Detail, host *url.URL) Ti
 		}
 
 		info.Thumbs = append(info.Thumbs, Thumbnail{
-			SubmissionID: sub.Submission.ID,
-			Title:        sub.Submission.Title,
+			SubmissionID: &sub.Submission.ID,
+			Title:        &sub.Submission.Title,
 			PageCount:    len(sub.Submission.Files),
-			URL:          sub.Extra.ThumbnailURL,
-			Width:        sub.Extra.ThumbnailWidth,
-			Height:       sub.Extra.ThumbnailHeight,
-			Metadata: Meta{
-				Generated: sub.Submission.Metadata.Generated,
-				Assisted:  sub.Submission.Metadata.Assisted,
-				Flags:     sub.Ticket.Labels,
-				Artists:   sub.Submission.Metadata.ArtistUsed,
-			},
+			URL:          &sub.Extra.ThumbnailURL,
+			Width:        &sub.Extra.ThumbnailWidth,
+			Height:       &sub.Extra.ThumbnailHeight,
 		})
 	}
 

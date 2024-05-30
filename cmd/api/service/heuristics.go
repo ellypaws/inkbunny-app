@@ -270,6 +270,8 @@ func parameterHeuristics(c echo.Context, sub *db.Submission, textFile *db.File, 
 			utils.WithFilename(f.FileName),
 			utils.UseSoph(),
 		)
+	case utils.IDNastAI:
+		params, err = utils.Sequential(utils.WithBytes(b.Blob), utils.WithFilename(f.FileName))
 	default:
 		params, err = utils.Common(
 			utils.WithBytes(bytes.Join([][]byte{[]byte(f.FileName), b.Blob}, []byte("\n"))),

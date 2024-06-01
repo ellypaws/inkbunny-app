@@ -8,7 +8,6 @@ import (
 	"github.com/labstack/echo/v4/middleware"
 	logger "github.com/labstack/gommon/log"
 	"net/url"
-	"time"
 )
 
 var (
@@ -34,13 +33,6 @@ func Run(config RunConfig) {
 
 	e := echo.New()
 
-	e.Use(middleware.LoggerWithConfig(
-		middleware.LoggerConfig{
-			Skipper:          nil,
-			Format:           `${time_custom}     	${status} ${method}  ${host}${uri} in ${latency_human} from ${remote_ip} ${error}` + "\n",
-			CustomTimeFormat: time.DateTime,
-		},
-	))
 	e.Use(middleware.Recover())
 
 	registerAs(e.GET, getHandlers)

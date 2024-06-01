@@ -15,6 +15,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 )
 
 var (
@@ -37,6 +38,13 @@ func main() {
 }
 
 var middlewares = []echo.MiddlewareFunc{
+	middleware.LoggerWithConfig(
+		middleware.LoggerConfig{
+			Skipper:          nil,
+			Format:           `${time_custom}     	${status} ${method}  ${host}${uri} in ${latency_human} from ${remote_ip} ${error}` + "\n",
+			CustomTimeFormat: time.DateTime,
+		},
+	),
 	middleware.RemoveTrailingSlash(),
 	middleware.Gzip(),
 	middleware.Decompress(),

@@ -151,6 +151,15 @@ func processObjectMetadata(submission *db.Submission, artists []db.Artist) {
 	submission.Metadata.MissingPrompt = true
 	submission.Metadata.MissingModel = true
 
+	var sizes [2]int
+	for _, f := range submission.Files {
+		if f.File.FullSizeX == 0 || f.File.FullSizeY == 0 {
+			continue
+		}
+		sizes[0] = max(sizes[0], int(f.File.FullSizeX))
+		sizes[1] = max(sizes[1], int(f.File.FullSizeY))
+		break
+	}
 	for _, obj := range submission.Metadata.Objects {
 		submission.Metadata.AISubmission = true
 		for _, artist := range artists {
@@ -185,6 +194,11 @@ func processObjectMetadata(submission *db.Submission, artists []db.Artist) {
 
 		if obj.OverrideSettings.SDModelCheckpoint != nil || obj.OverrideSettings.SDCheckpointHash != "" {
 			submission.Metadata.MissingModel = false
+		}
+
+		if obj.Width == 0 || obj.Height == 0 {
+			obj.Width = sizes[0]
+			obj.Height = sizes[1]
 		}
 	}
 }

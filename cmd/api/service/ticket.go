@@ -213,7 +213,7 @@ func TicketLabels(submission db.Submission) []db.TicketLabel {
 		}
 
 		if metadata.PrivateTool {
-			labels[db.LabelPrivateTool] = true
+			labels[db.TicketLabel(fmt.Sprintf("%s:%s", db.LabelPrivateTool, metadata.Generator))] = true
 		}
 
 		const (

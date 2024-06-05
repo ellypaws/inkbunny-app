@@ -217,13 +217,14 @@ func TicketLabels(submission db.Submission) []db.TicketLabel {
 		}
 
 		const (
-			prompt = "prompt"
-			model  = "model"
-			seed   = "seed"
-			steps  = "steps"
-			cfg    = "cfg"
+			prompt  = "prompt"
+			model   = "model"
+			seed    = "seed"
+			steps   = "steps"
+			cfg     = "cfg"
+			sampler = "sampler"
 		)
-		hint := [5]struct {
+		hint := [6]struct {
 			label   string
 			missing bool
 			partial bool
@@ -233,6 +234,7 @@ func TicketLabels(submission db.Submission) []db.TicketLabel {
 			{label: seed},
 			{label: steps},
 			{label: cfg},
+			{label: sampler},
 		}
 		for _, obj := range metadata.Objects {
 			if obj.Prompt == "" {
@@ -259,6 +261,11 @@ func TicketLabels(submission db.Submission) []db.TicketLabel {
 				hint[4].missing = true
 			} else {
 				hint[4].partial = true
+			}
+			if obj.SamplerName == "" {
+				hint[5].missing = true
+			} else {
+				hint[5].partial = true
 			}
 		}
 		for _, v := range hint {

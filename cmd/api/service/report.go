@@ -243,8 +243,8 @@ func CreateTicketReport(auditor *db.Auditor, details []Detail, host *url.URL) Ti
 			message.WriteString(fmt.Sprintf("\nSubmission #[url=https://inkbunny.net/s/%s]%s[/url]:", image.File.SubmissionID, image.File.SubmissionID))
 			lastSubmission = image.File.SubmissionID
 		}
-		message.WriteString(fmt.Sprintf("\n[url=%s]%s[/url] ([url=https://inkbunny.net/submissionsviewall.php?text=%s&md5=yes&mode=search]%s[/url])",
-			image.File.FileURLFull, image.File.FileName, image.File.FullFileMD5, image.File.FullFileMD5))
+		message.WriteString(fmt.Sprintf("\n[url=%s]%s[/url] (%s)",
+			image.File.FileURLFull, image.File.FileName, image.File.FullFileMD5))
 	}
 
 	message.WriteString(fmt.Sprintf("\n\nA copy of this report is available at: %s/report/%s/%s",

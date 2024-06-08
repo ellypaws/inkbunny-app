@@ -1,10 +1,13 @@
 package service
 
 import (
+	"encoding/json"
 	"fmt"
+	"github.com/ellypaws/inkbunny-app/cmd/api/cache"
 	"github.com/ellypaws/inkbunny-app/cmd/db"
 	"github.com/ellypaws/inkbunny-sd/entities"
 	"github.com/ellypaws/inkbunny/api"
+	"github.com/labstack/echo/v4"
 	"net/url"
 	"slices"
 	"strconv"
@@ -276,4 +279,30 @@ func CreateTicketReport(auditor *db.Auditor, details []Detail, host *url.URL) Ti
 		info.Thumbs}
 
 	return out
+}
+
+func StoreReport(c echo.Context, database *db.Sqlite, ticket TicketReport) {
+	reportKey := fmt.Sprintf(
+		"%s:report:%s:%s",
+		echo.MIMEApplicationJSON,
+		c.Param("id"),
+		ticket.Report.ReportDate.Format(db.TicketDateLayout),
+	)
+	report := any(ticket.Report)
+	bin, err := json.Marshal(report)
+	if err != nil {
+		c.Logger().Errorf("error marshaling report: %v", err)
+		return
+	}
+	StoreReview(c, reportKey, &report, cache.Indefinite, bin...)
+
+	err = database.UpsertTicketReport(db.TicketReport{
+		Username:   ticket.Report.UsernameID.Username,
+		ReportDate: ticket.Report.ReportDate,
+		Report:     bin,
+	})
+
+	if err != nil {
+		c.Logger().Error("error upserting ticket report:", err)
+	}
 }

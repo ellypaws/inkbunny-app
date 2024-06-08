@@ -1,7 +1,6 @@
 package api
 
 import (
-	"bytes"
 	_ "embed"
 	"encoding/json"
 	"errors"
@@ -24,7 +23,6 @@ import (
 	"strconv"
 	"strings"
 	"sync"
-	"time"
 )
 
 var getHandlers = pathHandler{
@@ -473,9 +471,6 @@ func GetReviewHandler(c echo.Context) error {
 
 	writer := c.Get("writer").(http.Flusher)
 
-	var processed []service.Detail
-	var missed []string
-
 	idKey := submissionIDs
 	if output == service.OutputReport {
 		idKey = idParam
@@ -488,102 +483,34 @@ func GetReviewHandler(c echo.Context) error {
 		query.Encode(),
 	)
 
+	var processed []service.Detail
+	var missed []string
 	var store any
 	if !skipCache {
-		if output != service.OutputReport {
-			item, err := cacheToUse.Get(reviewKey)
-			if err == nil {
-				c.Logger().Infof("Cache hit for %s", reviewKey)
-				if c.Param("id") != "search" {
-					return c.Blob(http.StatusOK, item.MimeType, item.Blob)
-				} else {
-					var store any
-					if err := json.Unmarshal(item.Blob, &store); err != nil {
-						return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
-					}
-					searchStore.Review = store
-					return c.JSON(http.StatusOK, searchStore)
-				}
-			}
+		var errFunc func(echo.Context) error
+		processed, missed, errFunc = service.RetrieveReview(c,
+			&service.Review{
+				Output:        output,
+				Query:         query,
+				Cache:         cacheToUse,
+				Key:           reviewKey,
+				Stream:        stream,
+				Writer:        writer,
+				SubmissionIDs: submissionIDSlice,
+				Search:        &searchStore,
+				Store:         &store,
+				Database:      Database,
+				ApiHost:       ServerHost,
+				Auditor:       auditor,
+			},
+		)
+		if errFunc != nil {
+			return errFunc(c)
 		}
-
-		for _, id := range submissionIDSlice {
-			key := fmt.Sprintf(
-				"%s:review:%s:%s?%s",
-				echo.MIMEApplicationJSON,
-				output,
-				id,
-				query.Encode(),
-			)
-			item, err := cacheToUse.Get(key)
-			if err == nil {
-				if stream {
-					c.Response().Header().Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
-
-					if _, err := c.Response().Write(item.Blob); err != nil {
-						c.Logger().Errorf("error encoding submission %v: %v", id, err)
-						c.Response().WriteHeader(http.StatusInternalServerError)
-						return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
-					}
-
-					if _, err = c.Response().Write([]byte("\n")); err != nil {
-						c.Logger().Errorf("error encoding submission %v: %v", id, err)
-						c.Response().WriteHeader(http.StatusInternalServerError)
-						return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
-					}
-					c.Logger().Debugf("flushing %v", id)
-
-					writer.Flush()
-				} else {
-					c.Logger().Infof("Cache hit for %s", key)
-				}
-
-				var detail service.Detail
-				if err := json.Unmarshal(bytes.Trim(item.Blob, "[]"), &detail); err != nil {
-					c.Logger().Errorf("error unmarshaling submission %v: %v", id, err)
-					return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
-				}
-
-				processed = append(processed, detail)
-				continue
-			}
-
-			missed = append(missed, id)
-		}
-
-		if len(processed) > 0 && len(missed) == 0 {
-			store = processed
-
-			if output == service.OutputSingleTicket {
-				store = createSingleTicket(auditor, processed)
-			}
-
-			if output == service.OutputReport {
-				report := service.CreateTicketReport(auditor, processed, ServerHost)
-				storeReport(c, Database, report)
-				store = report
-			}
-
-			if c.Param("id") == "search" {
-				searchStore.Review = store
-				if stream && output != service.OutputSingleTicket {
-					return nil
-				}
-				return c.JSON(http.StatusOK, searchStore)
-			}
-
-			if stream && output != service.OutputSingleTicket {
-				return nil
-			}
-
-			return c.JSON(http.StatusOK, store)
-		}
-
-		c.Logger().Debugf("Cache miss for %s retrieving review...", reviewKey)
 	}
 
 	if c.Param("id") != "search" && output != service.OutputReport {
-		defer storeReview(c, reviewKey, &store, cache.Hour)
+		defer service.StoreReview(c, reviewKey, &store, cache.Hour)
 	}
 
 	if len(missed) > 0 {
@@ -639,12 +566,12 @@ func GetReviewHandler(c echo.Context) error {
 		store = tickets
 	case service.OutputReport:
 		report := service.CreateTicketReport(auditor, details, ServerHost)
-		storeReport(c, Database, report)
+		service.StoreReport(c, Database, report)
 		store = report
 	case service.OutputSingleTicket:
 		fallthrough
 	default:
-		store = createSingleTicket(auditor, details)
+		store = service.CreateSingleTicket(auditor, details)
 	}
 
 	if c.Param("id") == "search" {
@@ -660,119 +587,6 @@ func GetReviewHandler(c echo.Context) error {
 	}
 
 	return c.JSON(http.StatusOK, store)
-}
-
-func createSingleTicket(auditor *db.Auditor, details []service.Detail) db.Ticket {
-	auditorAsUser := service.AuditorAsUsernameID(auditor)
-
-	var ticketLabels []db.TicketLabel
-	for _, sub := range details {
-		for _, label := range sub.Ticket.Labels {
-			if !slices.Contains(ticketLabels, label) {
-				ticketLabels = append(ticketLabels, label)
-			}
-		}
-	}
-	return db.Ticket{
-		Subject:    "subject",
-		DateOpened: time.Now().UTC(),
-		Status:     "triage",
-		Labels:     ticketLabels,
-		Priority:   "low",
-		Closed:     false,
-		Responses: []db.Response{
-			{
-				SupportTeam: false,
-				User:        auditorAsUser,
-				Date:        time.Now().UTC(),
-				Message: func() string {
-					var sb strings.Builder
-					for _, sub := range details {
-						if sb.Len() > 0 {
-							sb.WriteString("\n\n[s]                    [/s]\n\n")
-						}
-						sb.WriteString(sub.Ticket.Responses[0].Message)
-					}
-					return sb.String()
-				}(),
-			},
-		},
-		SubmissionIDs: func() []int64 {
-			var ids []int64
-			for _, sub := range details {
-				ids = append(ids, int64(sub.ID))
-			}
-			return ids
-		}(),
-		AssignedID: &auditor.UserID,
-		UsersInvolved: db.Involved{
-			Reporter: auditorAsUser,
-			ReportedIDs: func() []api.UsernameID {
-				var ids []api.UsernameID
-				for _, sub := range details {
-					ids = append(ids, sub.User)
-				}
-				return ids
-			}(),
-		},
-	}
-}
-
-func storeReview(c echo.Context, key string, store *any, duration time.Duration, bin ...byte) {
-	if bin == nil {
-		if store == nil {
-			c.Logger().Warnf("trying to cache nil review for %s", key)
-			return
-		}
-
-		if *store == nil {
-			return
-		}
-
-		var err error
-		bin, err = json.Marshal(store)
-		if err != nil {
-			c.Logger().Errorf("error marshaling review: %v", err)
-			return
-		}
-	}
-
-	err := cache.SwitchCache(c).Set(key, &cache.Item{
-		Blob:     bin,
-		MimeType: echo.MIMEApplicationJSON,
-	}, duration)
-	if err != nil {
-		c.Logger().Errorf("error caching review: %v", err)
-		return
-	}
-
-	c.Logger().Infof("Cached %s %s %dKiB", key, echo.MIMEApplicationJSON, len(bin)/units.KiB)
-}
-
-func storeReport(c echo.Context, database *db.Sqlite, ticket service.TicketReport) {
-	reportKey := fmt.Sprintf(
-		"%s:report:%s:%s",
-		echo.MIMEApplicationJSON,
-		c.Param("id"),
-		ticket.Report.ReportDate.Format(db.TicketDateLayout),
-	)
-	report := any(ticket.Report)
-	bin, err := json.Marshal(report)
-	if err != nil {
-		c.Logger().Errorf("error marshaling report: %v", err)
-		return
-	}
-	storeReview(c, reportKey, &report, cache.Indefinite, bin...)
-
-	err = database.UpsertTicketReport(db.TicketReport{
-		Username:   ticket.Report.UsernameID.Username,
-		ReportDate: ticket.Report.ReportDate,
-		Report:     bin,
-	})
-
-	if err != nil {
-		c.Logger().Error("error upserting ticket report:", err)
-	}
 }
 
 // GetReportHandler returns a report analysis of an artist
@@ -909,7 +723,7 @@ func GetReportHandler(c echo.Context) error {
 	)
 	store = out
 
-	storeReview(c, reportKey, &store, cache.Indefinite)
+	service.StoreReview(c, reportKey, &store, cache.Indefinite)
 	return c.Redirect(http.StatusSeeOther, fmt.Sprintf("/report/%s/%s.json", artist, date))
 }
 
@@ -928,7 +742,7 @@ func GetReportKeyHandler(c echo.Context) error {
 				t.ReportDate.Format(db.TicketDateLayout),
 			)
 
-			storeReview(c, reportKey, nil, cache.Indefinite, t.Report...)
+			service.StoreReview(c, reportKey, nil, cache.Indefinite, t.Report...)
 			return c.Redirect(
 				http.StatusFound,
 				fmt.Sprintf("/report/%s/%s.json", artist, t.ReportDate.Format(db.TicketDateLayout)),
@@ -953,7 +767,7 @@ func GetReportKeyHandler(c echo.Context) error {
 
 	t, err := Database.GetTicketReportByKey(fmt.Sprintf("%s:%s", key, artist))
 	if err == nil {
-		go storeReview(c, reportKey, nil, cache.Indefinite, t.Report...)
+		go service.StoreReview(c, reportKey, nil, cache.Indefinite, t.Report...)
 		return c.Blob(http.StatusOK, echo.MIMEApplicationJSON, t.Report)
 	}
 

@@ -104,6 +104,7 @@ func RetrieveReview(c echo.Context, review *Review) (processed []Detail, missed 
 	switch review.Output {
 	case OutputSingleTicket:
 		*review.Store = CreateSingleTicket(review.Auditor, processed)
+		review.Stream = false
 	case OutputReport:
 		report := CreateTicketReport(review.Auditor, processed, review.ApiHost)
 		StoreReport(c, review.Database, report)
@@ -114,13 +115,13 @@ func RetrieveReview(c echo.Context, review *Review) (processed []Detail, missed 
 
 	if c.Param("id") == "search" {
 		review.Search.Review = review.Store
-		if review.Stream && review.Output != OutputSingleTicket {
+		if review.Stream {
 			return nil, nil, func(c echo.Context) error { return nil }
 		}
 		return nil, nil, func(c echo.Context) error { return c.JSON(http.StatusOK, review.Search) }
 	}
 
-	if review.Stream && review.Output != OutputSingleTicket {
+	if review.Stream {
 		return nil, nil, func(c echo.Context) error { return nil }
 	}
 

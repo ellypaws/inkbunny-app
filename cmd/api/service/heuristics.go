@@ -240,6 +240,26 @@ func jsonHeuristics(c echo.Context, sub *db.Submission, b *cache.Item, textFile 
 		return
 	}
 
+	cubFestAI, err := entities.UnmarshalComfyUICubFestAITime(b.Blob)
+	if err != nil {
+		c.Logger().Errorf("error parsing comfy ui (CubFestAI) %s: %s", textFile.File.FileURLFull, err)
+	}
+	if err == nil && !reflect.DeepEqual(cubFestAI, entities.ComfyUICubFestAITime{}) {
+		c.Logger().Debugf("comfy ui cub fest ai found for %s", sub.URL)
+		var objects = make(map[string]entities.TextToImageRequest)
+		for key, value := range cubFestAI {
+			objects[key] = value.Convert()
+		}
+		sub.Metadata.Objects = objects
+		sub.Metadata.Params = &utils.Params{
+			textFile.File.FileName: utils.PNGChunk{
+				"comfy_ui": string(b.Blob),
+			},
+		}
+		sub.Metadata.Generator = "comfy_ui"
+		return
+	}
+
 	c.Logger().Warnf("could not parse json %s for %s", textFile.File.FileURLFull, sub.URL)
 	return
 }

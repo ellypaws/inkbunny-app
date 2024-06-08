@@ -7,6 +7,7 @@ import (
 	"github.com/ellypaws/inkbunny-app/cmd/api/cache"
 	"github.com/ellypaws/inkbunny-app/cmd/db"
 	"github.com/ellypaws/inkbunny-sd/entities"
+	"github.com/ellypaws/inkbunny-sd/entities/comfyui"
 	"github.com/ellypaws/inkbunny-sd/utils"
 	"github.com/labstack/echo/v4"
 	units "github.com/labstack/gommon/bytes"
@@ -204,7 +205,7 @@ func processObjectMetadata(submission *db.Submission, artists []db.Artist) {
 }
 
 func jsonHeuristics(c echo.Context, sub *db.Submission, b *cache.Item, textFile *db.File) {
-	comfyUI, err := entities.UnmarshalComfyUIBasic(b.Blob)
+	comfyUI, err := comfyui.UnmarshalComfyUIBasic(b.Blob)
 	if err != nil {
 		c.Logger().Errorf("error parsing comfy ui %s: %s", textFile.File.FileURLFull, err)
 	}
@@ -240,11 +241,11 @@ func jsonHeuristics(c echo.Context, sub *db.Submission, b *cache.Item, textFile 
 		return
 	}
 
-	cubFestAI, err := entities.UnmarshalComfyUICubFestAITime(b.Blob)
+	cubFestAI, err := comfyui.UnmarshalCubFestAIDate(b.Blob)
 	if err != nil {
 		c.Logger().Errorf("error parsing comfy ui (CubFestAI) %s: %s", textFile.File.FileURLFull, err)
 	}
-	if err == nil && !reflect.DeepEqual(cubFestAI, entities.ComfyUICubFestAITime{}) {
+	if err == nil && !reflect.DeepEqual(cubFestAI, comfyui.CubFestAITime{}) {
 		c.Logger().Debugf("comfy ui cub fest ai found for %s", sub.URL)
 		var objects = make(map[string]entities.TextToImageRequest)
 		for key, value := range cubFestAI {

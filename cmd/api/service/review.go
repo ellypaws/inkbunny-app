@@ -91,7 +91,7 @@ func RetrieveReview(c echo.Context, review *Review) (processed []Detail, missed 
 	}
 
 	if len(missed) > 0 {
-		c.Logger().Debugf("Cache miss for %s retrieving review...", review.Key)
+		c.Logger().Debugf("Retrieved: %d, Missed: %d, Total: %d (%s)", len(processed), len(missed), len(review.SubmissionIDs), review.Key)
 		return processed, missed, nil
 	}
 

@@ -484,7 +484,7 @@ func GetReviewHandler(c echo.Context) error {
 	)
 
 	var processed []service.Detail
-	var missed []string
+	var missed = submissionIDSlice
 	var store any
 	if !skipCache {
 		var errFunc func(echo.Context) error
@@ -513,13 +513,9 @@ func GetReviewHandler(c echo.Context) error {
 		defer service.StoreReview(c, reviewKey, &store, cache.Hour)
 	}
 
-	if len(missed) > 0 {
-		submissionIDs = strings.Join(missed, ",")
-	}
-
 	req := api.SubmissionDetailsRequest{
 		SID:                         sid,
-		SubmissionIDs:               submissionIDs,
+		SubmissionIDSlice:           missed,
 		OutputMode:                  "json",
 		ShowDescription:             true,
 		ShowDescriptionBbcodeParsed: true,
@@ -531,7 +527,7 @@ func GetReviewHandler(c echo.Context) error {
 	}
 
 	if len(submissionDetails.Submissions) == 0 {
-		c.Logger().Warnf("no submissions found for %s", submissionIDs)
+		c.Logger().Warnf("no submissions found for %s", missed)
 		return c.JSON(http.StatusNotFound, crashy.ErrorResponse{ErrorString: "no submissions found"})
 	}
 

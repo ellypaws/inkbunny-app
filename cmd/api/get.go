@@ -443,11 +443,10 @@ func GetReviewHandler(c echo.Context) error {
 
 	skipCache := c.Request().Header.Get(echo.HeaderCacheControl) == "no-cache"
 
-	var submissionIDs = c.Param("id")
 	var submissionIDSlice []string
 
 	var searchStore service.SearchReview
-	if submissionIDs == "search" || output == service.OutputReport {
+	if idParam == "search" || output == service.OutputReport {
 		var errFunc func(echo.Context) error
 		searchStore.Search, errFunc = service.RetrieveReviewSearch(c, sid, output, query, cacheToUse)
 		if errFunc != nil {
@@ -460,26 +459,27 @@ func GetReviewHandler(c echo.Context) error {
 			submissionIDSlice[i] = submission.SubmissionID
 		}
 
-		submissionIDs = strings.Join(submissionIDSlice, ",")
-
 		if output != service.OutputReport {
 			defer service.StoreSearchReview(c, query, &searchStore)
 		}
 	} else {
-		submissionIDSlice = strings.Split(submissionIDs, ",")
+		submissionIDSlice = strings.Split(idParam, ",")
 	}
 
 	writer := c.Get("writer").(http.Flusher)
 
-	idKey := submissionIDs
+	var key string
 	if output == service.OutputReport {
-		idKey = idParam
+		// idParam should contain the artist name
+		key = idParam
+	} else {
+		key = strings.Join(submissionIDSlice, ",")
 	}
 	reviewKey := fmt.Sprintf(
 		"%s:review:%s:%s?%s",
 		echo.MIMEApplicationJSON,
 		output,
-		idKey,
+		key,
 		query.Encode(),
 	)
 

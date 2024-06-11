@@ -509,7 +509,7 @@ func GetReviewHandler(c echo.Context) error {
 		}
 	}
 
-	if c.Param("id") != "search" && output != service.OutputReport {
+	if idParam != "search" && output != service.OutputReport {
 		defer service.StoreReview(c, reviewKey, &store, cache.Hour)
 	}
 

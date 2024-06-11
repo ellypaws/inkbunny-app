@@ -515,7 +515,7 @@ func GetReviewHandler(c echo.Context) error {
 
 	req := api.SubmissionDetailsRequest{
 		SID:                         sid,
-		SubmissionIDSlice:           missed,
+		SubmissionIDs:               strings.Join(missed, ","),
 		OutputMode:                  "json",
 		ShowDescription:             true,
 		ShowDescriptionBbcodeParsed: true,

@@ -100,18 +100,17 @@ func RetrieveReviewSearch(c echo.Context, sid string, output string, query url.V
 		return &searchResponse, nil
 	}
 
-	var pages = make(chan api.IntString, searchResponse.PagesCount-1)
+	var requests = make(chan api.SubmissionSearchRequest, searchResponse.PagesCount-1)
 	var responses = make(chan api.SubmissionSearchResponse, searchResponse.PagesCount-1)
 	var errors = make(chan error, searchResponse.PagesCount-1)
 
 	request.RID = searchResponse.RID
 	request.GetRID = false
 
-	work := func(id int, pages <-chan api.IntString, responses chan<- api.SubmissionSearchResponse, errors chan<- error) {
-		for page := range pages {
-			c.Logger().Infof("Worker %d processing page %s:%d", id, request.RID, page)
-			request.Page = page
-			response, err := RetrieveSearch(c, request)
+	work := func(id int, requests <-chan api.SubmissionSearchRequest, responses chan<- api.SubmissionSearchResponse, errors chan<- error) {
+		for req := range requests {
+			c.Logger().Infof("Worker %d processing page %s:%d", id, request.RID, req.Page)
+			response, err := RetrieveSearch(c, req)
 			if err != nil {
 				errors <- err
 				return
@@ -122,13 +121,14 @@ func RetrieveReviewSearch(c echo.Context, sid string, output string, query url.V
 
 	const workers = 3
 	for i := 0; i < workers; i++ {
-		go work(i, pages, responses, errors)
+		go work(i, requests, responses, errors)
 	}
 
 	for i := api.IntString(2); i <= searchResponse.PagesCount; i++ {
-		pages <- i
+		request.Page = i
+		requests <- request
 	}
-	close(pages)
+	close(requests)
 
 	for i := api.IntString(2); i <= searchResponse.PagesCount; i++ {
 		select {

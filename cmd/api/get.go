@@ -520,7 +520,13 @@ func GetReviewHandler(c echo.Context) error {
 		ShowDescription:             true,
 		ShowDescriptionBbcodeParsed: true,
 	}
-	submissionDetails, err := service.RetrieveSubmission(c, req)
+
+	var submissionDetails api.SubmissionDetailsResponse
+	if len(missed) > 100 {
+		submissionDetails, err = service.BatchRetrieveSubmission(c, req, missed)
+	} else {
+		submissionDetails, err = service.RetrieveSubmission(c, req)
+	}
 	if err != nil {
 		c.Logger().Errorf("error retrieving submission details: %v", err)
 		return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))

@@ -16,6 +16,65 @@ import (
 	"time"
 )
 
+// BatchRetrieveSubmission calls RetrieveSubmission in batches of 100, as that's the query limit.
+// It uses a pool of workers to do this concurrently.
+func BatchRetrieveSubmission(c echo.Context, req api.SubmissionDetailsRequest, missed []string) (api.SubmissionDetailsResponse, error) {
+	var submissionDetails api.SubmissionDetailsResponse
+
+	if len(missed) == 0 {
+		return submissionDetails, crashy.ErrorResponse{ErrorString: "no submission IDs provided"}
+	}
+
+	const batchSize = 100
+	// calculate the number of jobs depending on the batch size
+	var jobs = make(chan string, (len(missed)+batchSize-1)/batchSize)
+	var responses = make(chan api.SubmissionDetailsResponse, len(missed))
+	var errors = make(chan error, len(missed))
+
+	work := func(id int, req api.SubmissionDetailsRequest, jobs <-chan string) {
+		for submissionIDs := range jobs {
+			c.Logger().Debugf("Worker %d retrieving description %s", id, submissionIDs)
+			req.SubmissionIDs = submissionIDs
+			details, err := RetrieveSubmission(c, req)
+			if err != nil {
+				errors <- err
+				return
+			}
+			responses <- details
+		}
+	}
+
+	const workers = 3
+	for i := 0; i < workers; i++ {
+		go work(i, req, jobs)
+	}
+
+	var jobCount int
+	for i := 0; i < len(missed); i += batchSize {
+		end := i + batchSize
+		if end > len(missed) {
+			end = len(missed)
+		}
+		jobs <- strings.Join(missed[i:end], ",")
+		jobCount++
+	}
+	close(jobs)
+
+	for i := 0; i < jobCount; i++ {
+		select {
+		case response := <-responses:
+			submissionDetails.Sid = response.Sid
+			submissionDetails.UserLocation = response.UserLocation
+			submissionDetails.Submissions = append(submissionDetails.Submissions, response.Submissions...)
+			submissionDetails.ResultsCount += response.ResultsCount
+		case err := <-errors:
+			return submissionDetails, err
+		}
+	}
+
+	return submissionDetails, nil
+}
+
 func RetrieveSubmission(c echo.Context, req api.SubmissionDetailsRequest) (api.SubmissionDetailsResponse, error) {
 	var submissionDetails api.SubmissionDetailsResponse
 

@@ -313,7 +313,7 @@ func parameterHeuristics(c echo.Context, sub *db.Submission, textFile *db.File, 
 			utils.WithKeyCondition(func(line string) bool { return strings.HasPrefix(line, f.FileName) }))
 	}
 	if err != nil {
-		c.Logger().Errorf("error processing params for %s: %s", f.FileName, err)
+		c.Logger().Errorf("error processing params for %s: %v", f.FileName, err)
 		return true
 	}
 	if len(params) > 0 {
@@ -333,13 +333,13 @@ func paramsToObject(c echo.Context, sub *db.Submission) {
 	var mutex sync.Mutex
 	for fileName, params := range *sub.Metadata.Params {
 		if p, ok := params[utils.Parameters]; ok {
-			c.Logger().Debugf("processing heuristics for %v", fileName)
+			c.Logger().Debugf("processing heuristics for %s", fileName)
 			wg.Add(1)
 			go func(name string, content string) {
 				defer wg.Done()
 				heuristics, err := utils.ParameterHeuristics(content)
 				if err != nil {
-					c.Logger().Errorf("error processing heuristics for %v: %v", name, err)
+					c.Logger().Errorf("error processing heuristics for %s: %v", name, err)
 					return
 				}
 				if tool := PrivateTools.FindString(p); tool != "" {
@@ -360,7 +360,7 @@ func paramsToObject(c echo.Context, sub *db.Submission) {
 }
 
 func processDescriptionHeuristics(c echo.Context, sub *db.Submission) {
-	c.Logger().Debugf("processing description heuristics for %v", sub.URL)
+	c.Logger().Debugf("processing description heuristics for %s", sub.URL)
 	var heuristics entities.TextToImageRequest
 	var err error
 	switch sub.UserID {
@@ -370,11 +370,11 @@ func processDescriptionHeuristics(c echo.Context, sub *db.Submission) {
 		heuristics, err = utils.DescriptionHeuristics(sub.Description)
 	}
 	if err != nil {
-		c.Logger().Errorf("error processing description heuristics for %v: %v", sub.URL, err)
+		c.Logger().Errorf("error processing description heuristics for %s: %v", sub.URL, err)
 		return
 	}
 	if reflect.DeepEqual(heuristics, entities.TextToImageRequest{}) {
-		c.Logger().Debugf("no heuristics found for %v", sub.URL)
+		c.Logger().Debugf("no heuristics found for %s", sub.URL)
 		return
 	}
 	sub.Metadata.Objects = map[string]entities.TextToImageRequest{sub.Title: heuristics}

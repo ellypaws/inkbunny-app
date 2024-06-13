@@ -571,6 +571,7 @@ func GetReviewHandler(c echo.Context) error {
 		service.StoreReport(c, Database, report)
 		store = report
 	case service.OutputSingleTicket:
+		stream = false
 		fallthrough
 	default:
 		store = service.CreateSingleTicket(auditor, details)
@@ -578,13 +579,13 @@ func GetReviewHandler(c echo.Context) error {
 
 	if c.Param("id") == "search" {
 		searchStore.Review = store
-		if stream && output != service.OutputSingleTicket {
+		if stream {
 			return nil
 		}
 		return c.JSON(http.StatusOK, searchStore)
 	}
 
-	if stream && output != service.OutputSingleTicket {
+	if stream {
 		return nil
 	}
 

@@ -8,6 +8,7 @@ import (
 	"github.com/ellypaws/inkbunny-sd/entities"
 	"github.com/ellypaws/inkbunny/api"
 	"github.com/labstack/echo/v4"
+	"math/rand/v2"
 	"net/url"
 	"slices"
 	"strconv"
@@ -130,6 +131,39 @@ type Thumbnail struct {
 	Assisted     *bool   `json:"assisted,omitempty"`
 }
 
+func applyLabelColor(labels []db.TicketLabel, colors map[string]string) []string {
+	if labels == nil || colors == nil {
+		return nil
+	}
+
+	out := make([]string, len(labels))
+	for i, label := range labels {
+		out[i] = fmt.Sprintf("[color=%s]%s[/color]", getColor(label, colors), label)
+	}
+
+	return out
+}
+
+func getColor(label db.TicketLabel, colors map[string]string) string {
+	if _, ok := colors[string(label)]; !ok {
+		colors[string(label)] = randomColor()
+	}
+	return colors[string(label)]
+}
+
+func randomColor() string {
+	var palette = [6]string{
+		"#6169C0",
+		"#2D4F7B",
+		"#253C73",
+		"#795577",
+		"#4E4B76",
+		"#1A2D65",
+	}
+
+	return palette[rand.IntN(6)]
+}
+
 func CreateTicketReport(auditor *db.Auditor, details []Detail, host *url.URL) TicketReport {
 	report := CreateReport(details, auditor)
 	auditorAsUser := AuditorAsUsernameID(auditor)
@@ -142,8 +176,11 @@ func CreateTicketReport(auditor *db.Auditor, details []Detail, host *url.URL) Ti
 		IDs     []int64
 		Objects []map[string]entities.TextToImageRequest
 		Thumbs  []Thumbnail
+
+		Categories map[string][]int64
 	}
 
+	var colors = make(map[string]string)
 	for _, sub := range details {
 		if len(sub.Ticket.Labels) == 0 {
 			continue
@@ -188,6 +225,17 @@ func CreateTicketReport(auditor *db.Auditor, details []Detail, host *url.URL) Ti
 			Width:        &sub.Extra.ThumbnailWidth,
 			Height:       &sub.Extra.ThumbnailHeight,
 		})
+
+		if info.Categories == nil {
+			info.Categories = make(map[string][]int64)
+		}
+
+		category := strings.Join(applyLabelColor(sub.Ticket.Labels, colors), ", ")
+		if _, ok := info.Categories[category]; !ok {
+			info.Categories[category] = []int64{sub.Submission.ID}
+		} else {
+			info.Categories[category] = append(info.Categories[category], sub.Submission.ID)
+		}
 	}
 
 	var message strings.Builder
@@ -205,16 +253,15 @@ func CreateTicketReport(auditor *db.Auditor, details []Detail, host *url.URL) Ti
 		} else {
 			message.WriteString(", ")
 		}
-		message.WriteString(fmt.Sprintf("[b]%s[/b]", label))
+		message.WriteString(fmt.Sprintf("[b]%s[/b]", fmt.Sprintf("[color=%s]%s[/color]", getColor(label, colors), label)))
 	}
 
-	for i, id := range info.IDs {
-		if i == 0 {
-			message.WriteString("\n\n[u]Submissions[/u]:\n")
-		} else {
-			message.WriteString("  ")
+	message.WriteString("\n\n[u]Submissions[/u]:")
+	for category, submission := range info.Categories {
+		message.WriteString(fmt.Sprintf("\n[b]%s[/b]:\n", category))
+		for _, id := range submission {
+			message.WriteString(fmt.Sprintf("#M%d", id))
 		}
-		message.WriteString(fmt.Sprintf("#M%d", id))
 	}
 
 	if len(info.Artists) > 0 {
@@ -237,7 +284,7 @@ func CreateTicketReport(auditor *db.Auditor, details []Detail, host *url.URL) Ti
 	var lastSubmission string
 	for i, image := range info.Files {
 		if i == 0 {
-			message.WriteString(fmt.Sprintf("\n[u]MD5 Checksums at the time of writing[/u] ([url=https://inkbunny.net/submissionsviewall.php?text=%s&md5=yes&mode=search]search all[/url]):", strings.Join(info.MD5, "%20")))
+			message.WriteString(fmt.Sprintf("\n\n[u]MD5 Checksums at the time of writing[/u] ([url=https://inkbunny.net/submissionsviewall.php?text=%s&md5=yes&mode=search]search all[/url]):", strings.Join(info.MD5, "%20")))
 		}
 		if lastSubmission != image.File.SubmissionID {
 			if lastSubmission != "" {

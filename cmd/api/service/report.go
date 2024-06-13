@@ -256,9 +256,15 @@ func CreateTicketReport(auditor *db.Auditor, details []Detail, host *url.URL) Ti
 		message.WriteString(fmt.Sprintf("[b]%s[/b]", fmt.Sprintf("[color=%s]%s[/color]", getColor(label, colors), label)))
 	}
 
+	var nextCategory bool
 	message.WriteString("\n\n[u]Submissions[/u]:")
 	for category, submission := range info.Categories {
 		var written bool
+		if nextCategory {
+			message.WriteString("\n")
+		} else {
+			nextCategory = true
+		}
 		message.WriteString(fmt.Sprintf("\n(%d) [b]%s[/b]:\n", len(submission), category))
 		for _, id := range submission {
 			if written {

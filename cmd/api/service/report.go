@@ -8,7 +8,6 @@ import (
 	"github.com/ellypaws/inkbunny-sd/entities"
 	"github.com/ellypaws/inkbunny/api"
 	"github.com/labstack/echo/v4"
-	"math/rand/v2"
 	"net/url"
 	"slices"
 	"strconv"
@@ -144,24 +143,22 @@ func applyLabelColor(labels []db.TicketLabel, colors map[string]string) []string
 	return out
 }
 
-func getColor(label db.TicketLabel, colors map[string]string) string {
-	if _, ok := colors[string(label)]; !ok {
-		colors[string(label)] = randomColor()
-	}
-	return colors[string(label)]
+var lastUsed int
+var palette = [6]string{
+	"#6169C0",
+	"#2D4F7B",
+	"#253C73",
+	"#795577",
+	"#4E4B76",
+	"#1A2D65",
 }
 
-func randomColor() string {
-	var palette = [6]string{
-		"#6169C0",
-		"#2D4F7B",
-		"#253C73",
-		"#795577",
-		"#4E4B76",
-		"#1A2D65",
+func getColor(label db.TicketLabel, colors map[string]string) string {
+	if _, ok := colors[string(label)]; !ok {
+		colors[string(label)] = palette[lastUsed%len(palette)]
+		lastUsed++
 	}
-
-	return palette[rand.IntN(6)]
+	return colors[string(label)]
 }
 
 func CreateTicketReport(auditor *db.Auditor, details []Detail, host *url.URL) TicketReport {

@@ -258,7 +258,8 @@ func CreateTicketReport(auditor *db.Auditor, details []Detail, host *url.URL) Ti
 
 	message.WriteString("\n\n[u]Submissions[/u]:")
 	for category, submission := range info.Categories {
-		message.WriteString(fmt.Sprintf("\n[b]%s[/b]:\n", category))
+		var written bool
+		message.WriteString(fmt.Sprintf("\n(%d) [b]%s[/b]:\n", len(submission), category))
 		for _, id := range submission {
 			if written {
 				message.WriteString(" ")

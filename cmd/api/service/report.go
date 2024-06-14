@@ -1,6 +1,7 @@
 package service
 
 import (
+	"cmp"
 	"encoding/json"
 	"fmt"
 	"github.com/ellypaws/inkbunny-app/cmd/api/cache"
@@ -227,6 +228,7 @@ func CreateTicketReport(auditor *db.Auditor, details []Detail, host *url.URL) Ti
 			info.Categories = make(map[string][]int64)
 		}
 
+		slices.SortFunc(sub.Ticket.Labels, cmp.Compare[db.TicketLabel])
 		category := strings.Join(applyLabelColor(sub.Ticket.Labels, colors), ", ")
 		if _, ok := info.Categories[category]; !ok {
 			info.Categories[category] = []int64{sub.Submission.ID}
@@ -244,6 +246,7 @@ func CreateTicketReport(auditor *db.Auditor, details []Detail, host *url.URL) Ti
 		message.WriteString(fmt.Sprintf("needs to be reviewed[/u]: (%d submissions)\n", len(info.IDs)))
 	}
 
+	slices.SortFunc(info.Labels, cmp.Compare[db.TicketLabel])
 	for i, label := range info.Labels {
 		if i == 0 {
 			message.WriteString("\nThe following flags were detected:\n")

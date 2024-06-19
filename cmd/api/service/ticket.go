@@ -247,7 +247,7 @@ func TicketLabels(submission db.Submission) []db.TicketLabel {
 			} else {
 				hint[1].partial = true
 			}
-			if obj.Seed == 0 {
+			if obj.Seed <= 0 {
 				hint[2].missing = true
 			} else {
 				hint[2].partial = true

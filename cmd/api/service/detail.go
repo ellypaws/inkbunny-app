@@ -41,6 +41,7 @@ type Extra struct {
 const (
 	OutputSingleTicket    OutputType = "single_ticket"
 	OutputReport          OutputType = "report"
+	OutputReportIDs       OutputType = "report_ids"
 	OutputMultipleTickets OutputType = "multiple_tickets"
 	OutputSubmissions     OutputType = "submissions"
 	OutputFull            OutputType = "full"
@@ -121,7 +122,7 @@ func processSubmission(c echo.Context, submission *api.Submission, config *Confi
 	}
 
 	switch config.Output {
-	case OutputReport:
+	case OutputReport, OutputReportIDs:
 		detail.Extra = Extra{
 			ThumbnailURL:    submission.ThumbnailURLMediumNonCustom,
 			ThumbnailWidth:  int(submission.ThumbMediumNonCustomX),

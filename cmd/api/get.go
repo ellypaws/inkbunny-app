@@ -375,7 +375,7 @@ func GetAllAuditorsJHandler(c echo.Context) error {
 }
 
 // GetReviewHandler returns heuristic analysis of a submission
-//   - Set query "output" to "single_ticket", "multiple_tickets", "submissions", "full".
+//   - Set query "output" to "single_ticket", "multiple_tickets", "submissions", "full", "badges", "report", or "report_ids"
 //
 // - single_ticket: returns a single combined db.Ticket of all submissions
 //
@@ -384,6 +384,12 @@ func GetAllAuditorsJHandler(c echo.Context) error {
 // - submissions: returns a []details of each submission
 //
 // - full: returns a []details db.Ticket with the original api.Submission and db.Ticket
+//
+// - badges: returns a simplified []details of each submission
+//
+// - report: returns a combined service.TicketReport of a specified user
+//
+// - report_ids: returns a combined service.TicketReport of a specified user with submission IDs
 // Note: "parameters" and "interrogate" won't automatically be set on full output
 //
 // - badges: returns a simplified []details of each submission
@@ -414,6 +420,7 @@ func GetReviewHandler(c echo.Context) error {
 	validOutputs := []service.OutputType{
 		service.OutputSingleTicket,
 		service.OutputReport,
+		service.OutputReportIDs,
 		service.OutputMultipleTickets,
 		service.OutputSubmissions,
 		service.OutputFull,
@@ -509,7 +516,7 @@ func GetReviewHandler(c echo.Context) error {
 		}
 	}
 
-	if idParam != "search" && output != service.OutputReport {
+	if idParam != "search" && output != service.OutputReport && output != service.OutputReportIDs {
 		defer service.StoreReview(c, reviewKey, &store, cache.Hour)
 	}
 
@@ -566,7 +573,7 @@ func GetReviewHandler(c echo.Context) error {
 			tickets = append(tickets, *sub.Ticket)
 		}
 		store = tickets
-	case service.OutputReport:
+	case service.OutputReport, service.OutputReportIDs:
 		report := service.CreateTicketReport(auditor, details, ServerHost)
 		service.StoreReport(c, Database, report)
 		store = report

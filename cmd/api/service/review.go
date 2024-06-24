@@ -105,7 +105,7 @@ func RetrieveReview(c echo.Context, review *Review) (processed []Detail, missed 
 	case OutputSingleTicket:
 		*review.Store = CreateSingleTicket(review.Auditor, processed)
 		review.Stream = false
-	case OutputReport:
+	case OutputReport, OutputReportIDs:
 		report := CreateTicketReport(review.Auditor, processed, review.ApiHost)
 		StoreReport(c, review.Database, report)
 		*review.Store = report

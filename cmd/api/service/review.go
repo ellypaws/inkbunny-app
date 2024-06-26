@@ -38,7 +38,7 @@ type Review struct {
 }
 
 func RetrieveReview(c echo.Context, review *Review) (processed []Detail, missed []string, errFunc func(c echo.Context) error) {
-	if review.Output != OutputReport {
+	if review.Output != OutputReport && review.Output != OutputReportIDs {
 		item, err := review.Cache.Get(review.Key)
 		if err == nil {
 			c.Logger().Infof("Cache hit for %s", review.Key)

@@ -1,6 +1,7 @@
 package api
 
 import (
+	"github.com/ellypaws/inkbunny-app/cmd/api/service"
 	"github.com/ellypaws/inkbunny-app/cmd/crashy"
 	"github.com/ellypaws/inkbunny-app/cmd/db"
 	"github.com/labstack/echo/v4"
@@ -13,6 +14,7 @@ var patchHandlers = pathHandler{
 	"/artist":  handler{upsertArtist, staffMiddleware},
 	"/auditor": handler{upsertAuditor, staffMiddleware},
 	"/models":  handler{upsertModel, staffMiddleware},
+	"/report":  handler{patchReport, append(reducedMiddleware, WithRedis...)},
 }
 
 func updateTicket(c echo.Context) error {
@@ -154,4 +156,27 @@ func upsertModel(c echo.Context) error {
 	}
 
 	return c.JSON(http.StatusOK, modelHashes)
+}
+
+func patchReport(c echo.Context) error {
+	var reportRequest service.TicketReport
+	if err := c.Bind(&reportRequest); err != nil {
+		return err
+	}
+
+	if len(reportRequest.Report.Submissions) == 0 {
+		return c.JSON(http.StatusBadRequest, crashy.ErrorResponse{ErrorString: "no submissions found"})
+	}
+
+	if len(reportRequest.Ticket.Responses) == 0 {
+		return c.JSON(http.StatusBadRequest, crashy.ErrorResponse{ErrorString: "no responses found"})
+	}
+
+	if err := service.RecreateReport(&reportRequest); err != nil {
+		return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
+	}
+
+	service.StoreReport(c, Database, reportRequest)
+
+	return c.JSON(http.StatusOK, reportRequest)
 }

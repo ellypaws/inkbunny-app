@@ -32,6 +32,7 @@ var postHandlers = pathHandler{
 	"/interrogate":        handler{interrogate, nil},
 	"/interrogate/upload": handler{interrogateImage, nil},
 	"/review/:id":         handler{GetReviewHandler, append(reducedMiddleware, WithRedis...)},
+	"/report":             handler{patchReport, append(reducedMiddleware, WithRedis...)},
 	"/heuristics":         handler{heuristics, nil},
 	"/heuristics/:id":     handler{GetHeuristicsHandler, append(reducedMiddleware, WithRedis...)},
 	"/sd/:path":           handler{HandlePath, nil},

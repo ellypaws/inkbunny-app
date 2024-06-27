@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/ellypaws/inkbunny-app/cmd/api/cache"
+	"github.com/ellypaws/inkbunny-app/cmd/crashy"
 	"github.com/ellypaws/inkbunny-app/cmd/db"
 	"github.com/ellypaws/inkbunny-sd/entities"
 	"github.com/ellypaws/inkbunny/api"
@@ -364,4 +365,147 @@ func StoreReport(c echo.Context, database *db.Sqlite, ticket TicketReport) {
 	if err != nil {
 		c.Logger().Error("error upserting ticket report:", err)
 	}
+}
+
+func AssertTime(field *time.Time, set time.Time) {
+	if field.IsZero() {
+		*field = set
+	}
+}
+
+func AssertTrue(field *bool) bool {
+	if field != nil {
+		return *field
+	}
+	return false
+}
+
+func RecreateReport(report *TicketReport) error {
+	if report == nil {
+		return crashy.ErrorResponse{
+			ErrorString: "missing report",
+		}
+	}
+
+	oldMessage := report.Ticket.Responses[0].Message
+	end := strings.Index(oldMessage, "The prompt may have used these artists:")
+	if end == -1 {
+		end = strings.Index(oldMessage, "[u]MD5 Checksums at the time of writing[/u]")
+	}
+	if end == -1 {
+		return crashy.ErrorResponse{
+			ErrorString: "invalid message",
+			Debug:       oldMessage,
+		}
+	}
+
+	now := time.Now().UTC()
+
+	AssertTime(&report.Report.ReportDate, now)
+	AssertTime(&report.Ticket.DateOpened, now)
+	AssertTime(&report.Ticket.Responses[0].Date, now)
+
+	var info struct {
+		Labels     []db.TicketLabel
+		Categories map[string][]int64
+	}
+
+	report.Report.Violations = 0
+	report.Report.Ratio = 0
+	report.Report.Audited = 0
+
+	var colors = make(map[string]string)
+	for _, sub := range report.Report.Submissions {
+		if !AssertTrue(sub.Generated) && !AssertTrue(sub.Assisted) && len(sub.Flags) == 0 {
+			continue
+		}
+
+		report.Report.Audited++
+
+		if len(sub.Flags) == 0 {
+			continue
+		}
+
+		report.Report.Violations++
+
+		if sub.URL == nil {
+			return crashy.ErrorResponse{ErrorString: "missing URL", Debug: sub}
+		}
+
+		for _, label := range sub.Flags {
+			if !slices.Contains(info.Labels, label) {
+				info.Labels = append(info.Labels, label)
+			}
+		}
+
+		var id int64
+		if _, err := fmt.Sscanf(*sub.URL, "https://inkbunny.net/s/%d", &id); err != nil {
+			return crashy.ErrorResponse{ErrorString: "invalid URL", Debug: sub}
+		}
+
+		if info.Categories == nil {
+			info.Categories = make(map[string][]int64)
+		}
+		slices.SortFunc(sub.Flags, cmp.Compare[db.TicketLabel])
+		category := strings.Join(applyLabelColor(sub.Flags, colors), ", ")
+		if _, ok := info.Categories[category]; !ok {
+			info.Categories[category] = []int64{id}
+		} else {
+			info.Categories[category] = append(info.Categories[category], id)
+		}
+	}
+
+	report.Report.Ratio = float64(report.Report.Violations) / float64(report.Report.Audited)
+
+	var message strings.Builder
+
+	message.WriteString(fmt.Sprintf("[u]AI Submissions by @%s ", report.Report.UsernameID.Username))
+	if len(info.Labels) > 0 {
+		message.WriteString(fmt.Sprintf("do not follow the AI ACP[/u] (%d violations, %.2f%%):\n", report.Report.Violations, report.Report.Ratio*100))
+	} else {
+		message.WriteString(fmt.Sprintf("needs to be reviewed[/u]: (%d submissions)\n", len(report.Report.Submissions)))
+	}
+
+	slices.SortFunc(info.Labels, cmp.Compare[db.TicketLabel])
+	for i, label := range info.Labels {
+		if i == 0 {
+			message.WriteString("\nThe following flags were detected:\n")
+		} else {
+			message.WriteString(", ")
+		}
+		message.WriteString(fmt.Sprintf("[b]%s[/b]", fmt.Sprintf("[color=%s]%s[/color]", getColor(label, colors), label)))
+	}
+
+	var nextCategory bool
+	message.WriteString("\n\n[u]Submissions[/u]:")
+	for category, submission := range info.Categories {
+		var written bool
+		if nextCategory {
+			message.WriteString("\n")
+		} else {
+			nextCategory = true
+		}
+		message.WriteString(fmt.Sprintf("\n(%d) [b]%s[/b]:\n", len(submission), category))
+		for _, id := range submission {
+			if written {
+				message.WriteString(" ")
+			} else {
+				written = true
+			}
+			message.WriteString(fmt.Sprintf("#M%d", id))
+		}
+	}
+
+	report.Ticket.Status = "audited"
+	report.Ticket.Labels = info.Labels
+
+	report.Ticket.Subject = fmt.Sprintf("AI Submissions by %s - %d (%.2f%%) violations",
+		report.Report.UsernameID.Username, report.Report.Violations, report.Report.Ratio*100)
+
+	message.WriteString("\n\n")
+	message.WriteString(oldMessage[end:])
+
+	report.Ticket.Responses[0].Message = message.String()
+
+	return nil
 }

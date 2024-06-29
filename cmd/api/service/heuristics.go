@@ -67,7 +67,8 @@ func RetrieveParams(c echo.Context, wg *sync.WaitGroup, sub *db.Submission, cach
 		c.Logger().Debugf("Cache miss for %s retrieving params...", key)
 	}
 
-	processParams(c, sub, cacheToUse, artists)
+	processParams(c, sub, cacheToUse)
+	processObjectMetadata(sub, artists)
 	if sub.Metadata.Objects != nil || sub.Metadata.Params != nil {
 		bin, err := json.Marshal(sub.Metadata)
 		if err != nil {
@@ -113,8 +114,6 @@ func processParams(c echo.Context, sub *db.Submission, cacheToUse cache.Cache, a
 			found = true
 		}
 	}
-
-	defer processObjectMetadata(sub, artists)
 
 	if textFile == nil {
 		processDescriptionHeuristics(c, sub)

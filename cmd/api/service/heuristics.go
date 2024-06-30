@@ -11,6 +11,7 @@ import (
 	"github.com/ellypaws/inkbunny-sd/utils"
 	"github.com/labstack/echo/v4"
 	units "github.com/labstack/gommon/bytes"
+	"github.com/lu4p/cat/rtftxt"
 	"reflect"
 	"regexp"
 	"slices"
@@ -88,7 +89,9 @@ func RetrieveParams(c echo.Context, wg *sync.WaitGroup, sub *db.Submission, cach
 	}
 }
 
-func processParams(c echo.Context, sub *db.Submission, cacheToUse cache.Cache, artists []db.Artist) {
+const MIMETextRTF = "text/rtf"
+
+func processParams(c echo.Context, sub *db.Submission, cacheToUse cache.Cache) {
 	if sub.Metadata.Params != nil {
 		return
 	}
@@ -105,7 +108,7 @@ func processParams(c echo.Context, sub *db.Submission, cacheToUse cache.Cache, a
 			if strings.Contains(f.File.FileName, "workflow") {
 				break
 			}
-		case echo.MIMETextPlain:
+		case echo.MIMETextPlain, MIMETextRTF:
 			textFile = &sub.Files[i]
 			break
 		}
@@ -131,6 +134,14 @@ func processParams(c echo.Context, sub *db.Submission, cacheToUse cache.Cache, a
 		return
 	}
 
+	if b.MimeType == MIMETextRTF {
+		plain, err := rtftxt.Text(bytes.NewReader(b.Blob))
+		if err != nil {
+			c.Logger().Errorf("error parsing rtf %s: %s", textFile.File.FileURLFull, err)
+			return
+		}
+		b.Blob = plain.Bytes()
+	}
 	if err := parameterHeuristics(c, sub, textFile, b); err != nil {
 		c.Logger().Errorf("error processing params for %s: %v", textFile.File.FileName, err)
 		return

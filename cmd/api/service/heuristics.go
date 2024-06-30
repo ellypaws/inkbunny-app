@@ -122,6 +122,7 @@ func processParams(c echo.Context, sub *db.Submission, cacheToUse cache.Cache, a
 		MimeType: textFile.File.MimeType,
 	})
 	if errFunc != nil {
+		c.Logger().Errorf("error fetching %s: (%s)", textFile.File.FileURLFull, sub.URL)
 		return
 	}
 

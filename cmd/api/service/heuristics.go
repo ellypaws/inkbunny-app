@@ -130,7 +130,8 @@ func processParams(c echo.Context, sub *db.Submission, cacheToUse cache.Cache, a
 		return
 	}
 
-	if parameterHeuristics(c, sub, textFile, b) {
+	if err := parameterHeuristics(c, sub, textFile, b); err != nil {
+		c.Logger().Errorf("error processing params for %s: %v", textFile.File.FileName, err)
 		return
 	}
 
@@ -261,7 +262,7 @@ func jsonHeuristics(c echo.Context, sub *db.Submission, b *cache.Item, textFile 
 }
 
 // Because some artists already have standardized txt files, opt to split each file separately
-func parameterHeuristics(c echo.Context, sub *db.Submission, textFile *db.File, b *cache.Item) bool {
+func parameterHeuristics(c echo.Context, sub *db.Submission, textFile *db.File, b *cache.Item) error {
 	var params utils.Params
 	var err error
 	f := &textFile.File
@@ -308,15 +309,14 @@ func parameterHeuristics(c echo.Context, sub *db.Submission, textFile *db.File, 
 			utils.WithKeyCondition(func(line string) bool { return strings.HasPrefix(line, f.FileName) }))
 	}
 	if err != nil {
-		c.Logger().Errorf("error processing params for %s: %v", f.FileName, err)
-		return true
+		return err
 	}
 	if len(params) > 0 {
 		c.Logger().Debugf("finished params for %s", f.FileName)
 		sub.Metadata.Params = &params
 		paramsToObject(c, sub)
 	}
-	return false
+	return nil
 }
 
 func paramsToObject(c echo.Context, sub *db.Submission) {

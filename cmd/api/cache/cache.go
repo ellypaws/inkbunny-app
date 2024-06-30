@@ -177,14 +177,14 @@ func Retrieve(c echo.Context, cache Cache, fetch Fetch) (*Item, func(c echo.Cont
 		return nil, ErrFunc(http.StatusInternalServerError, crashy.Wrap(err))
 	}
 
-	mimeType := resp.Header.Get(echo.HeaderContentType)
+	headerMimeType := resp.Header.Get(echo.HeaderContentType)
 
-	if mimeType == "" {
-		mimeType = MimeTypeFromURL(fetch.URL)
+	if headerMimeType == "" {
+		headerMimeType = MimeTypeFromURL(fetch.URL)
 	}
 
-	if mimeType != fetch.MimeType {
-		c.Logger().Warnf(`mismatched mime types expected: "%s" got: "%s"`, fetch.MimeType, mimeType)
+	if headerMimeType != fetch.MimeType {
+		c.Logger().Warnf(`mismatched mime types expected: "%s" got: "%s"`, fetch.MimeType, headerMimeType)
 	}
 
 	if bytes.HasPrefix(blob, []byte("ERROR")) {
@@ -194,7 +194,7 @@ func Retrieve(c echo.Context, cache Cache, fetch Fetch) (*Item, func(c echo.Cont
 
 	item := &Item{
 		Blob:     blob,
-		MimeType: mimeType,
+		MimeType: fetch.MimeType,
 	}
 
 	err = cache.Set(fmt.Sprintf("%v:%v", item.MimeType, fetch.URL), item, Day)

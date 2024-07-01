@@ -2,7 +2,7 @@
   <img src="https://inkbunny.net/images81/elephant/logo/bunny.png" width="100" />
   <img src="https://inkbunny.net/images81/elephant/logo/text.png" width="300" />
   <br>
-  <h1 align="center">Inkbunny AI Bridge</h1>
+  <h1 align="center">Inkbunny Extensions</h1>
 </p>
 
 <p align="center">
@@ -92,14 +92,19 @@ Todo:
  - [ ] Highlight more relevant metadata and print generation objects (e.g. model, prompt, etc). Currently you can view this in the console debug.
  - [ ] Better styling
 
-### Configuring the Userscript
+#### Configuring the Userscript
 
 After installing the userscript, you need to configure it to match your server URL. If you're running the server locally, the default URL is `http://localhost:1323`.
 
-1. Open the userscript manager dashboard (Tampermonkey or Greasemonkey).
-2. Find the Inkbunny AI Bridge userscript and click on it to edit.
-3. Find the line that contains the API URL and replace it with your server URL (e.g., `http://localhost:1323`).
-4. Save the changes.
+![menu](doc/login.png)
+
+1. Click on the Tampermonkey icon in your browser to open the menu.
+2. Find the Inkbunny AI Bridge and <kbd>Set API URL</kbd> if you're using a different server.
+3. In the same menu, you can login using the <kbd>User menu (login)</kbd> button
+4. You can choose between three different options for AI thumbnails:
+    - <kbd>Label</kbd> - This will add a label to the submission.
+    - <kbd>Blur</kbd> - This will blur the submission.
+    - <kbd>Remove</kbd> - This will remove the submission.
 
 Now, the Inkbunny AI Bridge should be ready to use.
 

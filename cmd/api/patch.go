@@ -14,7 +14,7 @@ var patchHandlers = pathHandler{
 	"/artist":  handler{upsertArtist, staffMiddleware},
 	"/auditor": handler{upsertAuditor, staffMiddleware},
 	"/models":  handler{upsertModel, staffMiddleware},
-	"/report":  handler{patchReport, append(reducedMiddleware, WithRedis...)},
+	"/report":  handler{PatchReport, append(reducedMiddleware, WithRedis...)},
 }
 
 func updateTicket(c echo.Context) error {
@@ -158,7 +158,7 @@ func upsertModel(c echo.Context) error {
 	return c.JSON(http.StatusOK, modelHashes)
 }
 
-func patchReport(c echo.Context) error {
+func PatchReport(c echo.Context) error {
 	var reportRequest service.TicketReport
 	if err := c.Bind(&reportRequest); err != nil {
 		return err

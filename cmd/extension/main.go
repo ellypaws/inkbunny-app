@@ -13,6 +13,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"slices"
 	"strings"
 	"time"
 )
@@ -32,18 +33,21 @@ func main() {
 		e.Use(m)
 	}
 
-	config := append(api.WithRedis,
+	reducedMiddleware := append(slices.Clone(api.WithRedis),
 		[]echo.MiddlewareFunc{
-			api.SIDMiddleware,
-			api.Anonymous,
+			api.RequireSID,
+			api.TryAuditor,
 		}...)
 
-	e.GET("/review/:id", api.GetReviewHandler, config...)
-	e.POST("/review/:id", api.GetReviewHandler, config...)
+	e.GET("/review/:id", api.GetReviewHandler, reducedMiddleware...)
+	e.POST("/review/:id", api.GetReviewHandler, reducedMiddleware...)
+
+	e.GET("/report/:id/:key", api.GetReportKeyHandler, api.StaticMiddleware...)
+	e.PATCH("/report", api.PatchReport, reducedMiddleware...)
 
 	e.GET("/", redirect, api.StaticMiddleware...)
 	e.GET("/*", echo.StaticDirectoryHandler(
-		echo.MustSubFS(e.Filesystem, "../api/public"),
+		echo.MustSubFS(e.Filesystem, "public"),
 		false,
 	), api.StaticMiddleware...)
 

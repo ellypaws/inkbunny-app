@@ -7,8 +7,8 @@ replace github.com/ellypaws/inkbunny-app => ../..
 replace github.com/ellypaws/inkbunny-sd => ../mod/github.com/ellypaws/inkbunny-sd
 
 require (
-	github.com/ellypaws/inkbunny-app v0.0.0-20240701142729-95de5ac91368
-	github.com/ellypaws/inkbunny-sd v0.0.0-20240621011000-37f703ec6634
+	github.com/ellypaws/inkbunny-app v0.0.0-20240703085302-c4bfaaaf4ae6
+	github.com/ellypaws/inkbunny-sd v0.0.0-20240703164610-9682bfd03fde
 	github.com/labstack/echo/v4 v4.12.0
 	github.com/labstack/gommon v0.4.2
 	github.com/muesli/termenv v0.15.2
@@ -47,7 +47,7 @@ require (
 	golang.org/x/text v0.16.0 // indirect
 	golang.org/x/time v0.5.0 // indirect
 	modernc.org/gc/v3 v3.0.0-20240304020402-f0dba7c97c2b // indirect
-	modernc.org/libc v1.52.1 // indirect
+	modernc.org/libc v1.54.2 // indirect
 	modernc.org/mathutil v1.6.0 // indirect
 	modernc.org/memory v1.8.0 // indirect
 	modernc.org/sqlite v1.30.1 // indirect

@@ -10,6 +10,7 @@ import (
 	"github.com/ellypaws/inkbunny-sd/entities"
 	"github.com/ellypaws/inkbunny/api"
 	"github.com/labstack/echo/v4"
+	"math"
 	"net/url"
 	"slices"
 	"strconv"
@@ -110,6 +111,9 @@ func CreateReport(processed []Detail, auditor *db.Auditor) Report {
 	}
 	if len(processed) > 0 {
 		out.Ratio = float64(out.Violations) / float64(out.Audited)
+	}
+	if math.IsNaN(out.Ratio) {
+		out.Ratio = 0
 	}
 
 	return out
@@ -456,6 +460,9 @@ func RecreateReport(report *TicketReport) error {
 	}
 
 	report.Report.Ratio = float64(report.Report.Violations) / float64(report.Report.Audited)
+	if math.IsNaN(report.Report.Ratio) {
+		report.Report.Ratio = 0
+	}
 
 	var message strings.Builder
 

@@ -15,7 +15,7 @@ import (
 // InkbunnyTimeLayout e.g. 2010-03-03 13:26:46.357649+00
 const InkbunnyTimeLayout = "2006-01-02 15:04:05.999999-07"
 
-func InkbunnySubmissionToDBSubmission(submission api.Submission) db.Submission {
+func InkbunnySubmissionToDBSubmission(submission api.Submission, override bool) db.Submission {
 	id, _ := strconv.ParseInt(submission.SubmissionID, 10, 64)
 	userID, _ := strconv.ParseInt(submission.UserID, 10, 64)
 
@@ -44,7 +44,7 @@ func InkbunnySubmissionToDBSubmission(submission api.Submission) db.Submission {
 		})
 	}
 
-	SetSubmissionMeta(&dbSubmission)
+	SetSubmissionMeta(&dbSubmission, override)
 
 	return dbSubmission
 }
@@ -52,9 +52,12 @@ func InkbunnySubmissionToDBSubmission(submission api.Submission) db.Submission {
 var PrivateTools = regexp.MustCompile(`(?i)\b(midjourney|novelai|bing|dall[- ]?e|nijijourney|craiyon)\b`)
 
 // SetSubmissionMeta modifies a submission's Metadata based on its Keywords and other fields.
-func SetSubmissionMeta(submission *db.Submission) {
+func SetSubmissionMeta(submission *db.Submission, override bool) {
 	if submission == nil {
 		return
+	}
+	if override {
+		submission.Metadata.AISubmission = true
 	}
 	for _, keyword := range submission.Keywords {
 		switch keyword.KeywordName {

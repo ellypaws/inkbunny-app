@@ -456,7 +456,7 @@ func newTicket() {
 	var submissionsIDs []int64
 	var ticketLabels []db.TicketLabel
 	for i := range submissionDetails.Submissions {
-		submission := service.InkbunnySubmissionToDBSubmission(submissionDetails.Submissions[i])
+		submission := service.InkbunnySubmissionToDBSubmission(submissionDetails.Submissions[i], true)
 		err := sqlite.InsertSubmission(submission)
 		if err != nil {
 			log.Fatalf("could not insert submission: %v", err)

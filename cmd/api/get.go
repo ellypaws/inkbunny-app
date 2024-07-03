@@ -865,7 +865,7 @@ func GetHeuristicsHandler(c echo.Context) error {
 	for _, sub := range submissionDetails.Submissions {
 		waitGroup.Add(1)
 
-		submission := service.InkbunnySubmissionToDBSubmission(sub)
+		submission := service.InkbunnySubmissionToDBSubmission(sub, true)
 		go func(wg *sync.WaitGroup, sub *db.Submission) {
 			service.RetrieveParams(c, wg, sub, cacheToUse, artists)
 

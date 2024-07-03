@@ -85,7 +85,7 @@ func ProcessResponse(c echo.Context, config *Config) []Detail {
 func processSubmission(c echo.Context, submission *api.Submission, config *Config, detail *Detail) {
 	defer config.wg.Done()
 
-	sub := InkbunnySubmissionToDBSubmission(*submission)
+	sub := InkbunnySubmissionToDBSubmission(*submission, c.QueryParam("output") == OutputReportIDs)
 
 	if sub.Metadata.AISubmission {
 		c.Logger().Infof("processing files for %s %s", sub.URL, sub.Title)

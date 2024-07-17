@@ -3,6 +3,7 @@ package service
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/ellypaws/inkbunny-app/cmd/api/cache"
 	"github.com/ellypaws/inkbunny-app/cmd/db"
@@ -213,11 +214,14 @@ func processObjectMetadata(submission *db.Submission, artists []db.Artist) {
 }
 
 func jsonHeuristics(c echo.Context, sub *db.Submission, b *cache.Item, textFile *db.File) {
-	comfyUI, err := comfyui.UnmarshalComfyUIBasic(b.Blob)
-	if err != nil {
+	comfyUI, err := comfyui.UnmarshalIsolatedComfyUI(b.Blob)
+	if err != nil && !errors.Is(err, comfyui.ErrInvalidNode) {
 		c.Logger().Errorf("error parsing comfy ui %s: %s", textFile.File.FileURLFull, err)
-	}
-	if err == nil && len(comfyUI.Nodes) > 0 {
+	} else if len(comfyUI.Nodes) > 0 {
+		var e comfyui.NodeErrors
+		if errors.As(err, &e) {
+			c.Logger().Warnf("parsed comfy ui with some errors. errors/ok: %d/%d", e.Len(), len(comfyUI.Nodes))
+		}
 		c.Logger().Debugf("comfy ui found for %s", sub.URL)
 		sub.Metadata.Objects = map[string]entities.TextToImageRequest{
 			textFile.File.FileName: *comfyUI.Convert(),

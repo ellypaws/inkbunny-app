@@ -13,19 +13,19 @@ require (
 	github.com/TheZoraiz/ascii-image-converter v1.13.1
 	github.com/charmbracelet/bubbles v0.18.0
 	github.com/charmbracelet/bubbletea v0.26.6
-	github.com/charmbracelet/lipgloss v0.11.0
-	github.com/ellypaws/inkbunny-app v0.0.0-20240703085302-c4bfaaaf4ae6
-	github.com/ellypaws/inkbunny-sd v0.0.0-20240621011000-37f703ec6634
+	github.com/charmbracelet/lipgloss v0.12.1
+	github.com/ellypaws/inkbunny-app v0.0.0-20240703164931-08a99016b757
+	github.com/ellypaws/inkbunny-sd v0.0.0-20240717012843-d1016f403085
 	github.com/ellypaws/inkbunny/api v0.0.0-20240521065300-7d34160ddf2d
 	github.com/lrstanley/bubblezone v0.0.0-20240624011428-67235275f80c
-	golang.org/x/sys v0.21.0
+	golang.org/x/sys v0.22.0
 )
 
 require (
 	github.com/atotto/clipboard v0.1.4 // indirect
 	github.com/aymanbagabas/go-osc52/v2 v2.0.1 // indirect
 	github.com/charmbracelet/harmonica v0.2.0 // indirect
-	github.com/charmbracelet/x/ansi v0.1.2 // indirect
+	github.com/charmbracelet/x/ansi v0.1.4 // indirect
 	github.com/charmbracelet/x/input v0.1.2 // indirect
 	github.com/charmbracelet/x/term v0.1.1 // indirect
 	github.com/charmbracelet/x/windows v0.1.2 // indirect
@@ -49,7 +49,7 @@ require (
 	github.com/xo/terminfo v0.0.0-20220910002029-abceb7e1c41e // indirect
 	golang.org/x/exp v0.0.0-20240525044651-4c93da0ed11d // indirect
 	golang.org/x/image v0.18.0 // indirect
-	golang.org/x/net v0.26.0 // indirect
+	golang.org/x/net v0.27.0 // indirect
 	golang.org/x/sync v0.7.0 // indirect
 	golang.org/x/text v0.16.0 // indirect
 )

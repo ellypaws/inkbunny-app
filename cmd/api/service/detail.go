@@ -1,6 +1,7 @@
 package service
 
 import (
+	"cmp"
 	"encoding/json"
 	"fmt"
 	"github.com/ellypaws/inkbunny-app/cmd/api/cache"
@@ -251,38 +252,43 @@ func ticketSubject(sub *db.Submission) string {
 	flags := TicketLabels(*sub)
 	if len(flags) == 0 {
 		sb.WriteString("needs to be reviewed[/u]\n")
-	}
-	for i, flag := range flags {
-		switch i {
-		case 0:
-			switch flag {
-			case db.LabelArtistUsed:
-				sb.WriteString("has used an artist in the prompt[/u]\n")
-			case db.LabelMissingParams:
-				sb.WriteString("does not have any parameters[/u]\n")
-			case db.LabelMissingPrompt:
-				sb.WriteString("is missing the prompt[/u]\n")
-			case db.LabelMissingModel:
-				sb.WriteString("does not include the model information[/u]\n")
-			case db.LabelMissingSeed:
-				sb.WriteString("is missing the generation seed[/u]\n")
-			case db.LabelSoldArt:
-				sb.WriteString("is a selling content[/u]\n")
-			case db.LabelPrivateTool:
-				sb.WriteString(fmt.Sprintf("was generated using a private tool %s[/u]\n", sub.Metadata.Generator))
-			case db.LabelPrivateLora:
-				sb.WriteString("was generated using a private Lora model[/u]\n")
-			case db.LabelPrivateModel:
-				sb.WriteString("was generated using a private checkpoint model[/u]\n")
-			case db.LabelMissingTags:
-				sb.WriteString("is missing the AI tags[/u]\n")
-			default:
-				sb.WriteString("is not following AI ACP[/u]\n")
-			}
-			sb.WriteString(fmt.Sprintf("\n\nThe following flags were detected:\n[b]%s[/b]", flag))
+	} else {
+		slices.SortFunc(flags, cmp.Compare[db.TicketLabel])
+
+		switch flags[0] {
+		case db.LabelArtistUsed:
+			sb.WriteString("has used an artist in the prompt[/u]\n")
+		case db.LabelMissingParams:
+			sb.WriteString("does not have any parameters[/u]\n")
+		case db.LabelMissingPrompt:
+			sb.WriteString("is missing the prompt[/u]\n")
+		case db.LabelMissingModel:
+			sb.WriteString("does not include the model information[/u]\n")
+		case db.LabelMissingSeed:
+			sb.WriteString("is missing the generation seed[/u]\n")
+		case db.LabelSoldArt:
+			sb.WriteString("is a selling content[/u]\n")
+		case db.LabelPrivateTool:
+			sb.WriteString(fmt.Sprintf("was generated using a private tool %s[/u]\n", sub.Metadata.Generator))
+		case db.LabelPrivateLora:
+			sb.WriteString("was generated using a private Lora model[/u]\n")
+		case db.LabelPrivateModel:
+			sb.WriteString("was generated using a private checkpoint model[/u]\n")
+		case db.LabelMissingTags:
+			sb.WriteString("is missing the AI tags[/u]\n")
 		default:
-			sb.WriteString(fmt.Sprintf(", [b]%s[/b]", flag))
+			sb.WriteString("is not following AI ACP[/u]\n")
 		}
+	}
+
+	var colors = make(map[string]string)
+	for i, label := range flags {
+		if i == 0 {
+			sb.WriteString("\nThe following flags were detected:\n")
+		} else {
+			sb.WriteString(", ")
+		}
+		sb.WriteString(fmt.Sprintf("[b]%s[/b]", fmt.Sprintf("[color=%s]%s[/color]", getColor(label, colors), label)))
 	}
 
 	return sb.String()
@@ -312,13 +318,18 @@ func submissionMessage(sub *db.Submission) string {
 		}
 	}
 
+	var md5 []string
+	for _, file := range sub.Files {
+		md5 = append(md5, file.File.FullFileMD5)
+	}
+
 	var added uint
 	for _, file := range sub.Files {
 		switch file.File.MimeType {
 		//case echo.MIMEApplicationJSON, echo.MIMETextPlain:
 		default:
 			if added == 0 {
-				sb.WriteString("\n[u]MD5 Checksums at the time of writing[/u]:")
+				sb.WriteString(fmt.Sprintf("\n\n[u]MD5 Checksums at the time of writing[/u] ([url=https://inkbunny.net/submissionsviewall.php?text=%s&md5=yes&mode=search]search all[/url]):", strings.Join(md5, "%20")))
 			}
 			sb.WriteString("\n")
 			sb.WriteString(fmt.Sprintf("Page %d: [url=%s]%s[/url] ([url=https://inkbunny.net/submissionsviewall.php?text=%s&md5=yes&mode=search]%s[/url])",

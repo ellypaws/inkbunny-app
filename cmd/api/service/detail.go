@@ -323,12 +323,11 @@ func submissionMessage(sub *db.Submission) string {
 		md5 = append(md5, file.File.FullFileMD5)
 	}
 
-	var added uint
-	for _, file := range sub.Files {
+	for i, file := range sub.Files {
 		switch file.File.MimeType {
 		//case echo.MIMEApplicationJSON, echo.MIMETextPlain:
 		default:
-			if added == 0 {
+			if i == 0 {
 				sb.WriteString(fmt.Sprintf("\n\n[u]MD5 Checksums at the time of writing[/u] ([url=https://inkbunny.net/submissionsviewall.php?text=%s&md5=yes&mode=search]search all[/url]):", strings.Join(md5, "%20")))
 			}
 			sb.WriteString("\n")

@@ -46,6 +46,12 @@ func (w *ChunkedWriter) String() string {
 	return w.builder.String()
 }
 
+func (w *ChunkedWriter) Reset() {
+	w.builder.Reset()
+	w.buffer.Reset()
+	w.lastSplit = 0
+}
+
 func (w *ChunkedWriter) flush() {
 	if w.builder.Len() > 0 {
 		w.builder.WriteString(w.delimiter)

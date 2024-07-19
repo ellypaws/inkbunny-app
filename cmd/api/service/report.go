@@ -242,7 +242,7 @@ func CreateTicketReport(auditor *db.Auditor, details []Detail, host *url.URL) Ti
 		}
 	}
 
-	var message strings.Builder
+	message := NewChunkedWriter(10000, "\n--------✂️--------")
 
 	message.WriteString(fmt.Sprintf("[u]AI Submissions by @%s ", report.UsernameID.Username))
 	if len(info.Labels) > 0 {
@@ -260,6 +260,8 @@ func CreateTicketReport(auditor *db.Auditor, details []Detail, host *url.URL) Ti
 		}
 		message.WriteString(fmt.Sprintf("[b]%s[/b]", fmt.Sprintf("[color=%s]%s[/color]", getColor(label, colors), label)))
 	}
+
+	message.Split()
 
 	var nextCategory bool
 	message.WriteString("\n\n[u]Submissions[/u]:")
@@ -281,6 +283,8 @@ func CreateTicketReport(auditor *db.Auditor, details []Detail, host *url.URL) Ti
 		}
 	}
 
+	message.Split()
+
 	if len(info.Artists) > 0 {
 		message.WriteString("\n\n")
 		message.WriteString("The prompt may have used these artists: ")
@@ -298,6 +302,8 @@ func CreateTicketReport(auditor *db.Auditor, details []Detail, host *url.URL) Ti
 		added++
 	}
 
+	message.Split()
+
 	var lastSubmission string
 	for i, image := range info.Files {
 		if i == 0 {
@@ -305,6 +311,7 @@ func CreateTicketReport(auditor *db.Auditor, details []Detail, host *url.URL) Ti
 		}
 		if lastSubmission != image.File.SubmissionID {
 			if lastSubmission != "" {
+				message.Split()
 				message.WriteString("\n")
 			}
 			message.WriteString(fmt.Sprintf("\nSubmission #[url=https://inkbunny.net/s/%s]%s[/url]:", image.File.SubmissionID, image.File.SubmissionID))

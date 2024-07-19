@@ -295,7 +295,7 @@ func ticketSubject(sub *db.Submission) string {
 }
 
 func submissionMessage(sub *db.Submission) string {
-	var sb strings.Builder
+	sb := NewChunkedWriter(10000, "\n--------✂️--------")
 	sb.WriteString(ticketSubject(sub))
 
 	sb.WriteString(fmt.Sprintf("\n%s by @%s\n#M%d", sub.URL, sub.Username, sub.ID))
@@ -323,6 +323,8 @@ func submissionMessage(sub *db.Submission) string {
 		md5 = append(md5, file.File.FullFileMD5)
 	}
 
+	sb.Split()
+
 	for i, file := range sub.Files {
 		switch file.File.MimeType {
 		//case echo.MIMEApplicationJSON, echo.MIMETextPlain:
@@ -334,7 +336,7 @@ func submissionMessage(sub *db.Submission) string {
 			sb.WriteString(fmt.Sprintf("Page %d: [url=%s]%s[/url] ([url=https://inkbunny.net/submissionsviewall.php?text=%s&md5=yes&mode=search]%s[/url])",
 				file.File.SubmissionFileOrder+1,
 				file.File.FileURLFull, file.File.FileName, file.File.FullFileMD5, file.File.FullFileMD5))
-			added++
+			sb.Split()
 		}
 	}
 
@@ -353,7 +355,7 @@ func submissionMessage(sub *db.Submission) string {
 }
 
 func writeArtistUsed(sub *db.Submission) string {
-	var sb strings.Builder
+	sb := NewChunkedWriter(10000, "\n--------✂️--------")
 	if len(sub.Metadata.ArtistUsed) == 0 {
 		return ""
 	}
@@ -419,6 +421,7 @@ func writeArtistUsed(sub *db.Submission) string {
 			sb.WriteString(fmt.Sprintf("\nFrom description: [url=%s]%s[/url] %s", sub.URL, title, sub.URL))
 		}
 		sb.WriteString(fmt.Sprintf("\n[q=%s]%s[/q]", title, prompt))
+		sb.Split()
 	}
 
 	return sb.String()

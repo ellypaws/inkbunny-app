@@ -37,6 +37,15 @@ func (w *ChunkedWriter) Split() {
 	}
 }
 
+// String returns the entire content of the builder and buffer as a single string.
+func (w *ChunkedWriter) String() string {
+	if w.buffer.Len() > 0 {
+		w.lastSplit = 0
+		w.flush()
+	}
+	return w.builder.String()
+}
+
 func (w *ChunkedWriter) flush() {
 	if w.builder.Len() > 0 {
 		w.builder.WriteString(w.delimiter)
@@ -51,15 +60,6 @@ func (w *ChunkedWriter) flush() {
 		w.buffer.Reset()
 	}
 	w.lastSplit = 0
-}
-
-// String returns the entire content of the builder and buffer as a single string.
-func (w *ChunkedWriter) String() string {
-	if w.buffer.Len() > 0 {
-		w.lastSplit = 0
-		w.flush()
-	}
-	return w.builder.String()
 }
 
 func (w *ChunkedWriter) exceeds() bool {

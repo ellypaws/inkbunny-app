@@ -150,12 +150,13 @@ func processSubmission(c echo.Context, submission *api.Submission, config *Confi
 		fallthrough
 	case OutputMultipleTickets:
 		auditorAsUser := AuditorAsUsernameID(config.Auditor)
+		flags := TicketLabels(sub)
 		detail.Ticket = &db.Ticket{
 			ID:         sub.ID,
-			Subject:    ticketSubject(&sub),
+			Subject:    ticketSubject(flags),
 			DateOpened: time.Now().UTC(),
 			Status:     "triage",
-			Labels:     TicketLabels(sub),
+			Labels:     flags,
 			Priority:   "low",
 			Closed:     false,
 			Responses: []db.Response{
@@ -245,43 +246,42 @@ func parseFiles(c echo.Context, sub *db.Submission, config *Config) {
 	wg.Wait()
 }
 
-func ticketSubject(sub *db.Submission) string {
-	var sb strings.Builder
-	sb.WriteString(fmt.Sprintf("[u]AI Submission %d by @%s ", sub.ID, sub.Username))
-
-	flags := TicketLabels(*sub)
+// ticketSubject returns the subject of the ticket based on the flags detected in the submission.
+// Calling the function will sort flags.
+func ticketSubject(flags []db.TicketLabel) string {
 	if len(flags) == 0 {
-		sb.WriteString("needs to be reviewed[/u]\n")
+		return "needs to be reviewed[/u]\n"
 	} else {
 		slices.SortFunc(flags, cmp.Compare[db.TicketLabel])
-
 		switch flags[0] {
 		case db.LabelArtistUsed:
-			sb.WriteString("has used an artist in the prompt[/u]\n")
+			return "has used an artist in the prompt[/u]\n"
 		case db.LabelMissingParams:
-			sb.WriteString("does not have any parameters[/u]\n")
+			return "does not have any parameters[/u]\n"
 		case db.LabelMissingPrompt:
-			sb.WriteString("is missing the prompt[/u]\n")
+			return "is missing the prompt[/u]\n"
 		case db.LabelMissingModel:
-			sb.WriteString("does not include the model information[/u]\n")
+			return "does not include the model information[/u]\n"
 		case db.LabelMissingSeed:
-			sb.WriteString("is missing the generation seed[/u]\n")
+			return "is missing the generation seed[/u]\n"
 		case db.LabelSoldArt:
-			sb.WriteString("is a selling content[/u]\n")
+			return "is a selling content[/u]\n"
 		case db.LabelPrivateTool:
-			sb.WriteString(fmt.Sprintf("was generated using a private tool %s[/u]\n", sub.Metadata.Generator))
+			return "was generated using a private tool[/u]\n"
 		case db.LabelPrivateLora:
-			sb.WriteString("was generated using a private Lora model[/u]\n")
+			return "was generated using a private Lora model[/u]\n"
 		case db.LabelPrivateModel:
-			sb.WriteString("was generated using a private checkpoint model[/u]\n")
+			return "was generated using a private checkpoint model[/u]\n"
 		case db.LabelMissingTags:
-			sb.WriteString("is missing the AI tags[/u]\n")
+			return "is missing the AI tags[/u]\n"
 		default:
-			sb.WriteString("is not following AI ACP[/u]\n")
+			return "is not following AI ACP[/u]\n"
 		}
 	}
+}
 
-	var colors = make(map[string]string)
+func ticketFlagSummary(flags []db.TicketLabel, colors map[string]string) string {
+	var sb strings.Builder
 	for i, label := range flags {
 		if i == 0 {
 			sb.WriteString("\nThe following flags were detected:\n")
@@ -290,13 +290,18 @@ func ticketSubject(sub *db.Submission) string {
 		}
 		sb.WriteString(fmt.Sprintf("[b]%s[/b]", fmt.Sprintf("[color=%s]%s[/color]", getColor(label, colors), label)))
 	}
-
 	return sb.String()
 }
 
 func submissionMessage(sub *db.Submission) string {
 	sb := NewChunkedWriter(10000, "\n--------✂️--------")
-	sb.WriteString(ticketSubject(sub))
+	sb.WriteString(fmt.Sprintf("[u]AI Submission %d by @%s ", sub.ID, sub.Username))
+
+	flags := TicketLabels(*sub)
+	sb.WriteString(ticketSubject(flags))
+
+	colors := make(map[string]string)
+	sb.WriteString(ticketFlagSummary(flags, colors))
 
 	sb.WriteString(fmt.Sprintf("\n%s by @%s\n#M%d", sub.URL, sub.Username, sub.ID))
 

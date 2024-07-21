@@ -245,21 +245,18 @@ func CreateTicketReport(auditor *db.Auditor, details []Detail, host *url.URL) Ti
 	message := NewChunkedWriter(10000, "\n--------✂️--------")
 
 	message.WriteString(fmt.Sprintf("[u]AI Submissions by @%s ", report.UsernameID.Username))
-	if len(info.Labels) > 0 {
-		message.WriteString(fmt.Sprintf("do not follow the AI ACP[/u] (%d violations, %.2f%%):\n", report.Violations, report.Ratio*100))
-	} else {
+
+	switch len(info.Labels) {
+	case 0:
 		message.WriteString(fmt.Sprintf("needs to be reviewed[/u]: (%d submissions)\n", len(info.IDs)))
+	case 1:
+		subject := ticketSubject(info.Labels)
+		message.WriteString(fmt.Sprintf("%s[/u] (%d violations, %.2f%%):\n", subject, report.Violations, report.Ratio*100))
+	default:
+		message.WriteString(fmt.Sprintf("do not follow the AI ACP[/u] (%d violations, %.2f%%):\n", report.Violations, report.Ratio*100))
 	}
 
-	slices.SortFunc(info.Labels, cmp.Compare[db.TicketLabel])
-	for i, label := range info.Labels {
-		if i == 0 {
-			message.WriteString("\nThe following flags were detected:\n")
-		} else {
-			message.WriteString(", ")
-		}
-		message.WriteString(fmt.Sprintf("[b]%s[/b]", fmt.Sprintf("[color=%s]%s[/color]", getColor(label, colors), label)))
-	}
+	message.WriteString(ticketFlagSummary(info.Labels, colors))
 
 	message.Split()
 

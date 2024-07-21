@@ -260,25 +260,7 @@ func CreateTicketReport(auditor *db.Auditor, details []Detail, host *url.URL) Ti
 
 	message.Split()
 
-	var nextCategory bool
-	message.WriteString("\n\n[u]Submissions[/u]:")
-	for category, submission := range info.Categories {
-		var written bool
-		if nextCategory {
-			message.WriteString("\n")
-		} else {
-			nextCategory = true
-		}
-		message.WriteString(fmt.Sprintf("\n(%d) [b]%s[/b]:\n", len(submission), category))
-		for _, id := range submission {
-			if written {
-				message.WriteString(" ")
-			} else {
-				written = true
-			}
-			message.WriteString(fmt.Sprintf("#M%d", id))
-		}
-	}
+	groupSubmissions(message, info.Categories)
 
 	message.Split()
 
@@ -388,6 +370,30 @@ func AssertTrue(field *bool) bool {
 	return false
 }
 
+// groupSubmissions writes a list of submissions grouped by their categories.
+// The categories is a map of category names to a list of submission IDs.
+func groupSubmissions(writer ChunkedWriter, categories map[string][]int64) {
+	var nextCategory bool
+	writer.WriteString("\n\n[u]Submissions[/u]:")
+	for category, submission := range categories {
+		var written bool
+		if nextCategory {
+			writer.WriteString("\n")
+		} else {
+			nextCategory = true
+		}
+		writer.WriteString(fmt.Sprintf("\n(%d) [b]%s[/b]:\n", len(submission), category))
+		for _, id := range submission {
+			if written {
+				writer.WriteString(" ")
+			} else {
+				written = true
+			}
+			writer.WriteString(fmt.Sprintf("#M%d", id))
+		}
+	}
+}
+
 func RecreateReport(report *TicketReport) error {
 	if report == nil {
 		return crashy.ErrorResponse{
@@ -487,25 +493,7 @@ func RecreateReport(report *TicketReport) error {
 
 	message.Split()
 
-	var nextCategory bool
-	message.WriteString("\n\n[u]Submissions[/u]:")
-	for category, submission := range info.Categories {
-		var written bool
-		if nextCategory {
-			message.WriteString("\n")
-		} else {
-			nextCategory = true
-		}
-		message.WriteString(fmt.Sprintf("\n(%d) [b]%s[/b]:\n", len(submission), category))
-		for _, id := range submission {
-			if written {
-				message.WriteString(" ")
-			} else {
-				written = true
-			}
-			message.WriteString(fmt.Sprintf("#M%d", id))
-		}
-	}
+	groupSubmissions(message, info.Categories)
 
 	message.Split()
 

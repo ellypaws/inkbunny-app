@@ -15,7 +15,7 @@ require (
 	github.com/charmbracelet/bubbletea v0.26.6
 	github.com/charmbracelet/lipgloss v0.12.1
 	github.com/ellypaws/inkbunny-app v0.0.0-20240703164931-08a99016b757
-	github.com/ellypaws/inkbunny-sd v0.0.0-20240717024025-1b5b67a23a18
+	github.com/ellypaws/inkbunny-sd v0.0.0-20240721082322-d40c4ce7f3b7
 	github.com/ellypaws/inkbunny/api v0.0.0-20240521065300-7d34160ddf2d
 	github.com/lrstanley/bubblezone v0.0.0-20240624011428-67235275f80c
 	golang.org/x/sys v0.22.0

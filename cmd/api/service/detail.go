@@ -70,17 +70,12 @@ type Config struct {
 func ProcessResponse(c echo.Context, config *Config) []Detail {
 	submissionCount := len(config.SubmissionDetails.Submissions)
 
-	submissions := make(chan *api.Submission, submissionCount)
 	processed := make(chan Detail, submissionCount)
-
-	for range submissionCount {
-		go spawnSubmissionWorker(c, config, submissions, processed)
-	}
+	defer close(processed)
 
 	for i := range submissionCount {
-		submissions <- &config.SubmissionDetails.Submissions[i]
+		go spawnSubmissionWorker(c, config, &config.SubmissionDetails.Submissions[i], processed)
 	}
-	close(submissions)
 
 	var details []Detail
 	for range submissionCount {
@@ -92,15 +87,12 @@ func ProcessResponse(c echo.Context, config *Config) []Detail {
 		go setCache(c, config, &detail)
 		details = append(details, detail)
 	}
-	close(processed)
 
 	return details
 }
 
-func spawnSubmissionWorker(c echo.Context, config *Config, submissions <-chan *api.Submission, details chan<- Detail) {
-	for sub := range submissions {
-		details <- processSubmission(c, sub, config)
-	}
+func spawnSubmissionWorker(c echo.Context, config *Config, sub *api.Submission, processed chan<- Detail) {
+	processed <- processSubmission(c, sub, config)
 }
 
 func processSubmission(c echo.Context, submission *api.Submission, config *Config) Detail {

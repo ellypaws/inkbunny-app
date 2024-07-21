@@ -288,7 +288,7 @@ func ticketFlagSummary(flags []db.TicketLabel, colors map[string]string) string 
 		} else {
 			sb.WriteString(", ")
 		}
-		sb.WriteString(fmt.Sprintf("[b]%s[/b]", fmt.Sprintf("[color=%s]%s[/color]", getColor(label, colors), label)))
+		sb.WriteString(fmt.Sprintf("[b][color=%s]%s[/color][/b]", getColor(label, colors), label))
 	}
 	return sb.String()
 }

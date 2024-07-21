@@ -550,7 +550,7 @@ func GetReviewHandler(c echo.Context) error {
 
 	details := service.ProcessResponse(c, &service.Config{
 		SubmissionDetails: submissionDetails,
-		Database:          Database,
+		Artists:           Database.AllArtists(),
 		Cache:             cacheToUse,
 		Host:              SDHost,
 		Output:            output,
@@ -706,7 +706,7 @@ func GetReportHandler(c echo.Context) error {
 
 		details := service.ProcessResponse(c, &service.Config{
 			SubmissionDetails: submissionDetails,
-			Database:          Database,
+			Artists:           Database.AllArtists(),
 			Cache:             cacheToUse,
 			Host:              SDHost,
 			Output:            service.OutputBadges,

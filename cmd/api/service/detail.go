@@ -52,7 +52,7 @@ type OutputType = string
 
 type Config struct {
 	SubmissionDetails api.SubmissionDetailsResponse
-	Database          *db.Sqlite
+	Artists           []db.Artist
 	Cache             cache.Cache
 	Host              *sd.Host
 	Output            OutputType
@@ -63,15 +63,12 @@ type Config struct {
 	Query             url.Values
 	Writer            http.Flusher
 
-	wg      sync.WaitGroup
-	mutex   sync.Mutex
-	artists []db.Artist
+	wg    sync.WaitGroup
+	mutex sync.Mutex
 }
 
 func ProcessResponse(c echo.Context, config *Config) []Detail {
 	var details = make([]Detail, len(config.SubmissionDetails.Submissions))
-
-	config.artists = config.Database.AllArtists()
 
 	for i, submission := range config.SubmissionDetails.Submissions {
 		config.wg.Add(1)
@@ -234,7 +231,7 @@ func parseFiles(c echo.Context, sub *db.Submission, config *Config) {
 	var wg sync.WaitGroup
 	if config.Parameters {
 		wg.Add(1)
-		go RetrieveParams(c, &wg, sub, config.Cache, config.artists)
+		go RetrieveParams(c, &wg, sub, config.Cache, config.Artists)
 	}
 	if config.Interrogate {
 		for i := range sub.Files {

@@ -246,7 +246,6 @@ func parseFiles(c echo.Context, sub *db.Submission, config *Config) {
 }
 
 // ticketSubject returns the subject of the ticket based on the flags detected in the submission.
-// Calling the function will sort flags.
 func ticketSubject(flags []db.TicketLabel) string {
 	if len(flags) == 0 {
 		return "needs to be reviewed[/u]\n"
@@ -297,6 +296,7 @@ func submissionMessage(sub *db.Submission) string {
 	sb.WriteString(fmt.Sprintf("[u]AI Submission %d by @%s ", sub.ID, sub.Username))
 
 	flags := TicketLabels(*sub)
+	slices.Sort(flags)
 	sb.WriteString(ticketSubject(flags))
 
 	colors := make(map[string]string)

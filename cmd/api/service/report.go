@@ -245,6 +245,7 @@ func CreateTicketReport(auditor *db.Auditor, details []Detail, host *url.URL) Ti
 
 	message.WriteString(fmt.Sprintf("[u]AI Submissions by @%s ", report.UsernameID.Username))
 
+	slices.Sort(info.Labels)
 	switch len(info.Labels) {
 	case 0:
 		message.WriteString(fmt.Sprintf("needs to be reviewed[/u]: (%d submissions)\n", len(info.IDs)))

@@ -468,7 +468,7 @@ func RecreateReport(report *TicketReport) error {
 		report.Report.Ratio = 0
 	}
 
-	var message strings.Builder
+	message := NewChunkedWriter(10000, "\n--------✂️--------")
 
 	message.WriteString(fmt.Sprintf("[u]AI Submissions by @%s ", report.Report.UsernameID.Username))
 	if len(info.Labels) > 0 {
@@ -486,6 +486,8 @@ func RecreateReport(report *TicketReport) error {
 		}
 		message.WriteString(fmt.Sprintf("[b]%s[/b]", fmt.Sprintf("[color=%s]%s[/color]", getColor(label, colors), label)))
 	}
+
+	message.Split()
 
 	var nextCategory bool
 	message.WriteString("\n\n[u]Submissions[/u]:")
@@ -506,6 +508,8 @@ func RecreateReport(report *TicketReport) error {
 			message.WriteString(fmt.Sprintf("#M%d", id))
 		}
 	}
+
+	message.Split()
 
 	report.Ticket.Status = "audited"
 	report.Ticket.Labels = info.Labels

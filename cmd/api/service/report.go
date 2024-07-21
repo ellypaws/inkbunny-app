@@ -471,21 +471,19 @@ func RecreateReport(report *TicketReport) error {
 	message := NewChunkedWriter(10000, "\n--------✂️--------")
 
 	message.WriteString(fmt.Sprintf("[u]AI Submissions by @%s ", report.Report.UsernameID.Username))
-	if len(info.Labels) > 0 {
-		message.WriteString(fmt.Sprintf("do not follow the AI ACP[/u] (%d violations, %.2f%%):\n", report.Report.Violations, report.Report.Ratio*100))
-	} else {
-		message.WriteString(fmt.Sprintf("needs to be reviewed[/u]: (%d submissions)\n", len(report.Report.Submissions)))
-	}
 
 	slices.Sort(info.Labels)
-	for i, label := range info.Labels {
-		if i == 0 {
-			message.WriteString("\nThe following flags were detected:\n")
-		} else {
-			message.WriteString(", ")
-		}
-		message.WriteString(fmt.Sprintf("[b]%s[/b]", fmt.Sprintf("[color=%s]%s[/color]", getColor(label, colors), label)))
+	switch len(info.Labels) {
+	case 0:
+		message.WriteString(fmt.Sprintf("needs to be reviewed[/u]: (%d submissions)\n", len(report.Report.Submissions)))
+	case 1:
+		subject := ticketSubject(info.Labels)
+		message.WriteString(fmt.Sprintf("%s[/u] (%d violations, %.2f%%):\n", subject, report.Report.Violations, report.Report.Ratio*100))
+	default:
+		message.WriteString(fmt.Sprintf("do not follow the AI ACP[/u] (%d violations, %.2f%%):\n", report.Report.Violations, report.Report.Ratio*100))
 	}
+
+	message.WriteString(ticketFlagSummary(info.Labels, colors))
 
 	message.Split()
 

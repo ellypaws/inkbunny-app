@@ -68,20 +68,42 @@ type Config struct {
 }
 
 func ProcessResponse(c echo.Context, config *Config) []Detail {
-	var details = make([]Detail, len(config.SubmissionDetails.Submissions))
+	submissionCount := len(config.SubmissionDetails.Submissions)
 
-	for i, submission := range config.SubmissionDetails.Submissions {
-		config.wg.Add(1)
-		go processSubmission(c, &submission, config, &details[i])
+	submissions := make(chan *api.Submission, submissionCount)
+	processed := make(chan Detail, submissionCount)
+
+	for range submissionCount {
+		go spawnSubmissionWorker(c, config, submissions, processed)
 	}
-	config.wg.Wait()
+
+	for i := range submissionCount {
+		submissions <- &config.SubmissionDetails.Submissions[i]
+	}
+	close(submissions)
+
+	var details []Detail
+	for range submissionCount {
+		detail := <-processed
+		if c.QueryParam("stream") == "true" {
+			stream(c, config.Writer, detail)
+		}
+
+		go setCache(c, config, &detail)
+		details = append(details, detail)
+	}
+	close(processed)
 
 	return details
 }
 
-func processSubmission(c echo.Context, submission *api.Submission, config *Config, detail *Detail) {
-	defer config.wg.Done()
+func spawnSubmissionWorker(c echo.Context, config *Config, submissions <-chan *api.Submission, details chan<- Detail) {
+	for sub := range submissions {
+		details <- processSubmission(c, sub, config)
+	}
+}
 
+func processSubmission(c echo.Context, submission *api.Submission, config *Config) Detail {
 	sub := InkbunnySubmissionToDBSubmission(*submission, config.Output == OutputReportIDs)
 
 	if sub.Metadata.AISubmission {
@@ -111,7 +133,7 @@ func processSubmission(c echo.Context, submission *api.Submission, config *Confi
 
 	user := api.UsernameID{UserID: strconv.FormatInt(sub.UserID, 10), Username: sub.Username}
 
-	*detail = Detail{
+	var detail = Detail{
 		URL:        sub.URL,
 		ID:         api.IntString(sub.ID),
 		User:       user,
@@ -174,23 +196,7 @@ func processSubmission(c echo.Context, submission *api.Submission, config *Confi
 		}
 	}
 
-	if c.QueryParam("stream") == "true" {
-		config.mutex.Lock()
-		defer config.mutex.Unlock()
-		c.Response().Header().Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
-
-		enc := json.NewEncoder(c.Response())
-		if err := enc.Encode(detail); err != nil {
-			c.Logger().Errorf("error encoding submission %v: %v", sub.ID, err)
-			c.Response().WriteHeader(http.StatusInternalServerError)
-			return
-		}
-		c.Logger().Debugf("flushing %v", sub.ID)
-
-		config.Writer.Flush()
-	}
-
-	go setCache(c, config, detail)
+	return detail
 }
 
 func setCache(c echo.Context, config *Config, detail *Detail) {
@@ -216,6 +222,23 @@ func setCache(c echo.Context, config *Config, detail *Detail) {
 	} else {
 		c.Logger().Infof("Cached %s %dKiB", key, len(bin)/units.KiB)
 	}
+}
+
+func stream(c echo.Context, writer http.Flusher, detail Detail) {
+	if writer == nil {
+		return
+	}
+	c.Response().Header().Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+
+	enc := json.NewEncoder(c.Response())
+	if err := enc.Encode(detail); err != nil {
+		c.Logger().Errorf("error encoding submission %s: %s", detail.ID, err)
+		c.Response().WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	c.Logger().Debugf("flushing %v", detail.ID)
+
+	writer.Flush()
 }
 
 var apiImage = regexp.MustCompile(`(?i)(https://(?:\w+\.ib\.metapix|inkbunny)\.net(?:/[\w\-.]+)+\.(?:jpe?g|png|gif))`)

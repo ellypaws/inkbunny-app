@@ -1,7 +1,6 @@
 package service
 
 import (
-	"cmp"
 	"encoding/json"
 	"fmt"
 	"github.com/ellypaws/inkbunny-app/cmd/api/cache"
@@ -252,7 +251,7 @@ func ticketSubject(flags []db.TicketLabel) string {
 	if len(flags) == 0 {
 		return "needs to be reviewed[/u]\n"
 	} else {
-		slices.SortFunc(flags, cmp.Compare[db.TicketLabel])
+		slices.Sort(flags)
 		switch flags[0] {
 		case db.LabelArtistUsed:
 			return "has used an artist in the prompt[/u]\n"

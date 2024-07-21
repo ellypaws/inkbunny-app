@@ -1,7 +1,6 @@
 package service
 
 import (
-	"cmp"
 	"encoding/json"
 	"fmt"
 	"github.com/ellypaws/inkbunny-app/cmd/api/cache"
@@ -233,7 +232,7 @@ func CreateTicketReport(auditor *db.Auditor, details []Detail, host *url.URL) Ti
 			info.Categories = make(map[string][]int64)
 		}
 
-		slices.SortFunc(sub.Ticket.Labels, cmp.Compare[db.TicketLabel])
+		slices.Sort(sub.Ticket.Labels)
 		category := strings.Join(applyLabelColor(sub.Ticket.Labels, colors), ", ")
 		if _, ok := info.Categories[category]; !ok {
 			info.Categories[category] = []int64{sub.Submission.ID}
@@ -454,7 +453,7 @@ func RecreateReport(report *TicketReport) error {
 		if info.Categories == nil {
 			info.Categories = make(map[string][]int64)
 		}
-		slices.SortFunc(sub.Flags, cmp.Compare[db.TicketLabel])
+		slices.Sort(sub.Flags)
 		category := strings.Join(applyLabelColor(sub.Flags, colors), ", ")
 		if _, ok := info.Categories[category]; !ok {
 			info.Categories[category] = []int64{id}
@@ -477,7 +476,7 @@ func RecreateReport(report *TicketReport) error {
 		message.WriteString(fmt.Sprintf("needs to be reviewed[/u]: (%d submissions)\n", len(report.Report.Submissions)))
 	}
 
-	slices.SortFunc(info.Labels, cmp.Compare[db.TicketLabel])
+	slices.Sort(info.Labels)
 	for i, label := range info.Labels {
 		if i == 0 {
 			message.WriteString("\nThe following flags were detected:\n")

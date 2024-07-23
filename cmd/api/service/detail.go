@@ -163,7 +163,7 @@ func processSubmission(c echo.Context, submission *api.Submission, config *Confi
 		flags := TicketLabels(sub)
 		detail.Ticket = &db.Ticket{
 			ID:         sub.ID,
-			Subject:    ticketSubject(flags),
+			Subject:    fmt.Sprintf("AI Submission #%d by @%s %s", sub.ID, sub.Username, ticketSubject(flags)),
 			DateOpened: time.Now().UTC(),
 			Status:     "triage",
 			Labels:     flags,
@@ -260,32 +260,32 @@ func parseFiles(c echo.Context, sub *db.Submission, config *Config) {
 // ticketSubject returns the subject of the ticket based on the flags detected in the submission.
 func ticketSubject(flags []db.TicketLabel) string {
 	if len(flags) == 0 {
-		return "needs to be reviewed[/u]\n"
+		return "needs to be reviewed"
 	} else {
 		slices.Sort(flags)
 		switch flags[0] {
 		case db.LabelArtistUsed:
-			return "has used an artist in the prompt[/u]\n"
+			return "has used an artist in the prompt"
 		case db.LabelMissingParams:
-			return "does not have any parameters[/u]\n"
+			return "does not have any parameters"
 		case db.LabelMissingPrompt:
-			return "is missing the prompt[/u]\n"
+			return "is missing the prompt"
 		case db.LabelMissingModel:
-			return "does not include the model information[/u]\n"
+			return "does not include the model information"
 		case db.LabelMissingSeed:
-			return "is missing the generation seed[/u]\n"
+			return "is missing the generation seed"
 		case db.LabelSoldArt:
-			return "is a selling content[/u]\n"
+			return "is a selling content"
 		case db.LabelPrivateTool:
-			return "was generated using a private tool[/u]\n"
+			return "was generated using a private tool"
 		case db.LabelPrivateLora:
-			return "was generated using a private Lora model[/u]\n"
+			return "was generated using a private Lora model"
 		case db.LabelPrivateModel:
-			return "was generated using a private checkpoint model[/u]\n"
+			return "was generated using a private checkpoint model"
 		case db.LabelMissingTags:
-			return "is missing the AI tags[/u]\n"
+			return "is missing the AI tags"
 		default:
-			return "is not following AI ACP[/u]\n"
+			return "is not following AI ACP"
 		}
 	}
 }

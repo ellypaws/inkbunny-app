@@ -245,7 +245,6 @@ func CreateTicketReport(auditor *db.Auditor, details []Detail, host *url.URL) Ti
 
 	message.WriteString(fmt.Sprintf("[u]AI Submissions by @%s ", report.UsernameID.Username))
 
-	slices.Sort(info.Labels)
 	switch len(info.Labels) {
 	case 0:
 		message.WriteString(fmt.Sprintf("needs to be reviewed[/u]: (%d submissions)\n", len(info.IDs)))
@@ -256,6 +255,7 @@ func CreateTicketReport(auditor *db.Auditor, details []Detail, host *url.URL) Ti
 		message.WriteString(fmt.Sprintf("do not follow the AI ACP[/u] (%d violations, %.2f%%):\n", report.Violations, report.Ratio*100))
 	}
 
+	slices.Sort(info.Labels)
 	message.WriteString(ticketFlagSummary(info.Labels, colors))
 
 	message.Split()
@@ -460,6 +460,7 @@ func RecreateReport(report *TicketReport) error {
 		if info.Categories == nil {
 			info.Categories = make(map[string][]int64)
 		}
+
 		slices.Sort(sub.Flags)
 		category := strings.Join(applyLabelColor(sub.Flags, colors), ", ")
 		if _, ok := info.Categories[category]; !ok {

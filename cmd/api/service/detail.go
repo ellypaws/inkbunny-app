@@ -262,27 +262,26 @@ func ticketSubject(flags []db.TicketLabel) string {
 	if len(flags) == 0 {
 		return "needs to be reviewed"
 	} else {
-		slices.Sort(flags)
-		switch flags[0] {
-		case db.LabelArtistUsed:
+		switch {
+		case slices.Contains(flags, db.LabelArtistUsed):
 			return "has used an artist in the prompt"
-		case db.LabelMissingParams:
+		case slices.Contains(flags, db.LabelMissingParams):
 			return "does not have any parameters"
-		case db.LabelMissingPrompt:
+		case slices.Contains(flags, db.LabelMissingPrompt):
 			return "is missing the prompt"
-		case db.LabelMissingModel:
+		case slices.Contains(flags, db.LabelMissingModel):
 			return "does not include the model information"
-		case db.LabelMissingSeed:
+		case slices.Contains(flags, db.LabelMissingSeed):
 			return "is missing the generation seed"
-		case db.LabelSoldArt:
+		case slices.Contains(flags, db.LabelSoldArt):
 			return "is a selling content"
-		case db.LabelPrivateTool:
+		case slices.Contains(flags, db.LabelPrivateTool):
 			return "was generated using a private tool"
-		case db.LabelPrivateLora:
+		case slices.Contains(flags, db.LabelPrivateLora):
 			return "was generated using a private Lora model"
-		case db.LabelPrivateModel:
+		case slices.Contains(flags, db.LabelPrivateModel):
 			return "was generated using a private checkpoint model"
-		case db.LabelMissingTags:
+		case slices.Contains(flags, db.LabelMissingTags):
 			return "is missing the AI tags"
 		default:
 			return "is not following AI ACP"
@@ -308,9 +307,9 @@ func submissionMessage(sub *db.Submission) string {
 	sb.WriteString(fmt.Sprintf("[u]AI Submission %d by @%s ", sub.ID, sub.Username))
 
 	flags := TicketLabels(*sub)
-	slices.Sort(flags)
 	sb.WriteString(ticketSubject(flags))
 
+	slices.Sort(flags)
 	colors := make(map[string]string)
 	sb.WriteString(ticketFlagSummary(flags, colors))
 

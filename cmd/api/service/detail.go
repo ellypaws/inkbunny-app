@@ -308,6 +308,7 @@ func submissionMessage(sub *db.Submission) string {
 
 	flags := TicketLabels(*sub)
 	sb.WriteString(ticketSubject(flags))
+	sb.WriteString("[/u]\n")
 
 	slices.Sort(flags)
 	colors := make(map[string]string)

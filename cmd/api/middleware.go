@@ -2,14 +2,11 @@ package api
 
 import (
 	"fmt"
-	"github.com/coocood/freecache"
 	"github.com/ellypaws/inkbunny-app/cmd/api/cache"
 	"github.com/ellypaws/inkbunny-app/cmd/crashy"
 	"github.com/ellypaws/inkbunny-app/cmd/db"
 	"github.com/ellypaws/inkbunny/api"
-	gocache "github.com/gitsight/go-echo-cache"
 	"github.com/labstack/echo/v4"
-	"github.com/labstack/gommon/bytes"
 	"net/http"
 	"strings"
 	"time"
@@ -198,23 +195,6 @@ const timeToLive = 5 * time.Minute
 
 var timeToLiveString = fmt.Sprintf("max-age=%v", timeToLive.Seconds())
 
-var defaultCacheConfig = &gocache.Config{
-	Methods: []string{echo.GET, echo.HEAD},
-	TTL:     timeToLive,
-	Refresh: func(r *http.Request) bool {
-		return r.Header.Get(echo.HeaderCacheControl) == "no-cache"
-	},
-}
-
-var globalCache = func() echo.MiddlewareFunc {
-	c := freecache.NewCache(256 * bytes.MiB)
-	return gocache.New(defaultCacheConfig, c)
-}()
-
-func CacheMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
-	return globalCache(next)
-}
-
 func SetCacheHeaders(next echo.HandlerFunc) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		c.Response().Header().Set(echo.HeaderCacheControl, timeToLiveString)
@@ -222,7 +202,7 @@ func SetCacheHeaders(next echo.HandlerFunc) echo.HandlerFunc {
 	}
 }
 
-var withCache = []echo.MiddlewareFunc{SetCacheHeaders, CacheMiddleware}
+var withCache = []echo.MiddlewareFunc{SetCacheHeaders}
 
 func Static(next echo.HandlerFunc) echo.HandlerFunc {
 	return func(c echo.Context) error {
@@ -247,11 +227,11 @@ func OriginalResponseWriter(next echo.HandlerFunc) echo.HandlerFunc {
 	}
 }
 
-var withOriginalResponseWriter = []echo.MiddlewareFunc{LoggedInMiddleware, RequireAuditor, OriginalResponseWriter, CacheMiddleware}
+var withOriginalResponseWriter = []echo.MiddlewareFunc{LoggedInMiddleware, RequireAuditor, OriginalResponseWriter}
 
-var StaticMiddleware = []echo.MiddlewareFunc{Static, RedisMiddleware, CacheMiddleware}
+var StaticMiddleware = []echo.MiddlewareFunc{Static, RedisMiddleware}
 
-var WithRedis = []echo.MiddlewareFunc{OriginalResponseWriter, SetCacheHeaders, RedisMiddleware, CacheMiddleware}
+var WithRedis = []echo.MiddlewareFunc{OriginalResponseWriter, SetCacheHeaders, RedisMiddleware}
 
 func RedisMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
 	return func(c echo.Context) error {

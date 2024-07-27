@@ -14,10 +14,10 @@ require (
 	github.com/charmbracelet/bubbles v0.18.0
 	github.com/charmbracelet/bubbletea v0.26.6
 	github.com/charmbracelet/lipgloss v0.12.1
-	github.com/ellypaws/inkbunny-app v0.0.0-20240703164931-08a99016b757
+	github.com/ellypaws/inkbunny-app v0.0.0-20240725221538-e33a5147457f
 	github.com/ellypaws/inkbunny-sd v0.0.0-20240721133811-9fb8e8dff129
 	github.com/ellypaws/inkbunny/api v0.0.0-20240521065300-7d34160ddf2d
-	github.com/lrstanley/bubblezone v0.0.0-20240624011428-67235275f80c
+	github.com/lrstanley/bubblezone v0.0.0-20240723130623-7fd58a7b1f91
 	golang.org/x/sys v0.22.0
 )
 
@@ -26,7 +26,7 @@ require (
 	github.com/aymanbagabas/go-osc52/v2 v2.0.1 // indirect
 	github.com/charmbracelet/harmonica v0.2.0 // indirect
 	github.com/charmbracelet/x/ansi v0.1.4 // indirect
-	github.com/charmbracelet/x/input v0.1.2 // indirect
+	github.com/charmbracelet/x/input v0.1.3 // indirect
 	github.com/charmbracelet/x/term v0.1.1 // indirect
 	github.com/charmbracelet/x/windows v0.1.2 // indirect
 	github.com/disintegration/imaging v1.6.2 // indirect
@@ -38,7 +38,7 @@ require (
 	github.com/makeworld-the-better-one/dither/v2 v2.4.0 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/mattn/go-localereader v0.0.1 // indirect
-	github.com/mattn/go-runewidth v0.0.15 // indirect
+	github.com/mattn/go-runewidth v0.0.16 // indirect
 	github.com/muesli/ansi v0.0.0-20230316100256-276c6243b2f6 // indirect
 	github.com/muesli/cancelreader v0.2.2 // indirect
 	github.com/muesli/reflow v0.3.0 // indirect

@@ -725,7 +725,7 @@ func GetReportHandler(c echo.Context) error {
 		processed = append(processed, details...)
 	}
 
-	out := service.CreateReport(processed, auditor)
+	out := service.CreateReport(processed, auditor, ServerHost)
 
 	var store any
 	date := out.ReportDate.Format("2006-01-02")

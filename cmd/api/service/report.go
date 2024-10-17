@@ -25,11 +25,14 @@ type File struct {
 	InitialMD5   *string `json:"initial_md5,omitempty"`
 	FullFileMD5  *string `json:"full_file_md5,omitempty"`
 	FileURLFull  *string `json:"file_url_full,omitempty"`
+	BackupFile   *string `json:"backup_file,omitempty"`
 }
 
 type SubInfo struct {
-	Title *string `json:"title,omitempty"`
-	URL   *string `json:"url,omitempty"`
+	Title       *string    `json:"title,omitempty"`
+	URL         *string    `json:"url,omitempty"`
+	Description *string    `json:"description,omitempty"`
+	Updated     *time.Time `json:"updated,omitempty"`
 
 	Generated *bool `json:"generated,omitempty"`
 	Assisted  *bool `json:"assisted,omitempty"`
@@ -55,7 +58,7 @@ type Report struct {
 	Submissions []SubInfo `json:"submissions"`
 }
 
-func CreateReport(processed []Detail, auditor *db.Auditor) Report {
+func CreateReport(processed []Detail, auditor *db.Auditor, host *url.URL) Report {
 	out := Report{
 		ReportDate: time.Now().UTC(),
 	}
@@ -84,8 +87,11 @@ func CreateReport(processed []Detail, auditor *db.Auditor) Report {
 		out.Violations++
 
 		info := SubInfo{
-			Title:   &sub.Submission.Title,
-			URL:     &sub.Submission.URL,
+			Title:       &sub.Submission.Title,
+			URL:         &sub.Submission.URL,
+			Description: &sub.Submission.Description,
+			Updated:     &sub.Submission.Updated,
+
 			Flags:   sub.Ticket.Labels,
 			Artists: sub.Submission.Metadata.ArtistUsed,
 			Files:   make([]File, len(sub.Submission.Files)),
@@ -103,6 +109,14 @@ func CreateReport(processed []Detail, auditor *db.Auditor) Report {
 				InitialMD5:   &f.File.InitialFileMD5,
 				FullFileMD5:  &f.File.FullFileMD5,
 				FileURLFull:  &f.File.FileURLFull,
+			}
+			if f.File.MimeType == echo.MIMEApplicationJSON || f.File.MimeType == echo.MIMETextPlain || f.File.MimeType == MIMETextRTF {
+				u, err := url.Parse(f.File.FileURLFull)
+				if err != nil {
+					continue
+				}
+				backupURL := fmt.Sprintf("%s/%s", host, u.Path)
+				info.Files[i].BackupFile = &backupURL
 			}
 		}
 
@@ -167,7 +181,7 @@ func getColor(label db.TicketLabel, colors map[string]string) string {
 }
 
 func CreateTicketReport(auditor *db.Auditor, details []Detail, host *url.URL) TicketReport {
-	report := CreateReport(details, auditor)
+	report := CreateReport(details, auditor, host)
 	auditorAsUser := AuditorAsUsernameID(auditor)
 
 	var info struct {

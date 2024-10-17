@@ -14,6 +14,8 @@ import (
 	"mime"
 	"net/http"
 	"net/url"
+	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 	"time"
@@ -201,6 +203,19 @@ func Retrieve(c echo.Context, cache Cache, fetch Fetch) (*Item, func(c echo.Cont
 		c.Logger().Errorf("could not set %s in cache %T: %v", fetch.URL, cache, err)
 	}
 	c.Logger().Infof("Cached %s %dKiB", fetch.Key, len(item.Blob)/units.KiB)
+
+	if shouldSave, ok := c.Get("shouldSave").(bool); ok && shouldSave {
+		go func() {
+			err := os.MkdirAll(filepath.Join(".", parse.Path, ".."), 0755)
+			if err != nil {
+				c.Logger().Errorf("could not create directory %v", err)
+			}
+			err = os.WriteFile(filepath.Join(".", parse.Path), blob, 0644)
+			if err != nil {
+				c.Logger().Errorf("could not write file %v", err)
+			}
+		}()
+	}
 
 	return item, nil
 }

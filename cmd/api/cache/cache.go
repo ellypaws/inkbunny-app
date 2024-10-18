@@ -74,6 +74,7 @@ type Fetch struct {
 	Key      string
 	URL      string
 	MimeType string
+	Duration *time.Duration
 }
 
 const (
@@ -198,7 +199,11 @@ func Retrieve(c echo.Context, cache Cache, fetch Fetch) (*Item, func(c echo.Cont
 		MimeType: fetch.MimeType,
 	}
 
-	err = cache.Set(fmt.Sprintf("%v:%v", item.MimeType, fetch.URL), item, Day)
+	duration := Day
+	if fetch.Duration != nil {
+		duration = *fetch.Duration
+	}
+	err = cache.Set(fmt.Sprintf("%v:%v", item.MimeType, fetch.URL), item, duration)
 	if err != nil {
 		c.Logger().Errorf("could not set %s in cache %T: %v", fetch.URL, cache, err)
 	}

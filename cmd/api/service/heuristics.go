@@ -121,10 +121,12 @@ func processParams(c echo.Context, sub *db.Submission, cacheToUse cache.Cache) {
 	}
 
 	c.Set("shouldSave", c.QueryParam("output") == OutputReport || c.QueryParam("output") == OutputReportIDs)
+	threeMonths := 3 * cache.Month
 	b, errFunc := cache.Retrieve(c, cacheToUse, cache.Fetch{
 		Key:      fmt.Sprintf("%s:%s", textFile.File.MimeType, textFile.File.FileURLFull),
 		URL:      textFile.File.FileURLFull,
 		MimeType: textFile.File.MimeType,
+		Duration: &threeMonths,
 	})
 	if errFunc != nil {
 		c.Logger().Errorf("error fetching %s: (%s)", textFile.File.FileURLFull, sub.URL)

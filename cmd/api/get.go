@@ -43,6 +43,7 @@ var getHandlers = pathHandler{
 	"/artists":                  handler{GetArtistsHandler, append(loggedInMiddleware, WithRedis...)},
 	"/models":                   handler{GetModelsHandler, withCache},
 	"/models/:hash":             handler{GetModelsHandler, WithRedis},
+	"/files/:file":              handler{GetFileHandler, StaticMiddleware},
 }
 
 // Deprecated: use registerAs((*echo.Echo).GET, getHandlers) instead

@@ -115,7 +115,7 @@ func CreateReport(processed []Detail, auditor *db.Auditor, host *url.URL) Report
 				if err != nil {
 					continue
 				}
-				backupURL := fmt.Sprintf("%s/%s", host, u.Path)
+				backupURL := fmt.Sprintf("%s%s", host, u.Path)
 				info.Files[i].BackupFile = &backupURL
 			}
 		}

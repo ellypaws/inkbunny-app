@@ -127,20 +127,18 @@ func HandlePath(c echo.Context) error {
 	return ProxyHandler(path)(c)
 }
 
-var firstFour = regexp.MustCompile(`^(\d{1,4})`)
+var divideThousand = regexp.MustCompile(`^(\d+?)\d{3}_`)
 
 func GetFileHandler(c echo.Context) error {
 	file := c.Param("file")
-	if !strings.HasPrefix(file, "full") {
-		return c.JSON(http.StatusBadRequest, crashy.ErrorResponse{ErrorString: "invalid file path"})
-	}
 	if strings.Contains(file, "..") {
 		return c.JSON(http.StatusBadRequest, crashy.ErrorResponse{ErrorString: "invalid file path"})
 	}
 	fileName := filepath.Base(file)
-	firstFourNumbers := firstFour.FindString(fileName)
-	if firstFourNumbers == "" {
-		return c.JSON(http.StatusBadRequest, crashy.ErrorResponse{ErrorString: "invalid file name"})
+	index := "0"
+	divide := divideThousand.FindStringSubmatch(fileName)
+	if len(divide) > 1 {
+		index = divide[1]
 	}
-	return c.File(filepath.Join(".", "files", "full", firstFourNumbers, fileName))
+	return c.File(filepath.Join(".", "files", "full", index, fileName))
 }

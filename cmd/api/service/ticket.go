@@ -2,14 +2,16 @@ package service
 
 import (
 	"fmt"
-	"github.com/ellypaws/inkbunny-app/cmd/db"
-	"github.com/ellypaws/inkbunny-sd/utils"
-	"github.com/ellypaws/inkbunny/api"
 	"log"
 	"regexp"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/ellypaws/inkbunny/api"
+
+	"github.com/ellypaws/inkbunny-app/cmd/db"
+	"github.com/ellypaws/inkbunny-sd/utils"
 )
 
 // InkbunnyTimeLayout e.g. 2010-03-03 13:26:46.357649+00
@@ -49,7 +51,7 @@ func InkbunnySubmissionToDBSubmission(submission api.Submission, override bool) 
 	return dbSubmission
 }
 
-var PrivateTools = regexp.MustCompile(`(?i)\b(midjourney|novelai|bing|dall[- ]?e|nijijourney|craiyon)\b`)
+var PrivateTools = regexp.MustCompile(`(?i)\b(midjourney|novelai|bing|dall[- ]?e|nijijourney|craiyon|imagefx)\b`)
 
 // SetSubmissionMeta modifies a submission's Metadata based on its Keywords and other fields.
 func SetSubmissionMeta(submission *db.Submission, override bool) {

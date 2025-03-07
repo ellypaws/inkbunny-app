@@ -122,6 +122,7 @@ func processParams(c echo.Context, sub *db.Submission, cacheToUse cache.Cache) {
 		return
 	}
 
+	// TODO: shouldSave won't run if we've retrieved cached data
 	c.Set("shouldSave", c.QueryParam("output") == OutputReport || c.QueryParam("output") == OutputReportIDs)
 	threeMonths := 3 * cache.Month
 	b, errFunc := cache.Retrieve(c, cacheToUse, cache.Fetch{

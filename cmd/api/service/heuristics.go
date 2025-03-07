@@ -148,6 +148,12 @@ func processParams(c echo.Context, sub *db.Submission, cacheToUse cache.Cache) {
 		}
 		b.Blob = plain.Bytes()
 	}
+
+	if bytes.HasPrefix(b.Blob, []byte("{")) && bytes.HasSuffix(b.Blob, []byte("}")) {
+		jsonHeuristics(c, sub, b, textFile)
+		return
+	}
+
 	if err := parameterHeuristics(c, sub, textFile, b); err != nil {
 		c.Logger().Errorf("error processing params for %s: %v", textFile.File.FileName, err)
 		return

@@ -5,19 +5,21 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/ellypaws/inkbunny-app/cmd/api/cache"
-	"github.com/ellypaws/inkbunny-app/cmd/db"
-	"github.com/ellypaws/inkbunny-sd/entities"
-	"github.com/ellypaws/inkbunny-sd/entities/comfyui"
-	"github.com/ellypaws/inkbunny-sd/utils"
-	"github.com/labstack/echo/v4"
-	units "github.com/labstack/gommon/bytes"
-	"github.com/lu4p/cat/rtftxt"
 	"reflect"
 	"regexp"
 	"slices"
 	"strings"
 	"sync"
+
+	"github.com/labstack/echo/v4"
+	units "github.com/labstack/gommon/bytes"
+	"github.com/lu4p/cat/rtftxt"
+
+	"github.com/ellypaws/inkbunny-app/cmd/api/cache"
+	"github.com/ellypaws/inkbunny-app/cmd/db"
+	"github.com/ellypaws/inkbunny-sd/entities"
+	"github.com/ellypaws/inkbunny-sd/entities/comfyui"
+	"github.com/ellypaws/inkbunny-sd/utils"
 )
 
 func RetrieveParams(c echo.Context, wg *sync.WaitGroup, sub *db.Submission, cacheToUse cache.Cache, artists []db.Artist) {
@@ -286,9 +288,11 @@ func parameterHeuristics(c echo.Context, sub *db.Submission, textFile *db.File, 
 	var err error
 	f := &textFile.File
 	c.Logger().Debugf("processing params for %s", f.FileName)
+
+	baseConfig := utils.Config{Text: string(b.Blob), Filename: f.FileName}
 	switch sub.UserID {
 	case utils.IDAutoSnep:
-		params, err = utils.AutoSnep(utils.WithBytes(b.Blob), utils.WithFilename(f.FileName))
+		params, err = utils.AutoSnep(utils.WithConfig(baseConfig))
 	case utils.IDDruge:
 		params, err = utils.Common(utils.WithBytes(b.Blob), utils.UseDruge(), utils.WithFilename(f.FileName))
 	case utils.IDAIBean:
@@ -296,32 +300,26 @@ func parameterHeuristics(c echo.Context, sub *db.Submission, textFile *db.File, 
 	case utils.IDArtieDragon:
 		params, err = utils.Common(utils.WithBytes(b.Blob), utils.UseArtie(), utils.WithFilename(f.FileName))
 	case 1125540:
-		params, err = utils.Common(
-			utils.WithBytes(b.Blob),
-			utils.WithFilename(f.FileName),
-			utils.WithKeyCondition(func(line string) bool { return strings.HasPrefix(line, "File Name") }))
+		hasFileName := func(line string) bool { return strings.HasPrefix(line, "File Name") }
+		params, err = utils.Common(utils.WithConfig(baseConfig), utils.WithKeyCondition(hasFileName))
 	case utils.IDFairyGarden:
 		params, err = utils.Common(utils.WithBytes(b.Blob), utils.UseFairyGarden(), utils.WithFilename(f.FileName))
 	case utils.IDCirn0:
-		params, err = utils.Cirn0(utils.WithBytes(b.Blob), utils.WithFilename(f.FileName))
+		params, err = utils.Cirn0(utils.WithConfig(baseConfig))
 	case utils.IDHornybunny:
 		params, err = utils.Common(utils.WithBytes(b.Blob), utils.UseHornybunny(), utils.WithFilename(f.FileName))
 	case utils.IDMethuzalach:
 		params, err = utils.Common(utils.WithBytes(b.Blob), utils.UseMethuzalach(), utils.WithFilename(f.FileName))
 	case utils.IDSoph:
 		if utils.SophStartInvokeAI.Match(b.Blob) {
-			sub.Metadata.Objects, err = utils.Soph(utils.WithBytes(b.Blob), utils.WithFilename(f.FileName))
+			sub.Metadata.Objects, err = utils.Soph(utils.WithConfig(baseConfig))
 			if err == nil {
 				break
 			}
 		}
-		params, err = utils.Common(
-			utils.WithBytes(b.Blob),
-			utils.WithFilename(f.FileName),
-			utils.UseSoph(),
-		)
+		params, err = utils.Common(utils.WithConfig(baseConfig), utils.UseSoph())
 	case utils.IDNastAI:
-		params, err = utils.Sequential(utils.WithBytes(b.Blob), utils.WithFilename(f.FileName))
+		params, err = utils.Sequential(utils.WithConfig(baseConfig))
 	default:
 		params, err = utils.Common(
 			utils.WithBytes(bytes.Join([][]byte{[]byte(f.FileName), b.Blob}, []byte("\n"))),

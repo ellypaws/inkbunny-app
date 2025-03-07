@@ -240,6 +240,23 @@ func jsonHeuristics(c echo.Context, sub *db.Submission, b *cache.Item, textFile 
 		return
 	}
 
+	comfyUIAPI, err := comfyui.UnmarshalComfyApi(b.Blob)
+	if err != nil {
+		c.Logger().Errorf("error parsing comfy ui api %s: %s", textFile.File.FileURLFull, err)
+	} else if len(comfyUIAPI) > 0 {
+		c.Logger().Debugf("comfy ui api found for %s", sub.URL)
+		sub.Metadata.Objects = map[string]entities.TextToImageRequest{
+			textFile.File.FileName: *comfyUIAPI.Convert(),
+		}
+		sub.Metadata.Params = &utils.Params{
+			textFile.File.FileName: utils.PNGChunk{
+				"comfy_ui_api": string(b.Blob),
+			},
+		}
+		sub.Metadata.Generator = "comfy_ui"
+		return
+	}
+
 	easyDiffusion, err := entities.UnmarshalEasyDiffusion(b.Blob)
 	if err != nil {
 		c.Logger().Errorf("error parsing easy diffusion %s: %s", textFile.File.FileURLFull, err)

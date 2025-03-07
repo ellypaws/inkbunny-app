@@ -225,6 +225,7 @@ func processObjectMetadata(submission *db.Submission, artists []db.Artist) {
 }
 
 func jsonHeuristics(c echo.Context, sub *db.Submission, b *cache.Item, textFile *db.File) {
+	b.Blob = bytes.ReplaceAll(b.Blob, []byte("NaN"), []byte("null"))
 	comfyUI, err := comfyui.UnmarshalIsolatedComfyUI(b.Blob)
 	if err != nil && !errors.Is(err, comfyui.ErrInvalidNode) {
 		c.Logger().Errorf("error parsing comfy ui %s: %s", textFile.File.FileURLFull, err)

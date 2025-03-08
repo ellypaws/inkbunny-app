@@ -2,13 +2,6 @@ package main
 
 import (
 	"fmt"
-	"github.com/ellypaws/inkbunny-app/cmd/api"
-	"github.com/ellypaws/inkbunny-app/cmd/db"
-	sd "github.com/ellypaws/inkbunny-sd/stable_diffusion"
-	"github.com/labstack/echo/v4"
-	"github.com/labstack/echo/v4/middleware"
-	level "github.com/labstack/gommon/log"
-	"github.com/muesli/termenv"
 	"log"
 	"net/http"
 	"net/url"
@@ -16,6 +9,16 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/joho/godotenv"
+	"github.com/labstack/echo/v4"
+	"github.com/labstack/echo/v4/middleware"
+	level "github.com/labstack/gommon/log"
+	"github.com/muesli/termenv"
+
+	"github.com/ellypaws/inkbunny-app/cmd/api"
+	"github.com/ellypaws/inkbunny-app/cmd/db"
+	sd "github.com/ellypaws/inkbunny-sd/stable_diffusion"
 )
 
 var (
@@ -110,6 +113,10 @@ func startupMessage(e *echo.Echo) {
 }
 
 func init() {
+	if err := godotenv.Load(); err != nil {
+		log.Println("No .env file found")
+	}
+
 	if p := os.Getenv("PORT"); p != "" {
 		i, err := strconv.ParseUint(p, 10, 32)
 		if err != nil {

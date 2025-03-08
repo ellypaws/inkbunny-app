@@ -32,7 +32,7 @@ var getHandlers = pathHandler{
 	"/inkbunny/description":     handler{GetInkbunnyDescription, withCache},
 	"/inkbunny/submission":      handler{GetInkbunnySubmission, withCache},
 	"/inkbunny/submission/:ids": handler{GetInkbunnySubmission, withCache},
-	"/inkbunny/sorter":          handler{GetSorterHandler, append(loggedInMiddleware, WithRedis...)},
+	"/inkbunny/sorter":          handler{GetSorterHandler, append(reducedMiddleware, WithRedis...)},
 	"/inkbunny/search":          handler{GetInkbunnySearch, append(loggedInMiddleware, WithRedis...)},
 	"/image":                    handler{GetImageHandler, append(StaticMiddleware, SIDMiddleware)},
 	"/review/:id":               handler{GetReviewHandler, append(reducedMiddleware, WithRedis...)},
@@ -183,7 +183,7 @@ func GetSorterHandler(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, crashy.Wrap(err))
 	}
 
-	request.SessionID, _, err = GetSIDandID(c)
+	request.SessionID, err = GetSID(c)
 	if err != nil {
 		return c.JSON(http.StatusUnauthorized, crashy.Wrap(err))
 	}

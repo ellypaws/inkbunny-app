@@ -11,15 +11,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/joho/godotenv"
 	"github.com/labstack/echo/v4"
 	"github.com/redis/go-redis/v9"
 )
 
-func init() {
-	if err := godotenv.Load(); err != nil {
-		log.Println("No .env file found")
-	}
+func Init() {
 	client = NewRedisClient()
 
 	_, err := client.Ping(ctx).Result()
@@ -36,13 +32,12 @@ func init() {
 
 type Redis redis.Client
 
-var client *Redis
-
-var addr string = "localhost:6379"
-
-var ctx = context.Background()
-
-var Initialized bool
+var (
+	client      *Redis
+	addr        = "localhost:6379"
+	ctx         = context.Background()
+	Initialized bool
+)
 
 func Context() context.Context {
 	return ctx
@@ -58,11 +53,8 @@ func RedisClient() *Redis {
 }
 
 func NewRedisClient() *Redis {
-	if e := os.Getenv("REDIS_HOST"); e != "" {
-		addr = e
-	}
 	client := redis.NewClient(&redis.Options{
-		Addr: addr,
+		Addr: os.Getenv("REDIS_HOST"),
 		Username: func() string {
 			u := os.Getenv("REDIS_USERNAME")
 			if u != "" {

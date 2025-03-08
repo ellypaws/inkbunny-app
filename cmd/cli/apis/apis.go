@@ -1,10 +1,13 @@
 package apis
 
 import (
-	"github.com/ellypaws/inkbunny-sd/stable_diffusion"
-	"github.com/ellypaws/inkbunny/api"
 	"net/url"
 	"os"
+
+	"github.com/ellypaws/inkbunny/api"
+
+	"github.com/ellypaws/inkbunny-app/cmd/api/cache"
+	"github.com/ellypaws/inkbunny-sd/stable_diffusion"
 )
 
 type Config struct {
@@ -15,6 +18,7 @@ type Config struct {
 }
 
 func New() *Config {
+	cache.Init()
 	var sdURL *sd.Host
 	if env := os.Getenv("SD_URL"); env != "" {
 		u, err := url.Parse(env)

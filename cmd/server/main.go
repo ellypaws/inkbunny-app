@@ -17,6 +17,7 @@ import (
 	"github.com/muesli/termenv"
 
 	"github.com/ellypaws/inkbunny-app/cmd/api"
+	"github.com/ellypaws/inkbunny-app/cmd/api/cache"
 	"github.com/ellypaws/inkbunny-app/cmd/db"
 	sd "github.com/ellypaws/inkbunny-sd/stable_diffusion"
 )
@@ -116,6 +117,8 @@ func init() {
 	if err := godotenv.Load(); err != nil {
 		log.Println("No .env file found")
 	}
+
+	cache.Init()
 
 	if p := os.Getenv("PORT"); p != "" {
 		i, err := strconv.ParseUint(p, 10, 32)

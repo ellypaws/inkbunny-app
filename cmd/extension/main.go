@@ -3,19 +3,24 @@ package main
 import (
 	_ "embed"
 	"encoding/json"
-	"github.com/ellypaws/inkbunny-app/cmd/api"
-	"github.com/ellypaws/inkbunny-app/cmd/db"
-	sd "github.com/ellypaws/inkbunny-sd/stable_diffusion"
-	"github.com/labstack/echo/v4"
-	"github.com/labstack/echo/v4/middleware"
-	logger "github.com/labstack/gommon/log"
-	"github.com/muesli/termenv"
+	"log"
 	"net/http"
 	"net/url"
 	"os"
 	"slices"
 	"strings"
 	"time"
+
+	"github.com/joho/godotenv"
+	"github.com/labstack/echo/v4"
+	"github.com/labstack/echo/v4/middleware"
+	logger "github.com/labstack/gommon/log"
+	"github.com/muesli/termenv"
+
+	"github.com/ellypaws/inkbunny-app/cmd/api"
+	"github.com/ellypaws/inkbunny-app/cmd/api/cache"
+	"github.com/ellypaws/inkbunny-app/cmd/db"
+	sd "github.com/ellypaws/inkbunny-sd/stable_diffusion"
 )
 
 var (
@@ -127,6 +132,12 @@ var middlewares = []echo.MiddlewareFunc{
 func init() {
 	e.Logger.SetLevel(logger.DEBUG)
 	e.Logger.SetHeader(`${time_rfc3339} ${level}	${short_file}:${line}	`)
+
+	if err := godotenv.Load(); err != nil {
+		log.Println("No .env file found")
+	}
+
+	cache.Init()
 
 	if h := os.Getenv("SD_HOST"); h != "" {
 		u, err := url.Parse(h)

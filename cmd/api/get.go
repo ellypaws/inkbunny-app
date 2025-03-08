@@ -5,6 +5,19 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net/http"
+	"net/url"
+	"regexp"
+	"slices"
+	"strconv"
+	"strings"
+	"sync"
+
+	"github.com/ellypaws/inkbunny/api"
+	"github.com/labstack/echo/v4"
+	units "github.com/labstack/gommon/bytes"
+	"github.com/redis/go-redis/v9"
+
 	"github.com/ellypaws/inkbunny-app/cmd/api/cache"
 	. "github.com/ellypaws/inkbunny-app/cmd/api/entities"
 	"github.com/ellypaws/inkbunny-app/cmd/api/service"
@@ -13,22 +26,13 @@ import (
 	"github.com/ellypaws/inkbunny-app/cmd/db"
 	"github.com/ellypaws/inkbunny-sd/entities"
 	"github.com/ellypaws/inkbunny-sd/utils"
-	"github.com/ellypaws/inkbunny/api"
-	"github.com/labstack/echo/v4"
-	units "github.com/labstack/gommon/bytes"
-	"github.com/redis/go-redis/v9"
-	"net/http"
-	"net/url"
-	"slices"
-	"strconv"
-	"strings"
-	"sync"
 )
 
 var getHandlers = pathHandler{
 	"/inkbunny/description":     handler{GetInkbunnyDescription, withCache},
 	"/inkbunny/submission":      handler{GetInkbunnySubmission, withCache},
 	"/inkbunny/submission/:ids": handler{GetInkbunnySubmission, withCache},
+	"/inkbunny/sorter":          handler{GetSorterHandler, append(loggedInMiddleware, WithRedis...)},
 	"/inkbunny/search":          handler{GetInkbunnySearch, append(loggedInMiddleware, WithRedis...)},
 	"/image":                    handler{GetImageHandler, append(StaticMiddleware, SIDMiddleware)},
 	"/review/:id":               handler{GetReviewHandler, append(reducedMiddleware, WithRedis...)},
@@ -163,6 +167,62 @@ func GetInkbunnySubmission(c echo.Context) error {
 	}
 
 	return c.JSON(http.StatusOK, details)
+}
+
+var submissionIDs = regexp.MustCompile(`https://inkbunny.net/s/(\d+)`)
+
+// GetSorterHandler sorts arbitrary submission links by its artist usernames
+func GetSorterHandler(c echo.Context) error {
+	var request struct {
+		Text      string `json:"text"`
+		SessionID string `query:"sid"`
+	}
+
+	err := c.Bind(&request)
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, crashy.Wrap(err))
+	}
+
+	request.SessionID, _, err = GetSIDandID(c)
+	if err != nil {
+		return c.JSON(http.StatusUnauthorized, crashy.Wrap(err))
+	}
+
+	if request.Text == "" {
+		return c.JSON(http.StatusBadRequest, crashy.ErrorResponse{ErrorString: "missing text"})
+	}
+
+	matches := submissionIDs.FindAllStringSubmatch(request.Text, -1)
+	if matches == nil {
+		return c.JSON(http.StatusBadRequest, crashy.ErrorResponse{ErrorString: "no submission IDs found"})
+	}
+
+	var ids []string
+	for _, match := range matches {
+		if len(match) < 2 {
+			continue
+		}
+		ids = append(ids, match[1])
+	}
+
+	details, err := service.RetrieveSubmission(c, api.SubmissionDetailsRequest{
+		SID:           request.SessionID,
+		SubmissionIDs: strings.Join(ids, ","),
+	})
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, crashy.Wrap(err))
+	}
+
+	if len(details.Submissions) == 0 {
+		return c.JSON(http.StatusNotFound, crashy.ErrorResponse{ErrorString: "no submissions found"})
+	}
+
+	submissions := make(map[string][]string)
+	for _, submission := range details.Submissions {
+		submissions[submission.Username] = append(submissions[submission.Username], fmt.Sprintf("https://inkbunny.net/s/%s", submission.SubmissionID))
+	}
+
+	return c.JSON(http.StatusOK, submissions)
 }
 
 // GetInkbunnySearch returns the search results of a submission using api.SubmissionSearchRequest

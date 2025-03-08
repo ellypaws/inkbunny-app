@@ -83,9 +83,8 @@ For those who prefer the directness of a command line, the CLI offers a robust i
 
 ## Usage
 
-> *Make sure you have api turned on in your Inkbunny account settings. You will need your API key and SID to
-use the Inkbunny API. You can change this in
-your [account settings](https://inkbunny.net/account.php#:~:text=API%20(External%20Scripting))*
+> [!IMPORTANT]  
+> Make sure you have API turned on in your Inkbunny account settings. You will need your API key and SID to use the Inkbunny API. You can change this in your [account settings](https://inkbunny.net/account.php#:~:text=API%20(External%20Scripting)).
 
 You can read the individual readme files for each project to get started.
 An example usage for [Inkbunny AI Bridge](cmd/extension) is provided below.
@@ -115,6 +114,7 @@ Download Go 1.22.3 or later from the [official website](https://golang.org/dl/).
 ```bash
 git clone --recurse-submodules https://github.com/ellypaws/inkbunny-app.git
 cd inkbunny-app/cmd/extension
+git submodule update --init --recursive
 
 go build -o inkbunny-ai-bridge
 ./inkbunny-ai-bridge
@@ -131,3 +131,6 @@ git submodule update --init --recursive
 ```
 
 You can also use the pre-built binaries from the [releases page](https://github.com/ellypaws/inkbunny-app/releases).
+
+> [!NOTE]  
+> Disclaimer: This project is not affiliated or endorsed by Inkbunny.

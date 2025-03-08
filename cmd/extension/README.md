@@ -137,6 +137,7 @@ Download Go 1.23.0 or later from the [official website](https://golang.org/dl/).
 ```bash
 git clone --recurse-submodules https://github.com/ellypaws/inkbunny-app.git
 cd inkbunny-app/cmd/extension
+git submodule update --init --recursive
 
 go build -o inkbunny-ai-bridge
 ./inkbunny-ai-bridge

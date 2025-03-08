@@ -8,7 +8,7 @@ replace github.com/ellypaws/inkbunny-sd => ../../pkg/mod/github.com/ellypaws/ink
 
 require (
 	github.com/ellypaws/inkbunny-app v0.0.0-20250307162652-bd25669a153c
-	github.com/ellypaws/inkbunny-sd v0.0.0-20250307145449-b2576215e847
+	github.com/ellypaws/inkbunny-sd v0.0.0-20250308155648-7bdadd27b44d
 	github.com/joho/godotenv v1.5.1
 	github.com/labstack/echo/v4 v4.13.3
 	github.com/labstack/gommon v0.4.2

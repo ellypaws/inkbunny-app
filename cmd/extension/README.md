@@ -68,13 +68,12 @@ A demo app is available either at [https://inkbunny.keiau.space](https://inkbunn
 
 ## Installation Instructions
 
-> *Make sure you have api turned on in your Inkbunny account settings. You will need your API key and SID to
-use the Inkbunny API. You can change this in
-your [account settings](https://inkbunny.net/account.php#:~:text=API%20(External%20Scripting))*
+> [!IMPORTANT]  
+> Make sure you have API turned on in your Inkbunny account settings. You will need your API key and SID to use the Inkbunny API. You can change this in your [account settings](https://inkbunny.net/account.php#:~:text=API%20(External%20Scripting)).
 
 There are two parts to the Inkbunny AI Bridge, the [server](#server) and the [userscript](#userscript).
 
-You will need to install a userscript manager extension in your web browser. You can use tampermonkey, greasemonkey or any similar userscript extension.
+You will need to install a userscript manager extension in your web browser. You can use Tampermonkey, Greasemonkey, or any similar userscript extension.
 
 ## Userscript
 
@@ -84,7 +83,8 @@ After installing a userscript manager, you can install the Inkbunny AI Bridge us
 2. Click on the "[Raw](https://github.com/ellypaws/inkbunny-extension/raw/main/scripts/Inkbunny%20AI%20bridge.user.js)" button, your userscript manager will recognize this as a userscript and ask for confirmation to install it.
 3. Alternatively you can either download or copy the content of the userscript and paste it in your userscript manager.
 
-A simpler [userscript](https://github.com/ellypaws/inkbunny-extension/blob/main/scripts/Inkbunny%20AI%20detector.user.js) is available if you do need the other features and only want the labelling, blurring or removal of AI generated images.
+> [!TIP]  
+> If you only need labeling for AI-generated images without the additional features, consider using the simpler [userscript](scripts/Inkbunny%20AI%20detector.user.js).
 
 Todo:
  - [x] Fix blurring and removal of AI generated images (the old script does this but the new one is currently broken) 
@@ -100,7 +100,7 @@ After installing the userscript, you need to configure it to match your server U
 
 1. Click on the Tampermonkey icon in your browser to open the menu.
 2. Find the Inkbunny AI Bridge and <kbd>Set API URL</kbd> if you're using a different server.
-3. In the same menu, you can login using the <kbd>User menu (login)</kbd> button
+3. In the same menu, you can login using the <kbd>User menu (login)</kbd> button.
 4. You can choose between three different options for AI thumbnails:
     - <kbd>Label</kbd> - This will add a label to the submission.
     - <kbd>Blur</kbd> - This will blur the submission.
@@ -130,7 +130,7 @@ You can always override this behavior for most request by setting the `Cache-Con
 ### Building from Source
 
 If you're building from source, you will need to install the dependencies:
-Download Go 1.22.3 or later from the [official website](https://golang.org/dl/).
+Download Go 1.23.0 or later from the [official website](https://golang.org/dl/).
 
 > When cloning from the repository, make sure to use `--recurse-submodules` to initialize inkbunny-sd.
 
@@ -153,3 +153,6 @@ git submodule update --init --recursive
 ```
 
 You can also use the pre-built binaries from the [releases page](https://github.com/ellypaws/inkbunny-extension/releases).
+
+> [!NOTE]  
+> Disclaimer: This project is not affiliated or endorsed by Inkbunny.

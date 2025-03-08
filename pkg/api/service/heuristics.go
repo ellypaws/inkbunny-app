@@ -120,45 +120,54 @@ func processParams(c echo.Context, sub *db.Submission, cacheToUse cache.Cache) {
 		return
 	}
 
+	var (
+		wg sync.WaitGroup
+		mu sync.Mutex
+	)
 	for _, textFile := range textFiles {
-		// TODO: shouldSave won't run if we've retrieved cached data
-		c.Set("shouldSave", c.QueryParam("output") == OutputReport || c.QueryParam("output") == OutputReportIDs)
-		threeMonths := 3 * cache.Month
-		b, errFunc := cache.Retrieve(c, cacheToUse, cache.Fetch{
-			Key:      fmt.Sprintf("%s:%s", textFile.File.MimeType, textFile.File.FileURLFull),
-			URL:      textFile.File.FileURLFull,
-			MimeType: textFile.File.MimeType,
-			Duration: &threeMonths,
-		})
-		if errFunc != nil {
-			c.Logger().Errorf("error fetching %s: (%s)", textFile.File.FileURLFull, sub.URL)
-			continue
-		}
-
-		if b.MimeType == echo.MIMEApplicationJSON {
-			jsonHeuristics(c, sub, b, textFile)
-			continue
-		}
-
-		if b.MimeType == MIMETextRTF {
-			plain, err := rtftxt.Text(bytes.NewReader(b.Blob))
-			if err != nil {
-				c.Logger().Errorf("error parsing rtf %s: %s", textFile.File.FileURLFull, err)
-				continue
+		wg.Add(1)
+		go func(textFile *db.File) {
+			defer wg.Done()
+			// TODO: shouldSave won't run if we've retrieved cached data
+			c.Set("shouldSave", c.QueryParam("output") == OutputReport || c.QueryParam("output") == OutputReportIDs)
+			threeMonths := 3 * cache.Month
+			b, errFunc := cache.Retrieve(c, cacheToUse, cache.Fetch{
+				Key:      fmt.Sprintf("%s:%s", textFile.File.MimeType, textFile.File.FileURLFull),
+				URL:      textFile.File.FileURLFull,
+				MimeType: textFile.File.MimeType,
+				Duration: &threeMonths,
+			})
+			if errFunc != nil {
+				c.Logger().Errorf("error fetching %s: (%s)", textFile.File.FileURLFull, sub.URL)
+				return
 			}
-			b.Blob = plain.Bytes()
-		}
 
-		if bytes.HasPrefix(b.Blob, []byte("{")) && bytes.HasSuffix(b.Blob, []byte("}")) {
-			jsonHeuristics(c, sub, b, textFile)
-			continue
-		}
+			if b.MimeType == echo.MIMEApplicationJSON {
+				jsonHeuristics(c, sub, b, textFile, &mu)
+				return
+			}
 
-		if err := parameterHeuristics(c, sub, textFile, b); err != nil {
-			c.Logger().Errorf("error processing params for %s: %v", textFile.File.FileName, err)
-			continue
-		}
+			if b.MimeType == MIMETextRTF {
+				plain, err := rtftxt.Text(bytes.NewReader(b.Blob))
+				if err != nil {
+					c.Logger().Errorf("error parsing rtf %s: %s", textFile.File.FileURLFull, err)
+					return
+				}
+				b.Blob = plain.Bytes()
+			}
+
+			if bytes.HasPrefix(b.Blob, []byte("{")) && bytes.HasSuffix(b.Blob, []byte("}")) {
+				jsonHeuristics(c, sub, b, textFile, &mu)
+				return
+			}
+
+			if err := parameterHeuristics(c, sub, textFile, b); err != nil {
+				c.Logger().Errorf("error processing params for %s: %v", textFile.File.FileName, err)
+				return
+			}
+		}(textFile)
 	}
+	wg.Wait()
 
 	if len(sub.Metadata.Objects) == 0 {
 		processDescriptionHeuristics(c, sub)
@@ -225,7 +234,7 @@ func processObjectMetadata(submission *db.Submission, artists []db.Artist) {
 	}
 }
 
-func jsonHeuristics(c echo.Context, sub *db.Submission, b *cache.Item, textFile *db.File) {
+func jsonHeuristics(c echo.Context, sub *db.Submission, b *cache.Item, textFile *db.File, mu *sync.Mutex) {
 	b.Blob = bytes.ReplaceAll(b.Blob, []byte("NaN"), []byte("null"))
 	comfyUI, err := comfyui.UnmarshalIsolatedComfyUI(b.Blob)
 	if err != nil && !errors.Is(err, comfyui.ErrInvalidNode) {
@@ -236,6 +245,7 @@ func jsonHeuristics(c echo.Context, sub *db.Submission, b *cache.Item, textFile 
 			c.Logger().Warnf("parsed comfy ui with some errors. errors/ok: %d/%d", e.Len(), len(comfyUI.Nodes))
 		}
 		c.Logger().Debugf("comfy ui found for %s", sub.URL)
+		mu.Lock()
 		insertOrInitalize(&sub.Metadata.Objects, map[string]entities.TextToImageRequest{
 			textFile.File.FileName: *comfyUI.Convert(),
 		})
@@ -244,6 +254,7 @@ func jsonHeuristics(c echo.Context, sub *db.Submission, b *cache.Item, textFile 
 				"comfy_ui": string(b.Blob),
 			},
 		})
+		mu.Unlock()
 		sub.Metadata.Generator = "comfy_ui"
 		return
 	}
@@ -271,6 +282,7 @@ func jsonHeuristics(c echo.Context, sub *db.Submission, b *cache.Item, textFile 
 	}
 	if err == nil && !reflect.DeepEqual(easyDiffusion, entities.EasyDiffusion{}) {
 		c.Logger().Debugf("easy diffusion found for %s", sub.URL)
+		mu.Lock()
 		insertOrInitalize(&sub.Metadata.Objects, map[string]entities.TextToImageRequest{
 			textFile.File.FileName: *easyDiffusion.Convert(),
 		})
@@ -279,6 +291,7 @@ func jsonHeuristics(c echo.Context, sub *db.Submission, b *cache.Item, textFile 
 				"easy_diffusion": string(b.Blob),
 			},
 		})
+		mu.Unlock()
 		sub.Metadata.Generator = "easy_diffusion"
 		return
 	}
@@ -293,12 +306,14 @@ func jsonHeuristics(c echo.Context, sub *db.Submission, b *cache.Item, textFile 
 		for key, value := range cubFestAI {
 			objects[key] = value.Convert()
 		}
+		mu.Lock()
 		insertOrInitalize(&sub.Metadata.Objects, objects)
 		insertOrInitializePointer(&sub.Metadata.Params, &utils.Params{
 			textFile.File.FileName: utils.PNGChunk{
 				"comfy_ui": string(b.Blob),
 			},
 		})
+		mu.Unlock()
 		sub.Metadata.Generator = "comfy_ui"
 		return
 	}

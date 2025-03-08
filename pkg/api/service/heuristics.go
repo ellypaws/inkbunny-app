@@ -161,7 +161,7 @@ func processParams(c echo.Context, sub *db.Submission, cacheToUse cache.Cache) {
 				return
 			}
 
-			if err := parameterHeuristics(c, sub, textFile, b); err != nil {
+			if err := parameterHeuristics(c, sub, textFile, b, &mu); err != nil {
 				c.Logger().Errorf("error processing params for %s: %v", textFile.File.FileName, err)
 				return
 			}
@@ -350,7 +350,7 @@ func insertOrInitalize[M interface{ ~map[K]V }, K comparable, V any](m *M, v M) 
 }
 
 // Because some artists already have standardized txt files, opt to split each file separately
-func parameterHeuristics(c echo.Context, sub *db.Submission, textFile *db.File, b *cache.Item) error {
+func parameterHeuristics(c echo.Context, sub *db.Submission, textFile *db.File, b *cache.Item, mu *sync.Mutex) error {
 	var params utils.Params
 	var err error
 	f := &textFile.File
@@ -397,8 +397,10 @@ func parameterHeuristics(c echo.Context, sub *db.Submission, textFile *db.File, 
 	}
 	if len(params) > 0 {
 		c.Logger().Debugf("finished params for %s", f.FileName)
-		sub.Metadata.Params = &params
+		mu.Lock()
+		insertOrInitializePointer(&sub.Metadata.Params, &params)
 		paramsToObject(c, sub)
+		mu.Unlock()
 	}
 	return nil
 }
@@ -426,11 +428,8 @@ func paramsToObject(c echo.Context, sub *db.Submission) {
 					sub.Metadata.PrivateTool = true
 					sub.Metadata.Generator = tool
 				}
-				if sub.Metadata.Objects == nil {
-					sub.Metadata.Objects = make(map[string]entities.TextToImageRequest)
-				}
 				mutex.Lock()
-				sub.Metadata.Objects[name] = heuristics
+				insertOrInitalize(&sub.Metadata.Objects, map[string]entities.TextToImageRequest{name: heuristics})
 				mutex.Unlock()
 			}(fileName, p)
 		}

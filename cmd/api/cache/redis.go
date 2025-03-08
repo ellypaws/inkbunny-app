@@ -5,20 +5,21 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/labstack/echo/v4"
-	"github.com/redis/go-redis/v9"
 	"log"
 	"os"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/joho/godotenv"
+	"github.com/labstack/echo/v4"
+	"github.com/redis/go-redis/v9"
 )
 
 func init() {
-	if e := os.Getenv("REDIS_HOST"); e != "" {
-		addr = e
+	if err := godotenv.Load(); err != nil {
+		log.Println("No .env file found")
 	}
-
 	client = NewRedisClient()
 
 	_, err := client.Ping(ctx).Result()
@@ -57,6 +58,9 @@ func RedisClient() *Redis {
 }
 
 func NewRedisClient() *Redis {
+	if e := os.Getenv("REDIS_HOST"); e != "" {
+		addr = e
+	}
 	client := redis.NewClient(&redis.Options{
 		Addr: addr,
 		Username: func() string {

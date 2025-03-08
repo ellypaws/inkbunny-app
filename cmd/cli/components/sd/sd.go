@@ -3,20 +3,22 @@ package sd
 import (
 	"encoding/json"
 	"fmt"
+	"os"
+	"strings"
+	"time"
+
 	stick "github.com/76creates/stickers/flexbox"
 	"github.com/TheZoraiz/ascii-image-converter/aic_package"
 	"github.com/charmbracelet/bubbles/progress"
 	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	zone "github.com/lrstanley/bubblezone"
+
 	utils "github.com/ellypaws/inkbunny-app/cmd/cli/components"
 	"github.com/ellypaws/inkbunny-app/cmd/cli/entle"
 	"github.com/ellypaws/inkbunny-sd/entities"
 	sd "github.com/ellypaws/inkbunny-sd/stable_diffusion"
-	zone "github.com/lrstanley/bubblezone"
-	"os"
-	"strings"
-	"time"
 )
 
 type Model struct {
@@ -199,7 +201,7 @@ func (m Model) imageAscii(image []byte) string {
 	if err != nil {
 		return ""
 	}
-	//defer os.Remove(f.Name())
+	// defer os.Remove(f.Name())
 
 	_, _ = f.Write(image)
 
@@ -212,7 +214,7 @@ func (m Model) imageAscii(image []byte) string {
 	flags.Colored = true
 	flags.Braille = true
 	flags.Threshold = int(m.threshold)
-	//flags.Dither = true
+	// flags.Dither = true
 
 	// Conversion for an image
 	asciiArt, err := aic_package.Convert(f.Name(), flags)

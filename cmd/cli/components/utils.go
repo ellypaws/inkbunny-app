@@ -2,10 +2,12 @@ package utils
 
 import (
 	"bytes"
+	"image"
+
 	tea "github.com/charmbracelet/bubbletea"
+
 	"github.com/ellypaws/inkbunny-sd/entities"
 	"github.com/ellypaws/inkbunny-sd/stable_diffusion"
-	"image"
 )
 
 func IF[T any](condition bool, a, b T) T {

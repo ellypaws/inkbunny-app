@@ -4,6 +4,6 @@ use (
 	.
 	cmd/cli
 	cmd/extension
-	cmd/mod/github.com/ellypaws/inkbunny-sd
 	cmd/server
+	pkg/mod/github.com/ellypaws/inkbunny-sd
 )

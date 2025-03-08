@@ -2,7 +2,7 @@ module github.com/ellypaws/inkbunny-app
 
 go 1.23.0
 
-replace github.com/ellypaws/inkbunny-sd => ./cmd/mod/github.com/ellypaws/inkbunny-sd
+replace github.com/ellypaws/inkbunny-sd => ./pkg/mod/github.com/ellypaws/inkbunny-sd
 
 require (
 	github.com/disintegration/imaging v1.6.2

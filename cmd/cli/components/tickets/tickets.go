@@ -3,6 +3,7 @@ package tickets
 import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+
 	"github.com/ellypaws/inkbunny-app/cmd/cli/apis"
 	utils "github.com/ellypaws/inkbunny-app/cmd/cli/components"
 	"github.com/ellypaws/inkbunny-app/cmd/cli/components/tickets/login"
@@ -30,10 +31,10 @@ func (m Model) Init() tea.Cmd {
 
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmd tea.Cmd
-	//switch msg := msg.(type) {
-	//default:
+	// switch msg := msg.(type) {
+	// default:
 	//	msg = msg
-	//}
+	// }
 	m.login, cmd = utils.Propagate(m.login, msg)
 	return m, cmd
 }

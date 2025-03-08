@@ -4,10 +4,10 @@ go 1.23.0
 
 replace github.com/ellypaws/inkbunny-app => ../..
 
-replace github.com/ellypaws/inkbunny-sd => ../mod/github.com/ellypaws/inkbunny-sd
+replace github.com/ellypaws/inkbunny-sd => ../../pkg/mod/github.com/ellypaws/inkbunny-sd
 
 require (
-	github.com/ellypaws/inkbunny-app v0.0.0-20241021050000-0ba56c80ccc9
+	github.com/ellypaws/inkbunny-app v0.0.0-20250307162652-bd25669a153c
 	github.com/ellypaws/inkbunny-sd v0.0.0-20250307145449-b2576215e847
 	github.com/joho/godotenv v1.5.1
 	github.com/labstack/echo/v4 v4.13.3

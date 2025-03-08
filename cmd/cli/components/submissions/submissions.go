@@ -6,19 +6,21 @@ package submissions
 
 import (
 	"errors"
+
 	stick "github.com/76creates/stickers/flexbox"
 	"github.com/charmbracelet/bubbles/list"
 	"github.com/charmbracelet/bubbles/spinner"
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	lib "github.com/ellypaws/inkbunny-app/cmd/api/library"
+	"github.com/ellypaws/inkbunny/api"
+	zone "github.com/lrstanley/bubblezone"
+
 	"github.com/ellypaws/inkbunny-app/cmd/cli/apis"
 	utils "github.com/ellypaws/inkbunny-app/cmd/cli/components"
 	"github.com/ellypaws/inkbunny-app/cmd/cli/components/submissions/description"
 	"github.com/ellypaws/inkbunny-app/cmd/cli/entle"
-	"github.com/ellypaws/inkbunny/api"
-	zone "github.com/lrstanley/bubblezone"
+	lib "github.com/ellypaws/inkbunny-app/pkg/api/library"
 )
 
 const (

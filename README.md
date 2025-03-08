@@ -45,11 +45,11 @@ is then structured into a text-to-image format.
 
 By using crafted [heuristics](https://github.com/ellypaws/inkbunny-sd),
 as well as the potential to use an LLM to inference the parameters.
-A general purpose [API](cmd/api) library is available to integrate with your own program logic.
+A general purpose [API](pkg/api) library is available to integrate with your own program logic.
 
 There are three different projects that aim to help in auditing and moderating AI generated content.
 
-## [Inkbunny ML](cmd/server): A General-Purpose [API](cmd/api)
+## [Inkbunny ML](cmd/server): A General-Purpose [API](pkg/api)
 Inkbunny ML offers a comprehensive suite of tools designed for auditing and moderating AI-generated content. It includes an extensive database that manages everything from tickets and auditors to artist lookups and the auditing process itself.
 
 To boost performance, this module integrates a dual-layer caching system, utilizing both local and Redis caches. This strategy is crafted to deliver aggressive performance improvements and scalable results.
@@ -79,7 +79,6 @@ It displays a badge on each submission to quickly notify you of any potential fl
 For those who prefer the directness of a command line, the CLI offers a robust interface for engaging with the Inkbunny ML API. It's an effective alternative to the web interface, providing all the necessary commands at your fingertips.
 
 ![Inkbunny CLI](cmd/cli/doc/cli.gif)
-
 
 ## Usage
 

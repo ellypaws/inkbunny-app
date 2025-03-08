@@ -6,7 +6,7 @@ import (
 
 	"github.com/ellypaws/inkbunny/api"
 
-	"github.com/ellypaws/inkbunny-app/cmd/api/cache"
+	"github.com/ellypaws/inkbunny-app/pkg/api/cache"
 	"github.com/ellypaws/inkbunny-sd/stable_diffusion"
 )
 

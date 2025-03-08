@@ -2,12 +2,14 @@ package settings
 
 import (
 	"fmt"
+	"net/url"
+	"strings"
+
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+
 	"github.com/ellypaws/inkbunny-app/cmd/cli/apis"
-	"net/url"
-	"strings"
 )
 
 type Model struct {

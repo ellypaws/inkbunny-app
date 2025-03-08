@@ -1,3 +1,3 @@
-[submodule "cmd/mod/github.com/ellypaws/inkbunny-sd"]
-	path = cmd/mod/github.com/ellypaws/inkbunny-sd
+[submodule "pkg/mod/github.com/ellypaws/inkbunny-sd"]
+	path = pkg/mod/github.com/ellypaws/inkbunny-sd
 	url = https://github.com/ellypaws/inkbunny-sd.git

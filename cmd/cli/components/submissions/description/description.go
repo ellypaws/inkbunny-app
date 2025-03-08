@@ -2,17 +2,19 @@ package description
 
 import (
 	"fmt"
+	"strings"
+
 	stick "github.com/76creates/stickers/flexbox"
 	"github.com/TheZoraiz/ascii-image-converter/aic_package"
 	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/ellypaws/inkbunny/api"
+
 	"github.com/ellypaws/inkbunny-app/cmd/cli/apis"
 	utils "github.com/ellypaws/inkbunny-app/cmd/cli/components"
 	"github.com/ellypaws/inkbunny-app/cmd/cli/entle"
 	sd "github.com/ellypaws/inkbunny-sd/stable_diffusion"
-	"github.com/ellypaws/inkbunny/api"
-	"strings"
 )
 
 const (
@@ -122,9 +124,9 @@ func (m Model) View() string {
 }
 
 func (m Model) Render(s entle.Screen) string {
-	//if m.loading {
+	// if m.loading {
 	//	return lipgloss.Place(s.Width-100, s.Height, lipgloss.Center, lipgloss.Center, m.spinner.View())
-	//}
+	// }
 	sub, ok := m.submissions[m.Active]
 	if !ok {
 		return lipgloss.Place(s.Width-100, s.Height, lipgloss.Center, lipgloss.Center, "select a submission")
@@ -196,7 +198,7 @@ func (m Model) processImage(s entle.Screen, sub api.Submission) {
 	flags.Colored = true
 	flags.Braille = true
 	flags.Threshold = 128 / 2
-	//flags.Dither = true
+	// flags.Dither = true
 	// Conversion for an image
 	url := file.ThumbnailURLMediumNonCustom
 	if url == "" {

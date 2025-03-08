@@ -17,9 +17,10 @@ import (
 	logger "github.com/labstack/gommon/log"
 	"github.com/muesli/termenv"
 
-	"github.com/ellypaws/inkbunny-app/cmd/api"
-	"github.com/ellypaws/inkbunny-app/cmd/api/cache"
-	"github.com/ellypaws/inkbunny-app/cmd/db"
+	"github.com/ellypaws/inkbunny-app/pkg/api"
+	"github.com/ellypaws/inkbunny-app/pkg/api/cache"
+	"github.com/ellypaws/inkbunny-app/pkg/db"
+
 	sd "github.com/ellypaws/inkbunny-sd/stable_diffusion"
 )
 

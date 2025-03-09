@@ -259,10 +259,14 @@ func jsonHeuristics(c echo.Context, sub *db.Submission, b *cache.Item, textFile 
 		return
 	}
 
-	comfyUIAPI, err := comfyui.UnmarshalComfyApi(b.Blob)
-	if err != nil {
+	comfyUIAPI, err := comfyui.UnmarshalIsolatedComfyApi(b.Blob)
+	if err != nil && !errors.Is(err, comfyui.ErrInvalidNode) {
 		c.Logger().Warnf("error parsing comfy ui api %s: %s", textFile.File.FileURLFull, err)
 	} else if len(comfyUIAPI) > 0 {
+		var e comfyui.NodeErrors
+		if errors.As(err, &e) {
+			c.Logger().Warnf("parsed comfy ui api with some errors. errors/ok: %d/%d", e.Len(), len(comfyUIAPI))
+		}
 		c.Logger().Debugf("comfy ui api found for %s", sub.URL)
 		insertOrInitalize(&sub.Metadata.Objects, map[string]entities.TextToImageRequest{
 			textFile.File.FileName: *comfyUIAPI.Convert(),
@@ -272,7 +276,7 @@ func jsonHeuristics(c echo.Context, sub *db.Submission, b *cache.Item, textFile 
 				"comfy_ui_api": string(b.Blob),
 			},
 		})
-		sub.Metadata.Generator = "comfy_ui"
+		sub.Metadata.Generator = "comfy_ui_api"
 		return
 	}
 

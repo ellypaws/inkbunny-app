@@ -1,12 +1,12 @@
 module github.com/ellypaws/inkbunny-app
 
-go 1.23.0
+go 1.24.1
 
 replace github.com/ellypaws/inkbunny-sd => ./pkg/mod/github.com/ellypaws/inkbunny-sd
 
 require (
 	github.com/disintegration/imaging v1.6.2
-	github.com/ellypaws/inkbunny-sd v0.0.0-20250309111131-552b31483290
+	github.com/ellypaws/inkbunny-sd v0.0.0-20250309150216-7bb1a25864a3
 	github.com/ellypaws/inkbunny/api v0.0.0-20240521065300-7d34160ddf2d
 	github.com/go-errors/errors v1.5.1
 	github.com/labstack/echo/v4 v4.13.3

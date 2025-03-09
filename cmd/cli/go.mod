@@ -1,6 +1,6 @@
 module github.com/ellypaws/inkbunny-app/cmd/cli
 
-go 1.23.0
+go 1.24.1
 
 replace github.com/ellypaws/inkbunny-app => ../..
 
@@ -15,7 +15,7 @@ require (
 	github.com/charmbracelet/bubbletea v1.3.4
 	github.com/charmbracelet/lipgloss v1.0.0
 	github.com/ellypaws/inkbunny-app v0.0.0-20250307162652-bd25669a153c
-	github.com/ellypaws/inkbunny-sd v0.0.0-20250309111131-552b31483290
+	github.com/ellypaws/inkbunny-sd v0.0.0-20250309150216-7bb1a25864a3
 	github.com/ellypaws/inkbunny/api v0.0.0-20240521065300-7d34160ddf2d
 	github.com/joho/godotenv v1.5.1
 	github.com/lrstanley/bubblezone v0.0.0-20250301021021-ab7b445e9861

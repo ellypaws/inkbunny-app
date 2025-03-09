@@ -409,6 +409,9 @@ func paramsToObject(c echo.Context, sub *db.Submission) {
 	if sub.Metadata.Objects != nil {
 		return
 	}
+	if sub.Metadata.Params == nil {
+		return
+	}
 
 	var wg sync.WaitGroup
 	var mutex sync.Mutex

@@ -379,9 +379,11 @@ func parameterHeuristics(c echo.Context, sub *db.Submission, textFile *db.File, 
 		params, err = utils.Common(utils.WithBytes(b.Blob), utils.UseMethuzalach(), utils.WithFilename(f.FileName))
 	case utils.IDSoph:
 		if utils.SophStartInvokeAI.Match(b.Blob) {
-			sub.Metadata.Objects, err = utils.Soph(utils.WithConfig(baseConfig))
-			if err == nil {
-				break
+			if param, err := utils.Soph(utils.WithConfig(baseConfig)); err == nil {
+				mu.Lock()
+				insertOrInitalize(&sub.Metadata.Objects, param)
+				mu.Unlock()
+				return nil
 			}
 		}
 		params, err = utils.Common(utils.WithConfig(baseConfig), utils.UseSoph())
@@ -458,5 +460,5 @@ func processDescriptionHeuristics(c echo.Context, sub *db.Submission) {
 		c.Logger().Debugf("no heuristics found for %s", sub.URL)
 		return
 	}
-	sub.Metadata.Objects = map[string]entities.TextToImageRequest{sub.Title: heuristics}
+	insertOrInitalize(&sub.Metadata.Objects, map[string]entities.TextToImageRequest{sub.Title: heuristics})
 }

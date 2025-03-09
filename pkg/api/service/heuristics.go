@@ -238,7 +238,7 @@ func jsonHeuristics(c echo.Context, sub *db.Submission, b *cache.Item, textFile 
 	b.Blob = bytes.ReplaceAll(b.Blob, []byte("NaN"), []byte("null"))
 	comfyUI, err := comfyui.UnmarshalIsolatedComfyUI(b.Blob)
 	if err != nil && !errors.Is(err, comfyui.ErrInvalidNode) {
-		c.Logger().Errorf("error parsing comfy ui %s: %s", textFile.File.FileURLFull, err)
+		c.Logger().Warnf("error parsing comfy ui %s: %s", textFile.File.FileURLFull, err)
 	} else if len(comfyUI.Nodes) > 0 {
 		var e comfyui.NodeErrors
 		if errors.As(err, &e) {
@@ -261,7 +261,7 @@ func jsonHeuristics(c echo.Context, sub *db.Submission, b *cache.Item, textFile 
 
 	comfyUIAPI, err := comfyui.UnmarshalComfyApi(b.Blob)
 	if err != nil {
-		c.Logger().Errorf("error parsing comfy ui api %s: %s", textFile.File.FileURLFull, err)
+		c.Logger().Warnf("error parsing comfy ui api %s: %s", textFile.File.FileURLFull, err)
 	} else if len(comfyUIAPI) > 0 {
 		c.Logger().Debugf("comfy ui api found for %s", sub.URL)
 		insertOrInitalize(&sub.Metadata.Objects, map[string]entities.TextToImageRequest{
@@ -278,7 +278,7 @@ func jsonHeuristics(c echo.Context, sub *db.Submission, b *cache.Item, textFile 
 
 	easyDiffusion, err := entities.UnmarshalEasyDiffusion(b.Blob)
 	if err != nil {
-		c.Logger().Errorf("error parsing easy diffusion %s: %s", textFile.File.FileURLFull, err)
+		c.Logger().Warnf("error parsing easy diffusion %s: %s", textFile.File.FileURLFull, err)
 	}
 	if err == nil && !reflect.DeepEqual(easyDiffusion, entities.EasyDiffusion{}) {
 		c.Logger().Debugf("easy diffusion found for %s", sub.URL)
@@ -298,7 +298,7 @@ func jsonHeuristics(c echo.Context, sub *db.Submission, b *cache.Item, textFile 
 
 	cubFestAI, err := comfyui.UnmarshalCubFestAIDate(b.Blob)
 	if err != nil {
-		c.Logger().Errorf("error parsing comfy ui (CubFestAI) %s: %s", textFile.File.FileURLFull, err)
+		c.Logger().Warnf("error parsing comfy ui (CubFestAI) %s: %s", textFile.File.FileURLFull, err)
 	}
 	if err == nil && !reflect.DeepEqual(cubFestAI, comfyui.CubFestAITime{}) {
 		c.Logger().Debugf("comfy ui cub fest ai found for %s", sub.URL)
@@ -318,7 +318,7 @@ func jsonHeuristics(c echo.Context, sub *db.Submission, b *cache.Item, textFile 
 		return
 	}
 
-	c.Logger().Warnf("could not parse json %s for %s", textFile.File.FileURLFull, sub.URL)
+	c.Logger().Errorf("could not parse json %s for %s", textFile.File.FileURLFull, sub.URL)
 	return
 }
 

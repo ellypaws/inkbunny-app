@@ -14,6 +14,9 @@ RUN apk --no-cache add ca-certificates
 
 WORKDIR /data
 COPY --from=builder /cmd/server/inkbunny-app /usr/local/bin/inkbunny-app
-EXPOSE 1323
+
+ARG PORT=1323
+ENV PORT=$PORT
+EXPOSE $PORT
 
 CMD ["/usr/local/bin/inkbunny-app"]

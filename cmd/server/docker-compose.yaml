@@ -26,7 +26,7 @@ services:
       - REDIS_PASSWORD=${REDIS_PASSWORD:-redis}
       - REDIS_USER=${REDIS_USER:-default}
     volumes:
-      - sqlite-data:/app
+      - sqlite-data:/data
     depends_on:
       - redis-stack
     networks:

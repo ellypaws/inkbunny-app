@@ -23,7 +23,7 @@ func Init() {
 		Initialized = true
 	}
 
-	if !Initialized {
+	if addr := os.Getenv("REDIS_HOST"); !Initialized {
 		log.Printf("warning: redis %s not initialized", addr)
 	} else {
 		log.Printf("redis initialized: %v", addr)
@@ -34,7 +34,6 @@ type Redis redis.Client
 
 var (
 	client      *Redis
-	addr        = "localhost:6379"
 	ctx         = context.Background()
 	Initialized bool
 )

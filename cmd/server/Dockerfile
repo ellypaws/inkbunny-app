@@ -1,26 +1,21 @@
 # Build stage
 FROM golang:1.24.1 AS builder
 
-WORKDIR /app
-COPY ../.. .
+WORKDIR /
+COPY . .
 
-# Install git to handle submodules
-RUN apt-get update && apt-get install -y git
-
-# Initialize and update submodules
-RUN git submodule update --init --recursive
-
-# Build the application
-RUN cd cmd/server && go build -o server .
+WORKDIR /cmd/server
+RUN go build -o inkbunny-app
 
 # Runtime stage
 FROM alpine:latest
 
 RUN apk --no-cache add ca-certificates
 
-WORKDIR /root/
-COPY --from=builder /app/cmd/server/server .
+WORKDIR /app
+COPY --from=builder /cmd/server/inkbunny-app .
+COPY --from=builder /cmd/server/audits.sqlite* /app/ 2>/dev/null || true
 
 EXPOSE 1373
 
-CMD ["./server"]
+CMD ["./inkbunny-app"]

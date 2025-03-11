@@ -5,17 +5,15 @@ WORKDIR /
 COPY . .
 
 WORKDIR /cmd/server
-RUN go build -o inkbunny-app
+RUN CGO_ENABLED=0 go build -o inkbunny-app
 
 # Runtime stage
 FROM alpine:latest
 
 RUN apk --no-cache add ca-certificates
 
-WORKDIR /app
-COPY --from=builder /cmd/server/inkbunny-app .
-COPY --from=builder /cmd/server/audits.sqlite* /app/ 2>/dev/null || true
-
+WORKDIR /data
+COPY --from=builder /cmd/server/inkbunny-app /usr/local/bin/inkbunny-app
 EXPOSE 1373
 
-CMD ["./inkbunny-app"]
+CMD ["/usr/local/bin/inkbunny-app"]

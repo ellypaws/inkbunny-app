@@ -14,6 +14,6 @@ RUN apk --no-cache add ca-certificates
 
 WORKDIR /data
 COPY --from=builder /cmd/server/inkbunny-app /usr/local/bin/inkbunny-app
-EXPOSE 1373
+EXPOSE 1323
 
 CMD ["/usr/local/bin/inkbunny-app"]

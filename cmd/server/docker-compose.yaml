@@ -17,9 +17,9 @@ services:
       context: ../..
       dockerfile: cmd/server/Dockerfile
     ports:
-      - "1373:1373"
+      - "1323:1323"
     environment:
-      - PORT=1373
+      - PORT=1323
       - API_HOST=${API_HOST:-localhost:1323}
       - SD_HOST=${SD_HOST:-localhost:7860}
       - REDIS_HOST=redis-stack

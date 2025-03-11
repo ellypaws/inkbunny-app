@@ -22,7 +22,7 @@ services:
       - PORT=${PORT:-1323}
       - API_HOST=${API_HOST:-localhost:1323}
       - SD_HOST=${SD_HOST:-localhost:7860}
-      - REDIS_HOST=redis-stack
+      - REDIS_HOST=${REDIS_HOST:-redis-stack:6379}
       - REDIS_PASSWORD=${REDIS_PASSWORD:-redis}
       - REDIS_USER=${REDIS_USER:-default}
     volumes:

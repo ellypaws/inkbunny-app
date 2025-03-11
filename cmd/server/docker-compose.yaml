@@ -12,7 +12,6 @@ services:
 
   inkbunny-app:
     build:
-      context: ../..
       dockerfile: Dockerfile
     ports:
       - "1373:1373"

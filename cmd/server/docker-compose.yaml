@@ -1,0 +1,32 @@
+version: '3.8'
+services:
+  redis-stack:
+    image: redis/redis-stack-server:latest
+    ports:
+      - "6379:6379"
+    environment:
+      - REDIS_ARGS=--save 60 1 --loglevel warning --requirepass ${REDIS_PASSWORD}
+    volumes:
+      - cache:/data
+    restart: always
+
+  inkbunny-app:
+    build:
+      context: ../..
+      dockerfile: Dockerfile
+    ports:
+      - "1373:1373"
+    environment:
+      - PORT=1373
+      - API_HOST=${API_HOST:-api.inkbunny.net}
+      - SD_HOST=${SD_HOST:-localhost:7860}
+      - REDIS_HOST=redis-stack
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+      - REDIS_USER=${REDIS_USER:-default}
+    depends_on:
+      - redis-stack
+    restart: always
+
+volumes:
+  cache:
+    driver: local

@@ -14,7 +14,7 @@ services:
 
   inkbunny-app:
     build:
-      context: ../..
+      context: https://github.com/ellypaws/inkbunny-app.git
       dockerfile: cmd/server/Dockerfile
     ports:
       - "${PORT:-1323}:${PORT:-1323}"

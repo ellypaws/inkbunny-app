@@ -245,9 +245,10 @@ func jsonHeuristics(c echo.Context, sub *db.Submission, b *cache.Item, textFile 
 			c.Logger().Warnf("parsed comfy ui with some errors. errors/ok: %d/%d", e.Len(), len(comfyUI.Nodes))
 		}
 		c.Logger().Debugf("comfy ui found for %s", sub.URL)
+		objects := comfyUI.Convert()
 		mu.Lock()
 		insertOrInitalize(&sub.Metadata.Objects, map[string]entities.TextToImageRequest{
-			textFile.File.FileName: *comfyUI.Convert(),
+			textFile.File.FileName: *objects,
 		})
 		insertOrInitializePointer(&sub.Metadata.Params, &utils.Params{
 			textFile.File.FileName: utils.PNGChunk{
@@ -268,14 +269,17 @@ func jsonHeuristics(c echo.Context, sub *db.Submission, b *cache.Item, textFile 
 			c.Logger().Warnf("parsed comfy ui api with some errors. errors/ok: %d/%d", e.Len(), len(comfyUIAPI))
 		}
 		c.Logger().Debugf("comfy ui api found for %s", sub.URL)
+		objects := comfyUIAPI.Convert()
+		mu.Lock()
 		insertOrInitalize(&sub.Metadata.Objects, map[string]entities.TextToImageRequest{
-			textFile.File.FileName: *comfyUIAPI.Convert(),
+			textFile.File.FileName: *objects,
 		})
 		insertOrInitializePointer(&sub.Metadata.Params, &utils.Params{
 			textFile.File.FileName: utils.PNGChunk{
 				"comfy_ui_api": string(b.Blob),
 			},
 		})
+		mu.Unlock()
 		sub.Metadata.Generator = "comfy_ui_api"
 		return
 	}
@@ -286,9 +290,10 @@ func jsonHeuristics(c echo.Context, sub *db.Submission, b *cache.Item, textFile 
 	}
 	if err == nil && !reflect.DeepEqual(easyDiffusion, entities.EasyDiffusion{}) {
 		c.Logger().Debugf("easy diffusion found for %s", sub.URL)
+		objects := easyDiffusion.Convert()
 		mu.Lock()
 		insertOrInitalize(&sub.Metadata.Objects, map[string]entities.TextToImageRequest{
-			textFile.File.FileName: *easyDiffusion.Convert(),
+			textFile.File.FileName: *objects,
 		})
 		insertOrInitializePointer(&sub.Metadata.Params, &utils.Params{
 			textFile.File.FileName: utils.PNGChunk{

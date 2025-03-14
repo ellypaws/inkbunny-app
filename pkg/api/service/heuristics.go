@@ -289,7 +289,7 @@ func jsonHeuristics(c echo.Context, sub *db.Submission, b *cache.Item, textFile 
 	invokeAI, err := entities.UnmarshalInvokeAI(b.Blob)
 	if err != nil {
 		c.Logger().Warnf("error parsing invoke ai: %s", err)
-	} else if !reflect.DeepEqual(invokeAI, &entities.InvokeAI{}) {
+	} else if !isEmpty(invokeAI) {
 		c.Logger().Debugf("invoke AI found for %s", sub.URL)
 		objects := invokeAI.Convert()
 		mu.Lock()
@@ -309,8 +309,7 @@ func jsonHeuristics(c echo.Context, sub *db.Submission, b *cache.Item, textFile 
 	easyDiffusion, err := entities.UnmarshalEasyDiffusion(b.Blob)
 	if err != nil {
 		c.Logger().Warnf("error parsing easy diffusion %s: %s", textFile.File.FileURLFull, err)
-	}
-	if err == nil && !reflect.DeepEqual(easyDiffusion, entities.EasyDiffusion{}) {
+	} else if !isEmpty(easyDiffusion) {
 		c.Logger().Debugf("easy diffusion found for %s", sub.URL)
 		objects := easyDiffusion.Convert()
 		mu.Lock()
@@ -330,8 +329,7 @@ func jsonHeuristics(c echo.Context, sub *db.Submission, b *cache.Item, textFile 
 	cubFestAI, err := comfyui.UnmarshalCubFestAIDate(b.Blob)
 	if err != nil {
 		c.Logger().Warnf("error parsing comfy ui (CubFestAI) %s: %s", textFile.File.FileURLFull, err)
-	}
-	if err == nil && !reflect.DeepEqual(cubFestAI, comfyui.CubFestAITime{}) {
+	} else if !isEmpty(cubFestAI) {
 		c.Logger().Debugf("comfy ui cub fest ai found for %s", sub.URL)
 		var objects = make(map[string]entities.TextToImageRequest)
 		for key, value := range cubFestAI {
@@ -351,6 +349,11 @@ func jsonHeuristics(c echo.Context, sub *db.Submission, b *cache.Item, textFile 
 
 	c.Logger().Errorf("could not parse json %s for %s", textFile.File.FileURLFull, sub.URL)
 	return false
+}
+
+func isEmpty[T any](value T) bool {
+	var zero T
+	return reflect.DeepEqual(value, zero)
 }
 
 func insertOrInitializePointer[M interface{ ~map[K]V }, K comparable, V any](m **M, v *M) bool {

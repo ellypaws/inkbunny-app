@@ -174,8 +174,8 @@ var submissionIDs = regexp.MustCompile(`https://inkbunny.net/s/(\d+)`)
 // GetSorterHandler sorts arbitrary submission links by its artist usernames
 func GetSorterHandler(c echo.Context) error {
 	var request struct {
-		Text      string `json:"text"`
-		SessionID string `query:"sid"`
+		Text      string `json:"text" query:"text"`
+		SessionID string `json:"sid" query:"sid"`
 	}
 
 	err := c.Bind(&request)
@@ -205,20 +205,6 @@ func GetSorterHandler(c echo.Context) error {
 		ids = append(ids, match[1])
 	}
 
-	key := fmt.Sprintf("%s:sort:%s",
-		echo.MIMEApplicationJSON,
-		strings.Join(ids, ","),
-	)
-	skipCache := c.Request().Header.Get(echo.HeaderCacheControl) == "no-cache"
-	cacheToUse := cache.SwitchCache(c)
-	if !skipCache {
-		item, err := cacheToUse.Get(key)
-		if err != nil && !errors.Is(err, redis.Nil) {
-			return c.JSON(http.StatusNotFound, crashy.ErrorResponse{ErrorString: "an error occurred while retrieving sorted from cache", Debug: err})
-		}
-		return c.Blob(http.StatusOK, item.MimeType, item.Blob)
-	}
-
 	req := api.SubmissionDetailsRequest{
 		SID:           request.SessionID,
 		SubmissionIDs: strings.Join(ids, ","),
@@ -243,22 +229,7 @@ func GetSorterHandler(c echo.Context) error {
 		submissions[submission.Username] = append(submissions[submission.Username], fmt.Sprintf("https://inkbunny.net/s/%s", submission.SubmissionID))
 	}
 
-	bin, err := json.Marshal(submissions)
-	if err != nil {
-		c.Logger().Errorf("error marshaling sorter submissions: %v", err)
-	}
-
-	err = cacheToUse.Set(key, &cache.Item{
-		Blob:     bin,
-		MimeType: echo.MIMEApplicationJSON,
-	}, cache.Hour)
-	if err != nil {
-		c.Logger().Errorf("error caching submission details: %v", err)
-	} else {
-		c.Logger().Infof("Cached %s %s %dKiB", key, echo.MIMEApplicationJSON, len(bin)/units.KiB)
-	}
-
-	return c.Blob(http.StatusOK, echo.MIMEApplicationJSON, bin)
+	return c.JSON(http.StatusOK, submissions)
 }
 
 // GetInkbunnySearch returns the search results of a submission using api.SubmissionSearchRequest

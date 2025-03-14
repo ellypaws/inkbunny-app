@@ -324,7 +324,7 @@ type Metadata struct {
 
 	Generator string `json:"generator,omitempty"`
 
-	*utils.Params `json:"params,omitempty"`
+	Params utils.Params `json:"params,omitempty"`
 
 	Objects map[string]entities.TextToImageRequest `json:"objects,omitempty"`
 }

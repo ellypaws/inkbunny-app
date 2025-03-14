@@ -250,7 +250,7 @@ func jsonHeuristics(c echo.Context, sub *db.Submission, b *cache.Item, textFile 
 		insertOrInitalize(&sub.Metadata.Objects, map[string]entities.TextToImageRequest{
 			textFile.File.FileName: *objects,
 		})
-		insertOrInitializePointer(&sub.Metadata.Params, &utils.Params{
+		insertOrInitalize(&sub.Metadata.Params, utils.Params{
 			textFile.File.FileName: utils.PNGChunk{
 				"comfy_ui": string(b.Blob),
 			},
@@ -274,7 +274,7 @@ func jsonHeuristics(c echo.Context, sub *db.Submission, b *cache.Item, textFile 
 		insertOrInitalize(&sub.Metadata.Objects, map[string]entities.TextToImageRequest{
 			textFile.File.FileName: *objects,
 		})
-		insertOrInitializePointer(&sub.Metadata.Params, &utils.Params{
+		insertOrInitalize(&sub.Metadata.Params, utils.Params{
 			textFile.File.FileName: utils.PNGChunk{
 				"comfy_ui_api": string(b.Blob),
 			},
@@ -294,7 +294,7 @@ func jsonHeuristics(c echo.Context, sub *db.Submission, b *cache.Item, textFile 
 		insertOrInitalize(&sub.Metadata.Objects, map[string]entities.TextToImageRequest{
 			textFile.File.FileName: objects,
 		})
-		insertOrInitializePointer(&sub.Metadata.Params, &utils.Params{
+		insertOrInitalize(&sub.Metadata.Params, utils.Params{
 			textFile.File.FileName: utils.PNGChunk{
 				"invoke_ai": string(b.Blob),
 			},
@@ -315,7 +315,7 @@ func jsonHeuristics(c echo.Context, sub *db.Submission, b *cache.Item, textFile 
 		insertOrInitalize(&sub.Metadata.Objects, map[string]entities.TextToImageRequest{
 			textFile.File.FileName: *objects,
 		})
-		insertOrInitializePointer(&sub.Metadata.Params, &utils.Params{
+		insertOrInitalize(&sub.Metadata.Params, utils.Params{
 			textFile.File.FileName: utils.PNGChunk{
 				"easy_diffusion": string(b.Blob),
 			},
@@ -337,7 +337,7 @@ func jsonHeuristics(c echo.Context, sub *db.Submission, b *cache.Item, textFile 
 		}
 		mu.Lock()
 		insertOrInitalize(&sub.Metadata.Objects, objects)
-		insertOrInitializePointer(&sub.Metadata.Params, &utils.Params{
+		insertOrInitalize(&sub.Metadata.Params, utils.Params{
 			textFile.File.FileName: utils.PNGChunk{
 				"comfy_ui": string(b.Blob),
 			},
@@ -429,7 +429,7 @@ func parameterHeuristics(c echo.Context, sub *db.Submission, textFile *db.File, 
 	if len(params) > 0 {
 		c.Logger().Debugf("finished params for %s", f.FileName)
 		mu.Lock()
-		insertOrInitializePointer(&sub.Metadata.Params, &params)
+		insertOrInitalize(&sub.Metadata.Params, params)
 		paramsToObject(c, sub, textFile)
 		mu.Unlock()
 	}
@@ -449,7 +449,7 @@ func paramsToObject(c echo.Context, sub *db.Submission, textFile *db.File) {
 		mutex        sync.Mutex
 		foundObjects bool
 	)
-	for fileName, params := range *sub.Metadata.Params {
+	for fileName, params := range sub.Metadata.Params {
 		for k, v := range params {
 			if !strings.HasPrefix(k, utils.Objects) {
 				continue
@@ -477,7 +477,7 @@ func paramsToObject(c echo.Context, sub *db.Submission, textFile *db.File) {
 	if foundObjects {
 		return
 	}
-	for fileName, params := range *sub.Metadata.Params {
+	for fileName, params := range sub.Metadata.Params {
 		if p, ok := params[utils.Parameters]; ok {
 			c.Logger().Debugf("processing heuristics for %s", fileName)
 			wg.Add(1)

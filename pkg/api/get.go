@@ -968,7 +968,7 @@ func GetHeuristicsHandler(c echo.Context) error {
 
 	type p struct {
 		URL     string                                 `json:"url"`
-		Params  *utils.Params                          `json:"params"`
+		Params  utils.Params                           `json:"params"`
 		Objects map[string]entities.TextToImageRequest `json:"objects"`
 	}
 	var params []*p

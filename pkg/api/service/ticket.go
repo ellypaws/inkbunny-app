@@ -137,7 +137,7 @@ func SetSubmissionMeta(submission *db.Submission, override bool) {
 			}
 		}
 	}
-	if submission.Metadata.Params != nil && len(*submission.Metadata.Params) > 0 {
+	if submission.Metadata.Params != nil && len(submission.Metadata.Params) > 0 {
 		submission.Metadata.AISubmission = true
 	}
 	if aiRegex.MatchString(submission.Title) {

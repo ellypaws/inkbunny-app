@@ -28,6 +28,10 @@ func BatchRetrieveSubmission(c echo.Context, req api.SubmissionDetailsRequest, m
 	}
 
 	const batchSize = 100
+	if len(missed) <= batchSize {
+		return RetrieveSubmission(c, req)
+	}
+
 	// calculate the number of jobs depending on the batch size
 	var jobs = make(chan string, (len(missed)+batchSize-1)/batchSize)
 	var responses = make(chan api.SubmissionDetailsResponse, len(missed))

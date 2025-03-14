@@ -50,8 +50,8 @@ func BatchRetrieveSubmission(c echo.Context, req api.SubmissionDetailsRequest, m
 		}
 	}
 
-	const workers = 3
-	for i := 0; i < workers; i++ {
+	var workers = min(3, cap(jobs))
+	for i := range workers {
 		go work(i, req, jobs)
 	}
 

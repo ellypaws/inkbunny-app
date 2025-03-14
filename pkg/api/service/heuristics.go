@@ -444,8 +444,39 @@ func paramsToObject(c echo.Context, sub *db.Submission, textFile *db.File) {
 		return
 	}
 
-	var wg sync.WaitGroup
-	var mutex sync.Mutex
+	var (
+		wg           sync.WaitGroup
+		mutex        sync.Mutex
+		foundObjects bool
+	)
+	for fileName, params := range *sub.Metadata.Params {
+		for k, v := range params {
+			if !strings.HasPrefix(k, utils.Objects) {
+				continue
+			}
+			wg.Add(1)
+			go func(name string, object string, content string) {
+				defer wg.Done()
+				item := &cache.Item{
+					Blob:     []byte(v),
+					MimeType: echo.MIMEApplicationJSON,
+				}
+				textFile := *textFile
+				textFile.File.FileName = fmt.Sprintf("%s (%s)", fileName, object)
+				if !jsonHeuristics(c, sub, item, &textFile, &mutex) {
+					return
+				}
+				mutex.Lock()
+				delete(params, object)
+				mutex.Unlock()
+				foundObjects = true
+			}(fileName, k, v)
+		}
+	}
+	wg.Wait()
+	if foundObjects {
+		return
+	}
 	for fileName, params := range *sub.Metadata.Params {
 		if p, ok := params[utils.Parameters]; ok {
 			c.Logger().Debugf("processing heuristics for %s", fileName)
@@ -466,27 +497,6 @@ func paramsToObject(c echo.Context, sub *db.Submission, textFile *db.File) {
 				insertOrInitalize(&sub.Metadata.Objects, map[string]entities.TextToImageRequest{name: heuristics})
 				mutex.Unlock()
 			}(fileName, p)
-		}
-		for k, v := range params {
-			if !strings.HasPrefix(k, utils.Objects) {
-				continue
-			}
-			wg.Add(1)
-			go func(name string, object string, content string) {
-				defer wg.Done()
-				item := &cache.Item{
-					Blob:     []byte(v),
-					MimeType: echo.MIMEApplicationJSON,
-				}
-				textFile := *textFile
-				textFile.File.FileName = fmt.Sprintf("%s (%s)", fileName, object)
-				if !jsonHeuristics(c, sub, item, &textFile, &mutex) {
-					return
-				}
-				mutex.Lock()
-				delete(params, object)
-				mutex.Unlock()
-			}(fileName, k, v)
 		}
 	}
 	wg.Wait()

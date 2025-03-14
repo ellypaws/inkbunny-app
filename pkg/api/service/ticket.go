@@ -51,7 +51,7 @@ func InkbunnySubmissionToDBSubmission(submission api.Submission, override bool) 
 	return dbSubmission
 }
 
-var PrivateTools = regexp.MustCompile(`(?i)\b(midjourney|novelai|bing|dall[- ]?e|nijijourney|craiyon|imagefx)\b`)
+var PrivateTools = regexp.MustCompile(`(?i)\b(midjourney|novelai|bing|dall[- ]?e|nijijourney|craiyon|image[- ]*fx)\b`)
 
 // SetSubmissionMeta modifies a submission's Metadata based on its Keywords and other fields.
 func SetSubmissionMeta(submission *db.Submission, override bool) {

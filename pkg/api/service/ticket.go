@@ -229,51 +229,23 @@ func TicketLabels(submission db.Submission) []db.TicketLabel {
 			cfg     = "cfg"
 			sampler = "sampler"
 		)
-		hint := [6]struct {
-			label   string
-			missing bool
-			partial bool
-		}{
-			{label: prompt},
-			{label: model},
-			{label: seed},
-			{label: steps},
-			{label: cfg},
-			{label: sampler},
+		hints := [...]hint{
+			0: {label: prompt},
+			1: {label: model},
+			2: {label: seed},
+			3: {label: steps},
+			4: {label: cfg},
+			5: {label: sampler},
 		}
 		for _, obj := range metadata.Objects {
-			if obj.Prompt == "" {
-				hint[0].missing = true
-			} else {
-				hint[0].partial = true
-			}
-			if obj.OverrideSettings.SDModelCheckpoint == nil && obj.OverrideSettings.SDCheckpointHash == "" {
-				hint[1].missing = true
-			} else {
-				hint[1].partial = true
-			}
-			if obj.Seed == 0 || obj.Seed == -1 {
-				hint[2].missing = true
-			} else {
-				hint[2].partial = true
-			}
-			if obj.Steps == 0 {
-				hint[3].missing = true
-			} else {
-				hint[3].partial = true
-			}
-			if obj.CFGScale == 0.0 {
-				hint[4].missing = true
-			} else {
-				hint[4].partial = true
-			}
-			if obj.SamplerName == "" {
-				hint[5].missing = true
-			} else {
-				hint[5].partial = true
-			}
+			hints[0].assert(obj.Prompt != "")
+			hints[1].assert(obj.OverrideSettings.SDModelCheckpoint != nil || obj.OverrideSettings.SDCheckpointHash != "")
+			hints[2].assert(obj.Seed != 0 && obj.Seed != -1)
+			hints[3].assert(obj.Steps > 0)
+			hints[4].assert(obj.CFGScale != 0.0)
+			hints[5].assert(obj.SamplerName != "")
 		}
-		for _, v := range hint {
+		for _, v := range hints {
 			if v.missing {
 				if v.partial {
 					labels[db.TicketLabel("partial_"+v.label)] = true
@@ -300,4 +272,18 @@ func TicketLabels(submission db.Submission) []db.TicketLabel {
 	}
 
 	return out
+}
+
+type hint struct {
+	label   string
+	missing bool
+	partial bool
+}
+
+func (h *hint) assert(condition bool) {
+	if condition {
+		h.partial = true
+	} else {
+		h.missing = true
+	}
 }

@@ -234,7 +234,7 @@ func processObjectMetadata(submission *db.Submission, artists []db.Artist) {
 	}
 }
 
-func jsonHeuristics(c echo.Context, sub *db.Submission, b *cache.Item, textFile *db.File, mu *sync.Mutex) {
+func jsonHeuristics(c echo.Context, sub *db.Submission, b *cache.Item, textFile *db.File, mu *sync.Mutex) bool {
 	b.Blob = bytes.ReplaceAll(b.Blob, []byte("NaN"), []byte("null"))
 	comfyUI, err := comfyui.UnmarshalIsolatedComfyUI(b.Blob)
 	if err != nil && !errors.Is(err, comfyui.ErrInvalidNode) {
@@ -257,7 +257,7 @@ func jsonHeuristics(c echo.Context, sub *db.Submission, b *cache.Item, textFile 
 		})
 		mu.Unlock()
 		sub.Metadata.Generator = "comfy_ui"
-		return
+		return true
 	}
 
 	comfyUIAPI, err := comfyui.UnmarshalIsolatedComfyApi(b.Blob)
@@ -281,7 +281,7 @@ func jsonHeuristics(c echo.Context, sub *db.Submission, b *cache.Item, textFile 
 		})
 		mu.Unlock()
 		sub.Metadata.Generator = "comfy_ui_api"
-		return
+		return true
 	}
 
 	invokeAI, err := entities.UnmarshalInvokeAI(b.Blob)
@@ -301,7 +301,7 @@ func jsonHeuristics(c echo.Context, sub *db.Submission, b *cache.Item, textFile 
 		})
 		mu.Unlock()
 		sub.Metadata.Generator = "invoke_ai"
-		return
+		return true
 	}
 
 	easyDiffusion, err := entities.UnmarshalEasyDiffusion(b.Blob)
@@ -322,7 +322,7 @@ func jsonHeuristics(c echo.Context, sub *db.Submission, b *cache.Item, textFile 
 		})
 		mu.Unlock()
 		sub.Metadata.Generator = "easy_diffusion"
-		return
+		return true
 	}
 
 	cubFestAI, err := comfyui.UnmarshalCubFestAIDate(b.Blob)
@@ -344,11 +344,11 @@ func jsonHeuristics(c echo.Context, sub *db.Submission, b *cache.Item, textFile 
 		})
 		mu.Unlock()
 		sub.Metadata.Generator = "comfy_ui"
-		return
+		return true
 	}
 
 	c.Logger().Errorf("could not parse json %s for %s", textFile.File.FileURLFull, sub.URL)
-	return
+	return false
 }
 
 func insertOrInitializePointer[M interface{ ~map[K]V }, K comparable, V any](m **M, v *M) bool {
@@ -472,15 +472,21 @@ func paramsToObject(c echo.Context, sub *db.Submission, textFile *db.File) {
 				continue
 			}
 			wg.Add(1)
-			go func(name string, content string) {
+			go func(name string, object string, content string) {
 				defer wg.Done()
 				item := &cache.Item{
 					Blob:     []byte(v),
 					MimeType: echo.MIMEApplicationJSON,
 				}
 				textFile := *textFile
-				textFile.File.FileName = fmt.Sprintf("%s (%s)", fileName, k)
-			}(fileName, v)
+				textFile.File.FileName = fmt.Sprintf("%s (%s)", fileName, object)
+				if !jsonHeuristics(c, sub, item, &textFile, &mutex) {
+					return
+				}
+				mutex.Lock()
+				delete(params, object)
+				mutex.Unlock()
+			}(fileName, k, v)
 		}
 	}
 	wg.Wait()

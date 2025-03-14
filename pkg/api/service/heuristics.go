@@ -143,8 +143,9 @@ func processParams(c echo.Context, sub *db.Submission, cacheToUse cache.Cache) {
 			}
 
 			if b.MimeType == echo.MIMEApplicationJSON {
-				jsonHeuristics(c, sub, b, textFile, &mu)
-				return
+				if jsonHeuristics(c, sub, b, textFile, &mu) {
+					return
+				}
 			}
 
 			if b.MimeType == MIMETextRTF {
@@ -157,8 +158,9 @@ func processParams(c echo.Context, sub *db.Submission, cacheToUse cache.Cache) {
 			}
 
 			if bytes.HasPrefix(b.Blob, []byte("{")) && bytes.HasSuffix(b.Blob, []byte("}")) {
-				jsonHeuristics(c, sub, b, textFile, &mu)
-				return
+				if jsonHeuristics(c, sub, b, textFile, &mu) {
+					return
+				}
 			}
 
 			if err := parameterHeuristics(c, sub, textFile, b, &mu); err != nil {

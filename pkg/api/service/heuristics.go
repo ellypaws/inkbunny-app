@@ -284,6 +284,26 @@ func jsonHeuristics(c echo.Context, sub *db.Submission, b *cache.Item, textFile 
 		return
 	}
 
+	invokeAI, err := entities.UnmarshalInvokeAI(b.Blob)
+	if err != nil {
+		c.Logger().Warnf("error parsing invoke ai: %s", err)
+	} else if !reflect.DeepEqual(invokeAI, &entities.InvokeAI{}) {
+		c.Logger().Debugf("invoke AI found for %s", sub.URL)
+		objects := invokeAI.Convert()
+		mu.Lock()
+		insertOrInitalize(&sub.Metadata.Objects, map[string]entities.TextToImageRequest{
+			textFile.File.FileName: objects,
+		})
+		insertOrInitializePointer(&sub.Metadata.Params, &utils.Params{
+			textFile.File.FileName: utils.PNGChunk{
+				"invoke_ai": string(b.Blob),
+			},
+		})
+		mu.Unlock()
+		sub.Metadata.Generator = "invoke_ai"
+		return
+	}
+
 	easyDiffusion, err := entities.UnmarshalEasyDiffusion(b.Blob)
 	if err != nil {
 		c.Logger().Warnf("error parsing easy diffusion %s: %s", textFile.File.FileURLFull, err)
@@ -410,13 +430,13 @@ func parameterHeuristics(c echo.Context, sub *db.Submission, textFile *db.File, 
 		c.Logger().Debugf("finished params for %s", f.FileName)
 		mu.Lock()
 		insertOrInitializePointer(&sub.Metadata.Params, &params)
-		paramsToObject(c, sub)
+		paramsToObject(c, sub, textFile)
 		mu.Unlock()
 	}
 	return nil
 }
 
-func paramsToObject(c echo.Context, sub *db.Submission) {
+func paramsToObject(c echo.Context, sub *db.Submission, textFile *db.File) {
 	if sub.Metadata.Objects != nil {
 		return
 	}
@@ -446,6 +466,21 @@ func paramsToObject(c echo.Context, sub *db.Submission) {
 				insertOrInitalize(&sub.Metadata.Objects, map[string]entities.TextToImageRequest{name: heuristics})
 				mutex.Unlock()
 			}(fileName, p)
+		}
+		for k, v := range params {
+			if !strings.HasPrefix(k, utils.Objects) {
+				continue
+			}
+			wg.Add(1)
+			go func(name string, content string) {
+				defer wg.Done()
+				item := &cache.Item{
+					Blob:     []byte(v),
+					MimeType: echo.MIMEApplicationJSON,
+				}
+				textFile := *textFile
+				textFile.File.FileName = fmt.Sprintf("%s (%s)", fileName, k)
+			}(fileName, v)
 		}
 	}
 	wg.Wait()

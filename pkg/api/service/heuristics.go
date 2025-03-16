@@ -2,6 +2,7 @@ package service
 
 import (
 	"bytes"
+	"cmp"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -286,44 +287,25 @@ func jsonHeuristics(c echo.Context, sub *db.Submission, b *cache.Item, textFile 
 		return true
 	}
 
-	invokeAI, err := entities.UnmarshalInvokeAI(b.Blob)
-	if err != nil {
-		c.Logger().Warnf("error parsing invoke ai: %s", err)
-	} else if !reflect.DeepEqual(invokeAI, entities.InvokeAI{}) {
-		c.Logger().Debugf("invoke AI found for %s", sub.URL)
-		objects := invokeAI.Convert()
+	best := preferBest(b.Blob, map[string]Converter{
+		"invoke_ai":      &entities.InvokeAI{},
+		"easy_diffusion": &entities.EasyDiffusion{},
+	})
+	if best == nil {
+		c.Logger().Warnf("no suitable type found for %s", sub.URL)
+	} else {
+		c.Logger().Debugf("%s found for %s", best.label, sub.URL)
 		mu.Lock()
 		insertOrInitalize(&sub.Metadata.Objects, map[string]entities.TextToImageRequest{
-			textFile.File.FileName: *objects,
+			textFile.File.FileName: *best.TextToImageRequest,
 		})
 		insertOrInitalize(&sub.Metadata.Params, utils.Params{
 			textFile.File.FileName: utils.PNGChunk{
-				"invoke_ai": string(b.Blob),
+				best.label: string(b.Blob),
 			},
 		})
 		mu.Unlock()
-		sub.Metadata.Generator = "invoke_ai"
-		return true
-	}
-
-	easyDiffusion, err := entities.UnmarshalEasyDiffusion(b.Blob)
-	if err != nil {
-		c.Logger().Warnf("error parsing easy diffusion %s: %s", textFile.File.FileURLFull, err)
-	}
-	if err == nil && !reflect.DeepEqual(easyDiffusion, entities.EasyDiffusion{}) {
-		c.Logger().Debugf("easy diffusion found for %s", sub.URL)
-		objects := easyDiffusion.Convert()
-		mu.Lock()
-		insertOrInitalize(&sub.Metadata.Objects, map[string]entities.TextToImageRequest{
-			textFile.File.FileName: *objects,
-		})
-		insertOrInitalize(&sub.Metadata.Params, utils.Params{
-			textFile.File.FileName: utils.PNGChunk{
-				"easy_diffusion": string(b.Blob),
-			},
-		})
-		mu.Unlock()
-		sub.Metadata.Generator = "easy_diffusion"
+		sub.Metadata.Generator = best.label
 		return true
 	}
 
@@ -351,6 +333,80 @@ func jsonHeuristics(c echo.Context, sub *db.Submission, b *cache.Item, textFile 
 
 	c.Logger().Errorf("could not parse json %s for %s", textFile.File.FileURLFull, sub.URL)
 	return false
+}
+
+type Converter interface {
+	Convert() *entities.TextToImageRequest
+}
+
+type converted struct {
+	label string
+	*entities.TextToImageRequest
+}
+
+// preferBest takes a blob and a map of types, and returns the best match.
+// It sorts the objects by prompt, seed, model, width, and height.
+// Call preferBest with empty Converter types.
+func preferBest(blob []byte, types map[string]Converter) *converted {
+	if len(types) == 0 {
+		return nil
+	}
+	var (
+		object  Converter
+		objects []converted
+		err     error
+	)
+	for label, zero := range types {
+		switch zero.(type) {
+		case *entities.EasyDiffusion:
+			object, err = unmarshal[*entities.EasyDiffusion](blob)
+		case *entities.InvokeAI:
+			object, err = unmarshal[*entities.InvokeAI](blob)
+		default:
+			continue
+		}
+		if err != nil {
+			continue
+		}
+		if reflect.DeepEqual(object, zero) {
+			continue
+		}
+		objects = append(objects, converted{label, object.Convert()})
+	}
+	if len(objects) == 0 {
+		return nil
+	}
+	slices.SortFunc(objects, func(a, b converted) int {
+		return cmp.Or(
+			-cmp.Compare(a.Prompt, b.Prompt),
+			-cmp.Compare(a.Seed, b.Seed),
+			-comparePointer(a.OverrideSettings.SDModelCheckpoint, b.OverrideSettings.SDModelCheckpoint),
+			-cmp.Compare(a.Width, b.Width),
+			-cmp.Compare(a.Height, b.Height),
+		)
+	})
+	return &objects[0]
+}
+
+func unmarshal[T any](data []byte) (T, error) {
+	var zero T
+	if err := json.Unmarshal(data, &zero); err != nil {
+		return zero, err
+	}
+	return zero, nil
+}
+
+func comparePointer[T cmp.Ordered](a, b *T) int {
+	if a == nil && b == nil {
+		return 0
+	}
+	if a == nil {
+		return -1
+	}
+	if b == nil {
+		return 1
+	}
+	return cmp.Compare(*a, *b)
 }
 
 func insertOrInitializePointer[M interface{ ~map[K]V }, K comparable, V any](m **M, v *M) bool {

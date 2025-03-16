@@ -294,7 +294,7 @@ func jsonHeuristics(c echo.Context, sub *db.Submission, b *cache.Item, textFile 
 		objects := invokeAI.Convert()
 		mu.Lock()
 		insertOrInitalize(&sub.Metadata.Objects, map[string]entities.TextToImageRequest{
-			textFile.File.FileName: objects,
+			textFile.File.FileName: *objects,
 		})
 		insertOrInitalize(&sub.Metadata.Params, utils.Params{
 			textFile.File.FileName: utils.PNGChunk{

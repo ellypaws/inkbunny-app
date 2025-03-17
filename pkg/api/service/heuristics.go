@@ -239,55 +239,9 @@ func processObjectMetadata(submission *db.Submission, artists []db.Artist) {
 
 func jsonHeuristics(c echo.Context, sub *db.Submission, b *cache.Item, textFile *db.File, mu *sync.Mutex) bool {
 	b.Blob = bytes.ReplaceAll(b.Blob, []byte("NaN"), []byte("null"))
-	comfyUI, err := comfyui.UnmarshalIsolatedComfyUI(b.Blob)
-	if err != nil && !errors.Is(err, comfyui.ErrInvalidNode) {
-		c.Logger().Warnf("error parsing comfy ui %s: %s", textFile.File.FileURLFull, err)
-	} else if len(comfyUI.Nodes) > 0 {
-		var e comfyui.NodeErrors
-		if errors.As(err, &e) {
-			c.Logger().Warnf("parsed comfy ui with some errors. errors/ok: %d/%d", e.Len(), len(comfyUI.Nodes))
-		}
-		c.Logger().Debugf("comfy ui found for %s", sub.URL)
-		objects := comfyUI.Convert()
-		mu.Lock()
-		insertOrInitalize(&sub.Metadata.Objects, map[string]entities.TextToImageRequest{
-			textFile.File.FileName: *objects,
-		})
-		insertOrInitalize(&sub.Metadata.Params, utils.Params{
-			textFile.File.FileName: utils.PNGChunk{
-				"comfy_ui": string(b.Blob),
-			},
-		})
-		mu.Unlock()
-		sub.Metadata.Generator = "comfy_ui"
-		return true
-	}
-
-	comfyUIAPI, err := comfyui.UnmarshalIsolatedComfyApi(b.Blob)
-	if err != nil && !errors.Is(err, comfyui.ErrInvalidNode) {
-		c.Logger().Warnf("error parsing comfy ui api %s: %s", textFile.File.FileURLFull, err)
-	} else if len(comfyUIAPI) > 0 {
-		var e comfyui.NodeErrors
-		if errors.As(err, &e) {
-			c.Logger().Warnf("parsed comfy ui api with some errors. errors/ok: %d/%d", e.Len(), len(comfyUIAPI))
-		}
-		c.Logger().Debugf("comfy ui api found for %s", sub.URL)
-		objects := comfyUIAPI.Convert()
-		mu.Lock()
-		insertOrInitalize(&sub.Metadata.Objects, map[string]entities.TextToImageRequest{
-			textFile.File.FileName: *objects,
-		})
-		insertOrInitalize(&sub.Metadata.Params, utils.Params{
-			textFile.File.FileName: utils.PNGChunk{
-				"comfy_ui_api": string(b.Blob),
-			},
-		})
-		mu.Unlock()
-		sub.Metadata.Generator = "comfy_ui_api"
-		return true
-	}
-
-	best := preferBest(b.Blob, map[string]Converter{
+	best := preferBest(c, b.Blob, map[string]Converter{
+		"comfy_ui":       &comfyui.Basic{},
+		"comfy_ui_api":   &comfyui.Api{},
 		"invoke_ai":      &entities.InvokeAI{},
 		"easy_diffusion": &entities.EasyDiffusion{},
 	})
@@ -309,26 +263,28 @@ func jsonHeuristics(c echo.Context, sub *db.Submission, b *cache.Item, textFile 
 		return true
 	}
 
-	cubFestAI, err := comfyui.UnmarshalCubFestAIDate(b.Blob)
-	if err != nil {
-		c.Logger().Warnf("error parsing comfy ui (CubFestAI) %s: %s", textFile.File.FileURLFull, err)
-	}
-	if err == nil && !reflect.DeepEqual(cubFestAI, comfyui.CubFestAITime{}) {
-		c.Logger().Debugf("comfy ui cub fest ai found for %s", sub.URL)
-		var objects = make(map[string]entities.TextToImageRequest)
-		for key, value := range cubFestAI {
-			objects[key] = value.Convert()
+	if sub.UserID == 1247248 {
+		cubFestAI, err := comfyui.UnmarshalCubFestAIDate(b.Blob)
+		if err != nil {
+			c.Logger().Warnf("error parsing comfy ui (CubFestAI) %s: %s", textFile.File.FileURLFull, err)
 		}
-		mu.Lock()
-		insertOrInitalize(&sub.Metadata.Objects, objects)
-		insertOrInitalize(&sub.Metadata.Params, utils.Params{
-			textFile.File.FileName: utils.PNGChunk{
-				"comfy_ui": string(b.Blob),
-			},
-		})
-		mu.Unlock()
-		sub.Metadata.Generator = "comfy_ui"
-		return true
+		if err == nil && !reflect.DeepEqual(cubFestAI, comfyui.CubFestAITime{}) {
+			c.Logger().Debugf("comfy ui cub fest ai found for %s", sub.URL)
+			var objects = make(map[string]entities.TextToImageRequest)
+			for key, value := range cubFestAI {
+				objects[key] = value.Convert()
+			}
+			mu.Lock()
+			insertOrInitalize(&sub.Metadata.Objects, objects)
+			insertOrInitalize(&sub.Metadata.Params, utils.Params{
+				textFile.File.FileName: utils.PNGChunk{
+					"comfy_ui": string(b.Blob),
+				},
+			})
+			mu.Unlock()
+			sub.Metadata.Generator = "comfy_ui"
+			return true
+		}
 	}
 
 	c.Logger().Errorf("could not parse json %s for %s", textFile.File.FileURLFull, sub.URL)
@@ -342,12 +298,13 @@ type Converter interface {
 type converted struct {
 	label string
 	*entities.TextToImageRequest
+	err error
 }
 
 // preferBest takes a blob and a map of types, and returns the best match.
 // It sorts the objects by prompt, seed, model, width, and height.
 // Call preferBest with empty Converter types.
-func preferBest(blob []byte, types map[string]Converter) *converted {
+func preferBest(c echo.Context, blob []byte, types map[string]Converter) *converted {
 	if len(types) == 0 {
 		return nil
 	}
@@ -358,6 +315,10 @@ func preferBest(blob []byte, types map[string]Converter) *converted {
 	)
 	for label, zero := range types {
 		switch zero.(type) {
+		case *comfyui.Basic:
+			object, err = unmarshal[*comfyui.Basic](blob)
+		case *comfyui.Api:
+			object, err = unmarshal[*comfyui.Api](blob)
 		case *entities.EasyDiffusion:
 			object, err = unmarshal[*entities.EasyDiffusion](blob)
 		case *entities.InvokeAI:
@@ -365,16 +326,39 @@ func preferBest(blob []byte, types map[string]Converter) *converted {
 		default:
 			continue
 		}
-		if err != nil {
+		if err != nil && !errors.Is(err, comfyui.ErrInvalidNode) {
+			c.Logger().Warnf("error parsing %s: %v", label, err)
 			continue
 		}
-		if reflect.DeepEqual(object, zero) {
-			continue
+		switch object := object.(type) {
+		case *comfyui.Basic:
+			if len(object.Nodes) == 0 {
+				continue
+			}
+			var e comfyui.NodeErrors
+			if errors.As(err, &e) {
+				c.Logger().Warnf("parsed %s with some errors. errors/ok: %d/%d", label, e.Len(), len(object.Nodes))
+			}
+		case *comfyui.Api:
+			if len(*object) == 0 {
+				continue
+			}
+			var e comfyui.NodeErrors
+			if errors.As(err, &e) {
+				c.Logger().Warnf("parsed %s with some errors. errors/ok: %d/%d", label, e.Len(), len(*object))
+			}
+		default:
+			if reflect.DeepEqual(object, zero) {
+				continue
+			}
 		}
-		objects = append(objects, converted{label, object.Convert()})
+		objects = append(objects, converted{label, object.Convert(), err})
 	}
 	if len(objects) == 0 {
 		return nil
+	}
+	if len(objects) == 1 {
+		return &objects[0]
 	}
 	slices.SortFunc(objects, func(a, b converted) int {
 		return cmp.Or(
@@ -407,21 +391,6 @@ func comparePointer[T cmp.Ordered](a, b *T) int {
 		return 1
 	}
 	return cmp.Compare(*a, *b)
-}
-
-func insertOrInitializePointer[M interface{ ~map[K]V }, K comparable, V any](m **M, v *M) bool {
-	if m == nil {
-		return false
-	}
-	if *m == nil {
-		*m = v
-		return v != nil
-	}
-	if v == nil {
-		return false
-	}
-	maps.Copy(**m, *v)
-	return true
 }
 
 func insertOrInitalize[M interface{ ~map[K]V }, K comparable, V any](m *M, v M) bool {

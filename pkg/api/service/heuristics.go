@@ -474,14 +474,14 @@ func paramsToObject(c echo.Context, sub *db.Submission, textFile *db.File) {
 				continue
 			}
 			wg.Add(1)
-			go func(name string, object string, content string) {
+			go func(name, object, content string) {
 				defer wg.Done()
 				item := &cache.Item{
-					Blob:     []byte(v),
+					Blob:     []byte(content),
 					MimeType: echo.MIMEApplicationJSON,
 				}
 				textFile := *textFile
-				textFile.File.FileName = fmt.Sprintf("%s (%s)", fileName, object)
+				textFile.File.FileName = fmt.Sprintf("%s (%s)", name, object)
 				if !jsonHeuristics(c, sub, item, &textFile, &mutex) {
 					return
 				}

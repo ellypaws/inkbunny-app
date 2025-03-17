@@ -47,9 +47,7 @@ func Run(config RunConfig) {
 	e.Logger.SetLevel(config.LogLevel)
 	e.Logger.SetHeader(`${time_rfc3339} ${level}	${short_file}:${line}	`)
 
-	for _, m := range config.Middlewares {
-		e.Use(m)
-	}
+	e.Use(config.Middlewares...)
 
 	for _, f := range config.Extra {
 		f(e)

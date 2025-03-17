@@ -34,10 +34,7 @@ var (
 
 func main() {
 	e.Use(middleware.Recover())
-
-	for _, m := range middlewares {
-		e.Use(m)
-	}
+	e.Use(middlewares...)
 
 	reducedMiddleware := append(slices.Clone(api.WithRedis),
 		[]echo.MiddlewareFunc{

@@ -276,7 +276,7 @@ func ticketSubject(flags []db.TicketLabel) string {
 		case slices.Contains(flags, db.LabelMissingSeed):
 			return "is missing the generation seed"
 		case slices.Contains(flags, db.LabelSoldArt):
-			return "is a selling content"
+			return "is selling content"
 		case slices.Contains(flags, db.LabelPrivateTool):
 			return "was generated using a private tool"
 		case slices.Contains(flags, db.LabelPrivateLora):

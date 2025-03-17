@@ -302,7 +302,7 @@ func CreateTicketReport(auditor *db.Auditor, details []Detail, host *url.URL) Ti
 	var lastSubmission string
 	for i, image := range info.Files {
 		if i == 0 {
-			message.WriteString(fmt.Sprintf("\n\n[u]MD5 Checksums at the time of writing[/u] ([url=https://inkbunny.net/submissionsviewall.php?text=%s&md5=yes&mode=search]search all[/url]):", strings.Join(info.MD5, "%20")))
+			message.WriteString(fmt.Sprintf("\n\n[u]MD5 Checksums at the time of writing[/u] ([url=https://inkbunny.net/submissionsviewall.php?text=%s&md5=yes&mode=search]search all[/url]):", strings.Join(info.MD5, "+")))
 		}
 		if lastSubmission != image.File.SubmissionID {
 			if lastSubmission != "" {

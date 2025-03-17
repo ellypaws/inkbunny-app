@@ -348,7 +348,7 @@ func submissionMessage(sub *db.Submission) string {
 		// case echo.MIMEApplicationJSON, echo.MIMETextPlain:
 		default:
 			if i == 0 {
-				sb.WriteString(fmt.Sprintf("\n\n[u]MD5 Checksums at the time of writing[/u] ([url=https://inkbunny.net/submissionsviewall.php?text=%s&md5=yes&mode=search]search all[/url]):", strings.Join(md5, "%20")))
+				sb.WriteString(fmt.Sprintf("\n\n[u]MD5 Checksums at the time of writing[/u] ([url=https://inkbunny.net/submissionsviewall.php?text=%s&md5=yes&mode=search]search all[/url]):", strings.Join(md5, "+")))
 			}
 			sb.WriteString("\n")
 			sb.WriteString(fmt.Sprintf("Page %d: [url=%s]%s[/url] ([url=https://inkbunny.net/submissionsviewall.php?text=%s&md5=yes&mode=search]%s[/url])",

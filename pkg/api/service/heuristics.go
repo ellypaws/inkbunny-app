@@ -368,10 +368,8 @@ func preferBest(c echo.Context, blob []byte, types map[string]Converter) *conver
 
 func unmarshal[T any](data []byte) (T, error) {
 	var zero T
-	if err := json.Unmarshal(data, &zero); err != nil {
-		return zero, err
-	}
-	return zero, nil
+	err := json.Unmarshal(data, &zero)
+	return zero, err
 }
 
 func comparePointer[T cmp.Ordered](a, b *T) int {

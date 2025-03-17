@@ -265,8 +265,7 @@ func CreateTicketReport(auditor *db.Auditor, details []Detail, host *url.URL) Ti
 	case 0:
 		message.WriteString(fmt.Sprintf("needs to be reviewed[/u]: (%d submissions)\n", len(info.IDs)))
 	case 1:
-		subject := ticketSubject(info.Labels)
-		message.WriteString(fmt.Sprintf("%s[/u] (%d violations, %.2f%%):\n", subject, report.Violations, report.Ratio*100))
+		message.WriteString(fmt.Sprintf("%s[/u] (%d violations, %.2f%%):\n", ticketSubject(info.Labels), report.Violations, report.Ratio*100))
 	default:
 		message.WriteString(fmt.Sprintf("do not follow the AI ACP[/u] (%d violations, %.2f%%):\n", report.Violations, report.Ratio*100))
 	}
@@ -500,8 +499,7 @@ func RecreateReport(report *TicketReport) error {
 	case 0:
 		message.WriteString(fmt.Sprintf("needs to be reviewed[/u]: (%d submissions)\n", len(report.Report.Submissions)))
 	case 1:
-		subject := ticketSubject(info.Labels)
-		message.WriteString(fmt.Sprintf("%s[/u] (%d violations, %.2f%%):\n", subject, report.Report.Violations, report.Report.Ratio*100))
+		message.WriteString(fmt.Sprintf("%s[/u] (%d violations, %.2f%%):\n", ticketSubject(info.Labels), report.Report.Violations, report.Report.Ratio*100))
 	default:
 		message.WriteString(fmt.Sprintf("do not follow the AI ACP[/u] (%d violations, %.2f%%):\n", report.Report.Violations, report.Report.Ratio*100))
 	}

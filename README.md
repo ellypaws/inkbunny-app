@@ -75,11 +75,6 @@ It displays a badge on each submission to quickly notify you of any potential fl
 ![Inkbunny AI Bridge](cmd/extension/doc/ticket.png)
 </details>
 
-#### [CLI](cmd/cli): Command Line Interface
-For those who prefer the directness of a command line, the CLI offers a robust interface for engaging with the Inkbunny ML API. It's an effective alternative to the web interface, providing all the necessary commands at your fingertips.
-
-![Inkbunny CLI](cmd/cli/doc/cli.gif)
-
 ## Usage
 
 > [!IMPORTANT]  

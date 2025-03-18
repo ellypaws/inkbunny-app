@@ -113,7 +113,7 @@ func (r *Redis) Get(key string) (*Item, error) {
 		return nil, err
 	}
 
-	var items []any
+	var items []json.RawMessage
 	err = json.Unmarshal([]byte(val), &items)
 	if err != nil {
 		return nil, err
@@ -199,7 +199,7 @@ func (r *Redis) MGet(keys ...string) (map[string]*Item, error) {
 			lastAccess: time.Now().UTC(),
 		}
 
-		var values []any
+		var values []json.RawMessage
 		err = json.Unmarshal([]byte(val), &values)
 		if err != nil {
 			return nil, err

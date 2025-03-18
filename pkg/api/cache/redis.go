@@ -52,25 +52,21 @@ func RedisClient() *Redis {
 }
 
 func NewRedisClient() *Redis {
-	client := redis.NewClient(&redis.Options{
-		Addr: os.Getenv("REDIS_HOST"),
-		Username: func() string {
-			u := os.Getenv("REDIS_USERNAME")
-			if u != "" {
-				return u
-			}
-			return "default"
-		}(),
+	options := &redis.Options{
+		Addr:     os.Getenv("REDIS_HOST"),
+		Username: "default",
 		Password: os.Getenv("REDIS_PASSWORD"),
-		DB: func() int {
-			d := os.Getenv("REDIS_DB")
-			if i, err := strconv.Atoi(d); err == nil {
-				return i
-			}
-			return 0
-		}(),
-	})
-	return (*Redis)(client)
+		DB:       0,
+	}
+	if u := os.Getenv("REDIS_USERNAME"); u != "" {
+		options.Username = u
+	}
+	if d := os.Getenv("REDIS_DB"); d != "" {
+		if i, err := strconv.Atoi(d); err == nil {
+			options.DB = i
+		}
+	}
+	return (*Redis)(redis.NewClient(options))
 }
 
 func (r *Redis) Get(key string) (*Item, error) {

@@ -83,8 +83,8 @@ func (r *Redis) Get(key string) (*Item, error) {
 			return nil, err
 		}
 		var mimeType string
-		if strings.Contains(key, ":") {
-			mimeType = key[:strings.Index(key, ":")]
+		if p := strings.Index(key, ":"); p != -1 {
+			mimeType = key[:p]
 		}
 		if strings.HasPrefix(mimeType, "http") {
 			m := MimeTypeFromURL(key)
@@ -156,8 +156,8 @@ func (r *Redis) MGet(keys ...string) (map[string]*Item, error) {
 			}
 			foundAny = true
 			var mimeType string
-			if strings.Contains(key, ":") {
-				mimeType = key[:strings.Index(key, ":")]
+			if p := strings.Index(key, ":"); p != -1 {
+				mimeType = key[:p]
 			}
 			if strings.HasPrefix(mimeType, "http") {
 				m := MimeTypeFromURL(key)

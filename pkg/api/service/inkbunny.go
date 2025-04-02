@@ -56,12 +56,8 @@ func BatchRetrieveSubmission(c echo.Context, req api.SubmissionDetailsRequest, m
 	}
 
 	var jobCount int
-	for i := 0; i < len(missed); i += batchSize {
-		end := i + batchSize
-		if end > len(missed) {
-			end = len(missed)
-		}
-		jobs <- strings.Join(missed[i:end], ",")
+	for ids := range slices.Chunk(missed, batchSize) {
+		jobs <- strings.Join(ids, ",")
 		jobCount++
 	}
 	close(jobs)

@@ -72,6 +72,10 @@ type Config struct {
 func ProcessResponse(c echo.Context, config *Config) []Detail {
 	submissionCount := len(config.SubmissionDetails.Submissions)
 
+	if submissionCount == 0 {
+		return nil
+	}
+
 	processed := make(chan Detail, submissionCount)
 	defer close(processed)
 
@@ -79,15 +83,15 @@ func ProcessResponse(c echo.Context, config *Config) []Detail {
 		go spawnSubmissionWorker(c, config, &config.SubmissionDetails.Submissions[i], processed)
 	}
 
-	var details []Detail
-	for range submissionCount {
+	details := make([]Detail, submissionCount)
+	for i := range submissionCount {
 		detail := <-processed
 		if c.QueryParam("stream") == "true" {
 			stream(c, config.Writer, detail)
 		}
 
 		go setCache(c, config, &detail)
-		details = append(details, detail)
+		details[i] = detail
 	}
 
 	return details

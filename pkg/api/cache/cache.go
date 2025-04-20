@@ -44,13 +44,12 @@ func (item *Item) MarshalBinary() ([]byte, error) {
 		if err != nil {
 			return b, err
 		}
-		return bytes.Join(
-			[][]byte{
-				b[:len(b)-1],
-				[]byte(`,"blob":`),
-				blob,
-				[]byte("}"),
-			}, nil), nil
+		buf := make([]byte, 0, len(b)+len(`,"blob":`)+len(blob))
+		buf = append(buf, b[:len(b)-1]...)
+		buf = append(buf, `,"blob":`...)
+		buf = append(buf, blob...)
+		buf = append(buf, '}')
+		return buf, nil
 	}
 	return json.Marshal(item)
 }

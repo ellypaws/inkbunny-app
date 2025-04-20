@@ -44,9 +44,11 @@ func (item *Item) MarshalBinary() ([]byte, error) {
 		if err != nil {
 			return b, err
 		}
-		buf := make([]byte, 0, len(b)+len(`,"blob":`)+len(blob))
+		const blobKey = `,"blob":`
+		const blobLen = len(blobKey)
+		buf := make([]byte, 0, len(b)+blobLen+len(blob))
 		buf = append(buf, b[:len(b)-1]...)
-		buf = append(buf, `,"blob":`...)
+		buf = append(buf, blobKey...)
 		buf = append(buf, blob...)
 		buf = append(buf, '}')
 		return buf, nil

@@ -209,8 +209,8 @@ func TicketLabels(submission db.Submission) []db.TicketLabel {
 			labels[db.LabelArtistUsed] = true
 		}
 
-		if payment.MatchString(submission.Description) {
-			labels[db.LabelPayMention] = true
+		if p := payment.FindString(submission.Description); p != "" {
+			labels[db.TicketLabel(fmt.Sprintf("%s:%s", db.LabelPayMention, p))] = true
 		}
 
 		if submission.Updated.Before(db.Nov21) {
